@@ -1,0 +1,73 @@
+import { REPLYMESH_API_URL, ReplymeshApiError, request } from './replymeshApi'
+
+const TOKEN_KEY = 'replymesh_motoboy_token'
+const PROFILE_KEY = 'replymesh_motoboy_profile'
+const COMPANY_KEY = 'replymesh_motoboy_company'
+
+export const getMotoboyToken = () => localStorage.getItem(TOKEN_KEY)
+
+export const getStoredMotoboyProfile = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
+export const getStoredMotoboyCompany = () => {
+  try {
+    return JSON.parse(localStorage.getItem(COMPANY_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
+export const motoboyLogout = () => {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(PROFILE_KEY)
+  localStorage.removeItem(COMPANY_KEY)
+}
+
+export const motoboyLogin = async ({ phone, password, companySlug }) => {
+  const response = await fetch(`${REPLYMESH_API_URL}/motoboy/auth/login`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      auth: {
+        phone,
+        password,
+        company_slug: companySlug,
+      },
+    }),
+  })
+
+  const payload = await response.json()
+  if (!response.ok || payload?.success === false) {
+    throw new ReplymeshApiError(payload?.error || 'Telefone ou senha invalidos', {
+      status: response.status,
+      payload,
+    })
+  }
+
+  localStorage.setItem(TOKEN_KEY, payload.token)
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(payload.motoboy))
+  localStorage.setItem(COMPANY_KEY, JSON.stringify(payload.company))
+  return payload
+}
+
+const motoboyRequest = (path, options = {}) => request(`/motoboy${path}`, {
+  ...options,
+  token: getMotoboyToken(),
+})
+
+export const getMotoboyProfile = () => motoboyRequest('/profile')
+export const getMotoboyOrders = () => motoboyRequest('/orders')
+export const startMotoboyOrder = (id) => motoboyRequest(`/orders/${id}/start`, { method: 'POST' })
+export const completeMotoboyOrder = (id, notes = '') => motoboyRequest(`/orders/${id}/complete`, {
+  method: 'POST',
+  body: { notes },
+})
+export const getMotoboyHistory = () => motoboyRequest('/history')

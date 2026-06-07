@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap');
+
+/* =================== KEYFRAMES =================== */
+@keyframes prem-fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes prem-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.prem-anim-0  { animation: prem-fadeUp .6s both; }
+.prem-anim-1  { animation: prem-fadeUp .6s .1s both; }
+.prem-anim-2  { animation: prem-fadeUp .6s .2s both; }
+.prem-anim-3  { animation: prem-fadeUp .6s .3s both; }
+.prem-anim-4  { animation: prem-fadeUp .6s .4s both; }
+
+/* =================== GRID =================== */
+.prem-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.prem-foot-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.1fr;
+  gap: 36px;
+}
+
+.prem-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* =================== HERO IMG =================== */
+.prem-hero-img {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 62%;
+  overflow: hidden;
+}
+
+/* =================== SCROLLBAR =================== */
+.prem-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+.prem-scroll::-webkit-scrollbar-thumb { background: #2c2c30; border-radius: 999px; }
+.prem-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* =================== RESPONSIVE =================== */
+@media (max-width: 1080px) {
+  .prem-grid { grid-template-columns: repeat(3, 1fr); }
+  .prem-foot-grid { grid-template-columns: 1fr 1fr; }
+  .prem-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 860px) {
+  .prem-hero-img { width: 100%; opacity: .35; }
+  .prem-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .premium-product-detail { grid-template-columns: 1fr !important; }
+  .prem-feature-grid { display: none !important; }
+}
+
+@media (max-width: 520px) {
+  .prem-grid { grid-template-columns: 1fr 1fr; gap: 11px; }
+  .prem-foot-grid { grid-template-columns: 1fr; }
+}
+
+/* =================== NAV =================== */
+@media (max-width: 860px) {
+  .prem-desk-nav { display: none !important; }
+  .prem-burger { display: flex !important; }
+}
+
+@media (min-width: 861px) {
+  .prem-burger { display: none !important; }
+  .prem-mob-nav { display: none !important; }
+}

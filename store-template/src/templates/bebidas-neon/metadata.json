@@ -1,0 +1,31 @@
+{
+  "id": "bebidas-neon",
+  "name": "Bebidas Neon",
+  "category": "bebidas",
+  "description": "Template ultra-escuro com acento ciano neon. Estilo moderno para bares, açaí e bebidas.",
+  "preview": "/templates/bebidas-neon/preview.png",
+  "version": "1.0",
+  "status": "coming_soon",
+  "colors": {
+    "background": "#020712",
+    "surface": "#060E1E",
+    "card": "#0A1628",
+    "border": "#1E3A5F",
+    "accent": "#22D3EE",
+    "accentHover": "#06B6D4",
+    "text": "#F0F9FF",
+    "textMuted": "#7DD3FC",
+    "green": "#34D399"
+  },
+  "fonts": {
+    "primary": "Inter"
+  },
+  "features": {
+    "darkMode": true,
+    "showBanner": true,
+    "compactMenu": false,
+    "showRoleta": true,
+    "heroFullBleed": true,
+    "goldAccent": false
+  }
+}

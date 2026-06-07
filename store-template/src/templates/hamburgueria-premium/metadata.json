@@ -1,0 +1,33 @@
+{
+  "id": "hamburgueria-premium",
+  "name": "Hamburgueria Premium",
+  "category": "hamburgueria",
+  "description": "Design premium escuro com acento dourado, hero full-bleed e fonte Poppins. Categoria bar horizontal, cards com hover, footer completo.",
+  "preview": "/templates/hamburgueria-premium/preview.png",
+  "version": "1.0",
+  "status": "active",
+  "colors": {
+    "background": "#0c0c0e",
+    "surface": "#121214",
+    "card": "#1a1a1d",
+    "border": "#26262a",
+    "accent": "#f7a325",
+    "accentHover": "#ffb838",
+    "accentDeep": "#e8920f",
+    "text": "#f4f3f1",
+    "textMuted": "#9a9aa0",
+    "green": "#1fbf5a"
+  },
+  "fonts": {
+    "primary": "Poppins"
+  },
+  "features": {
+    "darkMode": true,
+    "showBanner": true,
+    "compactMenu": false,
+    "showRoleta": true,
+    "heroFullBleed": true,
+    "goldAccent": true
+  },
+  "sourceFiles": "hamburgueria V2/"
+}

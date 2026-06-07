@@ -1,0 +1,31 @@
+{
+  "id": "doceria-clean",
+  "name": "Doceria Clean",
+  "category": "doceria",
+  "description": "Template claro e delicado com acento rosa. Perfeito para docerias, confeitarias e bakeries.",
+  "preview": "/templates/doceria-clean/preview.png",
+  "version": "1.0",
+  "status": "coming_soon",
+  "colors": {
+    "background": "#FFF8F0",
+    "surface": "#FFFFFF",
+    "card": "#FDF2E9",
+    "border": "#F3D5B5",
+    "accent": "#EC4899",
+    "accentHover": "#DB2777",
+    "text": "#1F2937",
+    "textMuted": "#6B7280",
+    "green": "#10B981"
+  },
+  "fonts": {
+    "primary": "Inter"
+  },
+  "features": {
+    "darkMode": false,
+    "showBanner": true,
+    "compactMenu": true,
+    "showRoleta": true,
+    "heroFullBleed": false,
+    "goldAccent": false
+  }
+}

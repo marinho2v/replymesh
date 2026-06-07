@@ -1,0 +1,26 @@
+{
+  "id": "hamburgueria-classic",
+  "name": "Hamburgueria Classic",
+  "category": "hamburgueria",
+  "description": "Template escuro com destaque para lanches e combos. Visual padrão do sistema.",
+  "version": "1.0",
+  "preview": "/templates/hamburgueria-classic/preview.png",
+  "colors": {
+    "background": "#0A0A0A",
+    "surface": "#1A1A1A",
+    "border": "#2D2D2D",
+    "text": "#FFFFFF",
+    "textMuted": "#9CA3AF",
+    "accent": "#FFFFFF",
+    "accentFg": "#000000"
+  },
+  "fonts": {
+    "primary": "Inter"
+  },
+  "features": {
+    "darkMode": true,
+    "showBanner": true,
+    "compactMenu": false,
+    "showRoleta": true
+  }
+}

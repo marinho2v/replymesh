@@ -1,0 +1,95 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+master.key
+config/master.key
+config/credentials/*.key
+**/config/master.key
+**/config/credentials/*.key
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.ppk
+
+# Dependencies
+node_modules/
+**/node_modules/
+vendor/bundle/
+**/vendor/bundle/
+.bundle/
+
+# Build artifacts
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+.next/
+.nuxt/
+
+# Rails/runtime files
+tmp/
+**/tmp/
+log/
+**/log/
+storage/
+**/storage/
+*.log
+*.pid
+
+# Uploads, backups and exports
+uploads/
+**/uploads/
+backups/
+**/backups/
+exports/
+**/exports/
+replymesh-export/
+**/replymesh-export/
+*.zip
+*.tgz
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Android/Flutter generated artifacts
+.dart_tool/
+**/.dart_tool/
+.gradle/
+**/.gradle/
+*.apk
+*.aab
+*.dill
+*.class
+*.dex
+mapping.txt
+
+# Local copies and toolchains not part of the Replymesh source snapshot
+temple1/
+tools/
+screenshots/
+.claude/
+.thumbnail
+.git.local-*
+**/.git.local-*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local scratch/prototype files
+order_id
+/dashboard.jsx
+/empresas.jsx
+/index.html
+/lib.jsx
+/shell.jsx
+/whatsapp.jsx
+/Replymesh Painel Master.html

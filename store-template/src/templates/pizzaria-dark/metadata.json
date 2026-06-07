@@ -1,0 +1,31 @@
+{
+  "id": "pizzaria-dark",
+  "name": "Pizzaria Dark",
+  "category": "pizzaria",
+  "description": "Template escuro com acento vermelho intenso. Ideal para pizzarias e estabelecimentos com identidade forte.",
+  "preview": "/templates/pizzaria-dark/preview.png",
+  "version": "1.0",
+  "status": "coming_soon",
+  "colors": {
+    "background": "#100810",
+    "surface": "#180a18",
+    "card": "#200c20",
+    "border": "#3d1a1a",
+    "accent": "#DC2626",
+    "accentHover": "#EF4444",
+    "text": "#F9FAFB",
+    "textMuted": "#9CA3AF",
+    "green": "#22C55E"
+  },
+  "fonts": {
+    "primary": "Poppins"
+  },
+  "features": {
+    "darkMode": true,
+    "showBanner": true,
+    "compactMenu": false,
+    "showRoleta": true,
+    "heroFullBleed": true,
+    "goldAccent": false
+  }
+}
