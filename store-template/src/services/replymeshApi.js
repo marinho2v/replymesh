@@ -1,6 +1,6 @@
 import { resolveDefaultCompanySlug } from '../utils/companyDomain'
 
-const DEFAULT_API_URL = 'http://127.0.0.1:3000/api/v1'
+const DEFAULT_API_URL = 'https://api.replymesh.cloud/api/v1'
 
 export const REPLYMESH_API_URL = (
   import.meta.env.VITE_REPLYMESH_API_URL || DEFAULT_API_URL

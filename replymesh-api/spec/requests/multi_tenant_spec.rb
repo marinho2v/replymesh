@@ -46,4 +46,21 @@ RSpec.describe "Store multi-tenant isolation", type: :request do
     expect(ids).to include(@coupon_a.id)
     expect(ids).not_to include(@coupon_b.id)
   end
+
+  it "isolates marketing customers by company" do
+    get "/api/v1/store/marketing/customers", headers: auth_headers(user_a)
+    ids = json["customers"].map { |item| item["id"] }
+    expect(ids).to include(@customer_a.id)
+    expect(ids).not_to include(@customer_b.id)
+  end
+
+  it "isolates recovery customers by company" do
+    @customer_a.update!(last_order_at: 45.days.ago, total_orders: 2, total_spent_cents: 10_000)
+    @customer_b.update!(last_order_at: 45.days.ago, total_orders: 2, total_spent_cents: 10_000)
+
+    get "/api/v1/store/sales_recovery/customers", params: { days: 30 }, headers: auth_headers(user_a)
+    ids = json["customers"].map { |item| item["id"] }
+    expect(ids).to include(@customer_a.id)
+    expect(ids).not_to include(@customer_b.id)
+  end
 end

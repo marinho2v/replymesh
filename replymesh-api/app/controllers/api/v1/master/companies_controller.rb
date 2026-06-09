@@ -95,7 +95,6 @@ module Api
             }
           )
 
-          login_url = "http://127.0.0.1:5174/loja/#{@company.slug}/admin/impersonate"
           render json: {
             success: true,
             token: access_token,
@@ -104,7 +103,7 @@ module Api
             company_slug: @company.slug,
             expires_at: expires_at,
             expires_in_minutes: 30,
-            login_url: login_url,
+            login_url: store_impersonation_url(@company),
             company: serialize_company(@company),
             user: current_user.as_json
           }
@@ -114,6 +113,17 @@ module Api
 
         def set_company
           @company = Company.find(params[:id])
+        end
+
+        def store_impersonation_url(company)
+          platform_domain = ENV.fetch("REPLYMESH_PLATFORM_DOMAIN", "replymesh.cloud")
+                               .to_s
+                               .strip
+                               .sub(%r{\Ahttps?://}, "")
+                               .sub(%r{/.*\z}, "")
+          host = company.subdomain.presence || "#{company.slug}.#{platform_domain}"
+
+          "https://#{host}/admin/impersonate"
         end
 
         def company_params

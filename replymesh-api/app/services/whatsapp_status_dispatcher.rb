@@ -21,7 +21,6 @@ class WhatsappStatusDispatcher
     template = WhatsappTemplate.find_by(company_id: @order.company_id, template_key: template_key)
     return log_skip("template nao encontrado", template_key) unless template
     return log_skip("template desativado", template_key, template: template) unless template.enabled?
-    return log_skip("envio real habilitado apenas para Demo Hamburgueria local", template_key, template: template) unless real_send_allowed?
     return log_skip("pedido nao identificado como teste seguro", template_key, template: template) if @test_mode && !test_order?
 
     instance = WhatsappInstance.primary_for_company(@order.company)
@@ -40,7 +39,7 @@ class WhatsappStatusDispatcher
       level: "ok",
       message: "WhatsApp enviado para status #{@status}",
       metadata_json: base_metadata(template_key, template).merge(
-        delivery_mode: @test_mode ? "real_test" : "real_auto_demo",
+        delivery_mode: @test_mode ? "real_test" : "real_auto",
         order_id: @order.id,
         order_number: @order.order_number,
         status: @status,
@@ -66,12 +65,6 @@ class WhatsappStatusDispatcher
   end
 
   private
-
-  def real_send_allowed?
-    return true if @test_mode
-
-    Rails.env.development? && @order.company&.slug == "demohamburgueria"
-  end
 
   def test_order?
     return true if @order.notes.to_s.downcase.include?("teste")

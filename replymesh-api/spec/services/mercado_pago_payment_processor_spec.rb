@@ -24,6 +24,25 @@ RSpec.describe MercadoPagoPaymentProcessor do
     expect(result[:order_status]).to eq("accepted")
   end
 
+  it "approves Pix even when the accepted WhatsApp template is disabled" do
+    WhatsappTemplate.create!(
+      company: company,
+      template_key: "pedido_aceito",
+      title: "Pedido aceito",
+      message: "Seu pedido foi aceito",
+      enabled: false
+    )
+    order = pending_pix_order
+    allow(InventoryService).to receive(:deduct_for_order).and_return(
+      InventoryService::Result.new(success: true, data: nil)
+    )
+
+    result = described_class.process_result!(order, { status: "approved", id: "approved-2" })
+
+    expect(result[:payment_status]).to eq("paid")
+    expect(result[:order_status]).to eq("accepted")
+  end
+
   it "expires Pix and cancels the order" do
     order = pending_pix_order
     result = described_class.process_result!(order, { status: "expired", detail: "timeout" })

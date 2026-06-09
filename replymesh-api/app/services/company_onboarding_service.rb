@@ -19,6 +19,9 @@ class CompanyOnboardingService
     { name: "Cartao Credito", method_type: "credit_card" }
   ].freeze
 
+  DEFAULT_LOGO_URL = "/logo.png".freeze
+  DEFAULT_BANNER_URL = "/capa.jpeg".freeze
+
   def self.call(company_params, options = {}, actor: nil)
     new(company_params, options, actor: actor).call
   end
@@ -36,7 +39,8 @@ class CompanyOnboardingService
       whatsapp_instance: false,
       whatsapp_templates: false,
       payment_methods: false,
-      categories: false
+      categories: false,
+      app_banner: false
     }
   end
 
@@ -52,7 +56,7 @@ class CompanyOnboardingService
       create_default_delivery_zone! if option_enabled?(:create_default_settings, true)
       create_payment_methods! if option_enabled?(:create_default_payment_methods, true)
       create_whatsapp_templates! if option_enabled?(:create_default_templates, true)
-      create_whatsapp_instance! if option_enabled?(:create_whatsapp_instance, false)
+      create_whatsapp_instance! if option_enabled?(:create_whatsapp_instance, true)
       create_activity_log!
     end
 
@@ -155,10 +159,28 @@ class CompanyOnboardingService
       whatsapp: @company.responsible_phone,
       phone: @company.responsible_phone,
       email: @company.responsible_email,
+      logo_url: DEFAULT_LOGO_URL,
+      banner_url: DEFAULT_BANNER_URL,
+      cover_url: DEFAULT_BANNER_URL,
+      primary_color: "#16a34a",
+      secondary_color: "#0b0b0d",
+      visual_template_id: "hamburgueria-classic",
       accepted_payment_methods: StoreSetting::DEFAULT_ACCEPTED_PAYMENT_METHODS,
       opening_hours: StoreSetting::DEFAULT_OPENING_HOURS
     )
+    create_default_app_banner!
     created_resources[:store_settings] = true
+  end
+
+  def create_default_app_banner!
+    AppBanner.create!(
+      company: @company,
+      title: "Banner principal",
+      image_url: DEFAULT_BANNER_URL,
+      is_active: true,
+      sort_order: 0
+    )
+    created_resources[:app_banner] = true
   end
 
   def create_business_hours!
@@ -198,18 +220,32 @@ class CompanyOnboardingService
   end
 
   def create_whatsapp_instance!
-    instance_name = "replymesh_#{@company.slug}"
-    response = EvolutionGoClient.new.create_instance(instance_name)
+    instance_name = safe_instance_name(@company.slug)
+    token = SecureRandom.hex(32)
+    client = EvolutionGoClient.new
+    response = client.create_instance(instance_name, token: token)
 
-    WhatsappInstance.create!(
+    instance = WhatsappInstance.create!(
       company: @company,
       instance_name: instance_name,
+      instance_token: token,
+      provider: "evolution_go",
       status: response[:status] || "created",
-      base_url: response[:base_url]
+      remote_status: response[:raw_status] || response[:status],
+      remote_data: response[:remote_data],
+      base_url: response[:base_url],
+      instance_uuid: response[:instance_uuid],
+      connected_number: response[:connected_number],
+      last_remote_sync_at: Time.current
     )
+    client.configure_location_webhook(token)
     created_resources[:whatsapp_instance] = true
   rescue StandardError => e
     WhatsappLog.create!(company: @company, level: "warn", message: "Falha ao criar instancia WhatsApp: #{e.message}")
+  end
+
+  def safe_instance_name(slug)
+    "replymesh_#{slug.to_s.gsub(/[^a-z0-9_]/, "_")}"
   end
 
   def create_activity_log!

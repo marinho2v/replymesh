@@ -87,7 +87,8 @@ export const AdminLayout = () => {
       localStorage.removeItem('replymesh_store_company_slug')
     }
     window.dispatchEvent(new Event('replymesh-auth-changed'))
-    window.location.href = 'http://127.0.0.1:5173/empresas'
+    const masterUrl = import.meta.env.VITE_MASTER_URL || 'https://app.replymesh.cloud'
+    window.location.href = `${masterUrl}/empresas`
   }
 
   const handleSignOut = async () => {

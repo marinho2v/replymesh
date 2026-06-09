@@ -93,3 +93,7 @@ order_id
 /shell.jsx
 /whatsapp.jsx
 /Replymesh Painel Master.html
+
+secrets-local/
+*.bak
+.codex_tmp_*

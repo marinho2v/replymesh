@@ -30,22 +30,24 @@ class OrderStatusService
     def success? = success
   end
 
-  def self.call(order:, new_status:, user: nil, notes: nil, skip_side_effects: false)
+  def self.call(order:, new_status:, user: nil, notes: nil, skip_side_effects: false, allow_inactive_status: false)
     new(
       order: order,
       new_status: new_status,
       user: user,
       notes: notes,
-      skip_side_effects: skip_side_effects
+      skip_side_effects: skip_side_effects,
+      allow_inactive_status: allow_inactive_status
     ).call
   end
 
-  def initialize(order:, new_status:, user: nil, notes: nil, skip_side_effects: false)
+  def initialize(order:, new_status:, user: nil, notes: nil, skip_side_effects: false, allow_inactive_status: false)
     @order = order
     @new_status = new_status
     @user = user
     @notes = notes
     @skip_side_effects = skip_side_effects
+    @allow_inactive_status = allow_inactive_status
   end
 
   def call
@@ -85,6 +87,7 @@ class OrderStatusService
 
   def valid_transition?
     return false if @order.status.in?(%w[completed cancelled])
+    return VALID_TRANSITIONS[@order.status]&.include?(@new_status) if @allow_inactive_status
     return VALID_TRANSITIONS[@order.status]&.include?(@new_status) if @new_status == "cancelled"
 
     dynamic_next_status == @new_status
@@ -108,8 +111,7 @@ class OrderStatusService
   end
 
   def active_status_sequence
-    statuses = ["pending"]
-    statuses << "accepted" if template_enabled_for_status?("accepted", default: true)
+    statuses = %w[pending accepted]
     statuses << "preparing" if template_enabled_for_status?("preparing")
     statuses << "ready" if template_enabled_for_status?("ready")
     statuses << "out_for_delivery" if @order.order_type == "delivery" && template_enabled_for_status?("out_for_delivery", default: true)

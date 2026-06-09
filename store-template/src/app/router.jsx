@@ -262,7 +262,46 @@ export const router = createBrowserRouter([
     path: '/motoboy',
     children: [
       { index: true, element: <Navigate to="login" replace /> },
-      { path: 'login', element: page(MotoboyLogin) },
+      {
+        path: 'login',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyLogin)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
+        path: 'dashboard',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyDashboard)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
+        path: 'history',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyHistory)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
+        path: 'financeiro',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyFinance)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
+        path: 'profile',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyProfile)}
+          </CompanySlugProvider>
+        ),
+      },
     ],
   },
   {

@@ -117,7 +117,11 @@ module Api
           value = template.to_s
           value = value.lines.reject { |line| line.match?(/\{cupom\}/i) }.join if coupon.blank?
           value.gsub(/\{nome\}/i, customer.full_name).gsub(/\{telefone\}/i, customer.phone)
-            .gsub(/\{cupom\}/i, coupon.to_s).gsub(/\{link_loja\}/i, "http://127.0.0.1:5174/loja/#{current_company.slug}").strip
+            .gsub(/\{cupom\}/i, coupon.to_s).gsub(/\{link_loja\}/i, public_store_url).strip
+        end
+
+        def public_store_url
+          "https://#{current_company.slug}.replymesh.cloud"
         end
       end
     end

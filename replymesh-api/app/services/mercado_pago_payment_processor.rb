@@ -95,7 +95,12 @@ class MercadoPagoPaymentProcessor
       )
 
       if @order.status == "pending"
-        result = OrderStatusService.call(order: @order, new_status: "accepted", notes: "Pix Mercado Pago confirmado")
+        result = OrderStatusService.call(
+          order: @order,
+          new_status: "accepted",
+          notes: "Pix Mercado Pago confirmado",
+          allow_inactive_status: true
+        )
         raise ProcessorError, result.error unless result.success?
       end
     end

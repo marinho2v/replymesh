@@ -212,15 +212,20 @@ const MotoboyDashboard = () => {
                       </p>
                       <p className="text-white">{address || 'Endereco nao informado'}</p>
                       {order.address?.reference && <p className="mt-1 text-sm text-gray-400">Ref.: {order.address.reference}</p>}
-                      {whatsappLocation && (
-                        <div className="mt-3 rounded-lg border border-green-500/60 bg-green-950/60 p-3">
-                          <p className="text-sm font-bold text-green-100">Localização recebida pelo WhatsApp</p>
-                          <p className="mt-1 text-xs text-green-100/80">Maps e Waze vão abrir no pin enviado pelo cliente.</p>
+                      {whatsappLocation ? (
+                        <div className="mt-3 rounded-lg border border-green-500/70 bg-green-950/70 p-3 shadow-lg shadow-green-950/20">
+                          <p className="text-sm font-bold text-green-100">Localização confirmada pelo cliente</p>
+                          <p className="mt-1 text-xs text-green-100/85">Maps e Waze vão abrir no pin enviado pelo WhatsApp.</p>
                           {order.delivery_location_received_at && (
                             <p className="mt-2 text-xs text-green-200">
                               Recebida em {formatDateTime(order.delivery_location_received_at)}
                             </p>
                           )}
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-lg border border-yellow-500/50 bg-yellow-950/40 p-3">
+                          <p className="text-sm font-bold text-yellow-100">Aguardando localização do cliente</p>
+                          <p className="mt-1 text-xs text-yellow-100/80">Maps e Waze usam o endereço digitado até o cliente enviar o pin.</p>
                         </div>
                       )}
                     </div>

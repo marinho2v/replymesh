@@ -19,7 +19,7 @@ export const STATUS_TEMPLATE_KEYS = {
 }
 
 export const normalizeOrderStatusFlow = (flow = {}) => ({
-  accepted: flow?.accepted !== false,
+  accepted: true,
   preparing: Boolean(flow?.preparing),
   ready: Boolean(flow?.ready),
   out_for_delivery: flow?.out_for_delivery !== false,

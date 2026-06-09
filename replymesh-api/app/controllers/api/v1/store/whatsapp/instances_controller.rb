@@ -13,6 +13,7 @@ module Api
           def ensure
             if (instance = primary_instance)
               sync_remote_for!(instance)
+              ensure_location_webhook!(instance)
               return render_ok(instance: instance.reload.safe_json)
             end
 
@@ -74,6 +75,7 @@ module Api
               instance.provider = "evolution_go"
               instance.status = remote[:status].presence || instance.status.presence || "created"
               instance.save!
+              ensure_location_webhook!(instance)
               return instance
             end
 
@@ -87,6 +89,7 @@ module Api
             instance.status = remote_after_create[:status].presence || response[:status].presence || "created"
             assign_remote_attrs(instance, remote_after_create, now)
             instance.save!
+            ensure_location_webhook!(instance)
             instance
           end
 
@@ -109,6 +112,12 @@ module Api
             assign_remote_attrs(instance, remote, Time.current)
             instance.status = remote[:status].presence || instance.status
             instance.save!
+          end
+
+          def ensure_location_webhook!(instance)
+            return if instance.instance_token.blank?
+
+            client.configure_location_webhook(instance.instance_token)
           end
 
           def apply_remote_status!(instance, response)

@@ -23,7 +23,12 @@ export function CompanyImpersonationLaunch() {
           user: JSON.stringify(data.user),
           expires_at: data.expires_at,
         });
-        window.location.replace(`${data.login_url}#${payload.toString()}`);
+        const slug = data.company_slug || "";
+        const fallbackUrl = `https://${slug}.replymesh.cloud/loja/${slug}/admin/impersonate`;
+        const loginUrl = data.login_url && !data.login_url.includes("127.0.0.1") && !data.login_url.includes("localhost")
+          ? data.login_url
+          : fallbackUrl;
+        window.location.replace(`${loginUrl}#${payload.toString()}`);
       } catch (launchError) {
         if (active) setError(launchError.message || "Nao foi possivel abrir o painel da empresa.");
       }

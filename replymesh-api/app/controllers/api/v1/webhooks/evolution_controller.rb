@@ -68,7 +68,6 @@ module Api
           instance = find_instance(parsed)
 
           return render_error("Instancia Evolution nao vinculada", :unprocessable_entity) unless instance
-          return render_error("Webhook local liberado somente para Demo Hamburgueria", :forbidden) unless demo_allowed?(instance.company)
 
           if parsed.ignored_reason.present?
             log_webhook(instance, "warn", "Localizacao ignorada: #{parsed.ignored_reason}", parsed)
@@ -130,7 +129,8 @@ module Api
 
           provided = request.headers["apikey"].presence ||
                      request.headers["x-api-key"].presence ||
-                     request.headers["Authorization"].to_s.remove(/^Bearer\s+/).presence
+                     request.headers["Authorization"].to_s.remove(/^Bearer\s+/).presence ||
+                     params[:token].presence
           return false if provided.blank?
 
           ActiveSupport::SecurityUtils.secure_compare(provided.to_s, expected.to_s)
@@ -185,10 +185,6 @@ module Api
           )
         rescue StandardError => e
           Rails.logger.warn("Evolution AI webhook log failed: #{e.class}")
-        end
-
-        def demo_allowed?(company)
-          company.slug == "demohamburgueria" || ENV["ALLOW_EVOLUTION_LOCATION_WEBHOOK_ALL_COMPANIES"] == "true"
         end
 
         def find_open_order(company, phone)

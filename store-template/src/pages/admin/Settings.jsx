@@ -279,7 +279,6 @@ const defaultSettings = {
   pix_provider: 'manual',
   mercadopago_public_key: '',
   mercadopago_access_token: '',
-  mercadopago_webhook_secret: '',
   mercadopago_enabled: false,
 }
 
@@ -1064,22 +1063,6 @@ const Settings = () => {
                     onChange={(e) => updateSetting('mercadopago_access_token', e.target.value)}
                     placeholder="TEST-xxxxxxxxxxxxxxxx... ou APP_USR-..."
                   />
-                  <Input
-                    label="Webhook Secret (opcional)"
-                    value={localSettings.mercadopago_webhook_secret || ''}
-                    onChange={(e) => updateSetting('mercadopago_webhook_secret', e.target.value)}
-                    placeholder="Chave para validar webhooks"
-                  />
-                  <div className="rounded-lg border border-blue-700/40 bg-blue-900/15 p-3 text-xs text-blue-300">
-                    <p className="font-semibold mb-1">Webhook URL (configurar no Mercado Pago)</p>
-                    <p className="font-mono break-all text-blue-200">
-                      {window.location.origin}/api/v1/webhooks/mercadopago
-                    </p>
-                    <p className="mt-2 text-blue-400/80">
-                      Em desenvolvimento, use o endpoint de simulação:
-                      POST /api/v1/webhooks/mercadopago/simulate
-                    </p>
-                  </div>
                 </>
               )}
             </div>

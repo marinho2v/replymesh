@@ -177,7 +177,6 @@ const sanitizeStoreSettings = (settingsData = {}, includeOptionalColumns = true)
     if (settingsData.mercadopago_access_token && !settingsData.mercadopago_access_token.includes('****')) {
       payload.mercadopago_access_token = emptyToNull(settingsData.mercadopago_access_token)
     }
-    payload.mercadopago_webhook_secret = emptyToNull(settingsData.mercadopago_webhook_secret)
     payload.mercadopago_enabled = Boolean(settingsData.mercadopago_enabled)
   }
 
