@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_09_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -986,11 +986,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_120000) do
     t.jsonb "context", default: {}, null: false
     t.datetime "created_at", null: false
     t.bigint "customer_id"
+    t.string "handoff_reason"
     t.datetime "last_message_at"
+    t.datetime "paused_until"
     t.string "phone"
     t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id", "phone", "status"], name: "index_store_ai_conversations_lookup"
+    t.index ["company_id", "phone", "paused_until"], name: "index_store_ai_conversations_pause_lookup"
     t.index ["company_id"], name: "index_store_ai_conversations_on_company_id"
     t.index ["customer_id"], name: "index_store_ai_conversations_on_customer_id"
   end

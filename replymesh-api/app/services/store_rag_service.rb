@@ -9,7 +9,7 @@ class StoreRagService
     @company = company
     @query = normalize(query)
     @permissions = permissions
-    @phone = phone.to_s.gsub(/\D/, "")
+    @phone = extracted_query_phone.presence || phone.to_s.gsub(/\D/, "")
     @top_k = [[top_k.to_i, 1].max, 6].min
   end
 
@@ -40,7 +40,7 @@ class StoreRagService
   end
 
   def order_query?
-    @query.match?(/pedido|status|andamento/)
+    @query.match?(/pedido|status|andamento|telefone/)
   end
 
   def order_chunk
@@ -90,11 +90,11 @@ class StoreRagService
   def intent_boost(module_name, chunk_id)
     return 30 if @query.match?(/cupom|desconto|promocao|oferta/) && module_name == "promocoes"
     return 30 if @query.match?(/horario|abre|fecha|funcionamento/) && module_name == "horarios"
-    return 35 if @query.match?(/pedido|status|andamento/) && chunk_id == "latest-order"
-    return 25 if @query.match?(/produto|cardapio|lanche|hamburguer|burger|barato|preco|tem|vende/) && module_name == "produtos"
+    return 35 if @query.match?(/pedido|status|andamento|telefone/) && chunk_id == "latest-order"
+    return 25 if @query.match?(/produto|cardapio|lanche|hamburguer|hamburger|burger|barato|preco|tem|vende|bacon|cheddar|picanha|triplo|duplo|medio/) && module_name == "produtos"
     return 30 if @query.match?(/pix|pagamento|dinheiro|cartao|credito|debito|aceita/) && module_name == "pagamentos"
     return 30 if @query.match?(/entrega|taxa|frete|retir|demora|tempo/) && module_name == "entrega"
-    return 35 if @query.match?(/quero pedir|fazer um pedido|como pedir|comprar/) && module_name == "pedido"
+    return 35 if @query.match?(/quero pedir|quero fazer pedido|fazer pedido|fazer um pedido|como pedir|comprar/) && module_name == "pedido"
 
     0
   end
@@ -134,5 +134,12 @@ class StoreRagService
 
   def normalize(value)
     ReplymeshKnowledgeService.normalize(value)
+  end
+
+  def extracted_query_phone
+    digits = @query.to_s.gsub(/\D/, "")
+    return if digits.length < 8
+
+    digits
   end
 end

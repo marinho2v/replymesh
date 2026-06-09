@@ -38,7 +38,8 @@ RSpec.describe "Store AI WhatsApp multi-tenant answers" do
     "cade meu pedido?" => ["Nenhum pedido encontrado"],
     "tem promocao?" => ["Nao ha cupons ativos"],
     "como configuro meu painel?" => [StoreAiService::OUT_OF_SCOPE],
-    "me ajuda com token?" => [StoreAiService::OUT_OF_SCOPE]
+    "me ajuda com token?" => [StoreAiService::OUT_OF_SCOPE],
+    "quero falar com humano" => ["atendente continuar"]
   }.each do |question, expected_parts|
     it "answers #{question.inspect} inside the store boundary" do
       result = StoreAiService.call(
@@ -69,5 +70,31 @@ RSpec.describe "Store AI WhatsApp multi-tenant answers" do
       "Posso ajudar com o seu pedido.",
       "testemultiempresa.replymesh.cloud/menu"
     )
+  end
+
+  it "finds the latest order when the customer informs another phone" do
+    Order.create!(
+      company: company,
+      order_number: "806",
+      customer_name: "Cliente Teste",
+      customer_phone: "21968443941",
+      customer_whatsapp: "21968443941",
+      status: "accepted",
+      payment_method: "pix",
+      order_type: "delivery",
+      subtotal_cents: 2_200,
+      delivery_fee_cents: 500,
+      total_cents: 2_700
+    )
+
+    result = StoreAiService.call(
+      company: company,
+      user: nil,
+      question: "meu telefone e 21968443941, cade meu pedido?",
+      phone: "5521959099803",
+      simulate: true
+    )
+
+    expect(result[:answer]).to include("#806", "aceito")
   end
 end

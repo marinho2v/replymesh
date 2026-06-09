@@ -5,6 +5,7 @@ module Api
         def messages
           payload = parse_payload
           parsed = EvolutionMessagePayloadParser.call(payload: payload, headers: normalized_headers)
+          return handle_from_me_message(parsed) if parsed.from_me
           return render json: { success: true, ignored: true, reason: parsed.ignored_reason }, status: :ok if parsed.ignored_reason.present?
           return render json: { success: false, error: parsed.error }, status: :unprocessable_entity unless parsed.success?
 
@@ -20,6 +21,7 @@ module Api
         def location
           payload = parse_payload
           message = EvolutionMessagePayloadParser.call(payload: payload, headers: normalized_headers)
+          return handle_from_me_message(message) if message.from_me
           return process_message(message) if message.success?
           if message.ignored_reason.present? && message.ignored_reason != "Evento de localizacao"
             return render json: {
@@ -142,6 +144,25 @@ module Api
             return render json: { success: true, ignored: true, reason: "Mensagem ja processada" }, status: :ok
           end
 
+          if ai_paused?(instance, parsed)
+            log_ai_webhook(instance, parsed, "skipped", "human_takeover")
+            return render json: { success: true, ignored: true, reason: "human_takeover" }, status: :ok
+          end
+
+          if human_request?(parsed.text)
+            answer = "Certo, vou deixar um atendente continuar por aqui."
+            pause_conversation!(instance, parsed.phone, "customer_requested_human")
+            send_result = EvolutionGoClient.new.send_text(
+              instance.instance_token,
+              phone: parsed.phone,
+              message: answer
+            )
+            remember_ai_send(instance, parsed.phone)
+            mark_message_processed(instance, parsed)
+            log_ai_webhook(instance, parsed, "sent", nil, answer: answer, response: send_result, result: { intent: "human_request", status: "handoff" })
+            return render json: { success: true, sent: true, company_id: instance.company_id, phone_last4: parsed.phone.last(4), status: "handoff", intent: "human_request" }, status: :ok
+          end
+
           unless StoreAiRateLimiter.allow?(company: instance.company, phone: parsed.phone)
             log_ai_webhook(instance, parsed, "skipped", "rate_limit")
             return render json: { success: true, ignored: true, reason: "rate_limit" }, status: :ok
@@ -171,6 +192,7 @@ module Api
             log_ai_webhook(instance, parsed, "failed", e.message, answer: answer, result: result)
             raise
           end
+          remember_ai_send(instance, parsed.phone)
           mark_message_processed(instance, parsed)
           log_ai_webhook(instance, parsed, "sent", nil, answer: answer, response: send_result, result: result)
 
@@ -188,6 +210,53 @@ module Api
           return false if parsed.message_id.blank?
 
           Rails.cache.exist?("store-ai:evolution:#{instance.id}:#{parsed.message_id}")
+        end
+
+        def handle_from_me_message(parsed)
+          instance = authorized_instance(parsed, require_token: false) || find_instance(parsed, require_token: false)
+          return render json: { success: true, ignored: true, reason: parsed.ignored_reason }, status: :ok unless instance && parsed.phone.present?
+
+          if recent_ai_send?(instance, parsed.phone)
+            return render json: { success: true, ignored: true, reason: "Mensagem automatica enviada pela IA" }, status: :ok
+          end
+
+          pause_conversation!(instance, parsed.phone, "manual_whatsapp_reply")
+          log_ai_webhook(instance, parsed, "skipped", "manual_whatsapp_reply")
+          render json: { success: true, ignored: true, reason: "manual_whatsapp_reply" }, status: :ok
+        end
+
+        def ai_paused?(instance, parsed)
+          conversation = StoreAiConversation.latest_for_phone(instance.company_id, parsed.phone).first
+          conversation&.resume_if_expired!
+          conversation&.paused?
+        end
+
+        def pause_conversation!(instance, phone, reason)
+          normalized_phone = normalize_phone(phone)
+          conversation = StoreAiConversation.latest_for_phone(instance.company_id, normalized_phone).first
+          conversation ||= instance.company.store_ai_conversations.create!(
+            phone: normalized_phone,
+            channel: "whatsapp",
+            status: "open",
+            last_message_at: Time.current
+          )
+          conversation.pause_for!(30.minutes, reason: reason)
+        end
+
+        def human_request?(text)
+          StoreAiIntentClassifier.call(text) == :human_request
+        end
+
+        def remember_ai_send(instance, phone)
+          Rails.cache.write(ai_send_cache_key(instance, phone), true, expires_in: 45.seconds)
+        end
+
+        def recent_ai_send?(instance, phone)
+          Rails.cache.exist?(ai_send_cache_key(instance, phone))
+        end
+
+        def ai_send_cache_key(instance, phone)
+          "store-ai:evolution:recent-send:#{instance.id}:#{normalize_phone(phone)}"
         end
 
         def mark_message_processed(instance, parsed)

@@ -1,6 +1,6 @@
-class StoreAiService
+﻿class StoreAiService
   MEMORY_MESSAGES = 10
-  OUT_OF_SCOPE = "Eu posso te ajudar com produtos, horarios, entrega, pagamento e pedidos da loja."
+  OUT_OF_SCOPE = "Posso ajudar com produtos, pedidos, horarios, pagamentos e entregas da loja."
   TECHNICAL_SCOPE_PATTERNS = [
     /painel|dashboard|cadastrar produto|editar produto|configurar sistema/,
     /replymesh|suporte|ticket|token|api key|webhook|evolution/,
@@ -28,6 +28,7 @@ class StoreAiService
     return response("Escreva uma pergunta para testar a IA da loja.", "blocked", []) if @question.blank?
     @intent = StoreAiIntentClassifier.call(@question)
     return ignored_response if @intent == :trivial
+    return response(human_handoff_answer, "handoff", []) if @intent == :human_request
     return response(greeting_answer, "success", []) if greeting?
     return response(out_of_scope_answer, "blocked", []) if out_of_scope? || @intent.nil?
     return response("", "limited", []) if limit_reached?
@@ -111,28 +112,25 @@ class StoreAiService
 
     case chunk[:module]
     when "produtos"
-      products = Array(payload).first(4)
+      products = Array(payload).first(3)
       return "Nao encontrei produto ativo com esse nome agora." if products.empty?
 
-      intro = exact_product_match?(products) ? "Encontrei estas opcoes:" : "No momento nao encontrei esse produto exato.\n\nTemos opcoes parecidas:"
+      intro = exact_product_match?(products) ? "Tem sim. Olha essas opcoes:" : "Nao achei esse item exato, mas encontrei opcoes parecidas:"
       list = products.map do |product|
         price = product["promocional_centavos"].presence || product["preco_centavos"]
-        ["🍔 #{product['nome']}", product["descricao"].presence, "💰 #{format_brl(price)}", product["categoria"].present? ? "Categoria: #{product['categoria']}" : nil].compact.join("\n")
+        ["- #{product['nome']}", product["descricao"].presence, "Preco: #{format_brl(price)}", product["categoria"].present? ? "Categoria: #{product['categoria']}" : nil].compact.join("\n")
       end.join("\n\n")
       product_link = products.first["link"].presence || menu_url
       "#{intro}\n\n#{list}\n\nVoce pode pedir aqui: #{product_link}"
     when "horarios"
-      days = %w[domingo segunda terca quarta quinta sexta sabado]
-      Array(payload).map do |hour|
-        hour["aberto"] ? "#{days[hour['dia'].to_i].capitalize}: #{hour['abre']} as #{hour['fecha']}" : "#{days[hour['dia'].to_i].capitalize}: fechado"
-      end.join("\n")
+      hours_answer(Array(payload))
     when "promocoes"
       coupons = Array(payload)
       return "Nao ha cupons ativos disponiveis agora." if coupons.empty?
 
       "Estas promocoes estao disponiveis:\n\n" + coupons.first(4).map do |coupon|
         code = coupon["codigo"].to_s.strip
-        ["🏷️ #{coupon['titulo']}", code.present? ? "Cupom: #{code}" : nil].compact.join("\n")
+        ["- #{coupon['titulo']}", code.present? ? "Cupom: #{code}" : nil].compact.join("\n")
       end.join("\n\n")
     when "pedidos"
       return chunk[:content] unless payload.is_a?(Hash)
@@ -150,7 +148,7 @@ class StoreAiService
       "Aceitamos: #{forms.compact_blank.uniq.join(', ')}."
     when "entrega"
       parts = []
-      parts << (payload["entrega_ativa"] ? "🛵 Fazemos entrega." : "A entrega esta indisponivel no momento.")
+      parts << (payload["entrega_ativa"] ? "Fazemos entrega." : "A entrega esta indisponivel no momento.")
       if (zone = matching_delivery_zone(payload["regioes"]))
         parts << "Regiao: #{zone['nome']}."
         parts << "Taxa: #{format_brl(zone['taxa_centavos'])}."
@@ -162,9 +160,10 @@ class StoreAiService
         parts << "Informe seu bairro para eu conferir a regiao correta." if Array(payload["regioes"]).any?
       end
       parts << "Tambem e possivel retirar no local." if payload["retirada_ativa"]
+      parts << "Cardapio: #{menu_url}"
       parts.join("\n")
     when "pedido"
-      "Para fazer seu pedido, acesse: #{payload['link'].presence || menu_url}"
+      "Claro. Para fazer seu pedido, acesse:\n#{payload['link'].presence || menu_url}"
     else
       chunk[:content].to_s.truncate(700)
     end
@@ -207,25 +206,49 @@ class StoreAiService
     }[value.to_s] || "em atualizacao"
   end
 
+  def hours_answer(hours)
+    return "Nao encontrei horarios cadastrados para a loja agora." if hours.empty?
+
+    today_hour = hours.find { |hour| hour["dia"].to_i == current_store_time.wday }
+
+    if question_about_today?
+      return "Hoje a loja esta fechada." unless today_hour&.dig("aberto")
+
+      status = open_now?(today_hour) ? "aberta agora" : "fechada agora"
+      return "Hoje a loja esta #{status}. Horario de hoje: #{today_hour['abre']} as #{today_hour['fecha']}."
+    end
+
+    if @question.match?(/fecha|fechar/i) && today_hour&.dig("aberto")
+      return "Hoje a loja fecha as #{today_hour['fecha']}."
+    end
+
+    days = %w[domingo segunda terca quarta quinta sexta sabado]
+    hours.map do |hour|
+      hour["aberto"] ? "#{days[hour['dia'].to_i].capitalize}: #{hour['abre']} as #{hour['fecha']}" : "#{days[hour['dia'].to_i].capitalize}: fechado"
+    end.join("\n")
+  end
+
   def greeting?
     ReplymeshKnowledgeService.greeting?(@question)
   end
 
   def greeting_answer
     store_name = @company.store_setting&.company_name.presence || @company.name
-    greeting = case Time.current.hour
+    greeting = case current_store_time.hour
                when 5...12 then "Bom dia"
                when 12...18 then "Boa tarde"
                else "Boa noite"
                end
     initial_message = @settings.initial_message.to_s.strip
     initial_message = "Como posso ajudar voce hoje?" if initial_message.blank?
-    "#{greeting}!\nSeja bem-vindo a #{store_name}.\n#{initial_message}\n\nPara fazer um pedido: #{menu_url}"
+    "#{greeting}! Seja bem-vindo a #{store_name}.\n#{initial_message}\n\nCardapio: #{menu_url}"
   end
 
   def find_or_create_conversation
     phone = normalized_phone
-    conversation = StoreAiConversation.recent_for(@company.id, phone).first if phone.present?
+    conversation = StoreAiConversation.latest_for_phone(@company.id, phone).first if phone.present?
+    conversation&.resume_if_expired!
+    conversation = nil if conversation&.status == "handed_off"
     conversation ||= @company.store_ai_conversations.create!(
       phone: phone,
       channel: @simulate ? "simulator" : "whatsapp",
@@ -258,11 +281,15 @@ class StoreAiService
   end
 
   def out_of_scope_answer
-    "#{OUT_OF_SCOPE} Para fazer um pedido, acesse: #{menu_url}"
+    OUT_OF_SCOPE
   end
 
   def fallback_answer
-    "Nao encontrei essa informacao nos dados atuais da loja. Voce pode conferir aqui: #{menu_url}"
+    "Nao consegui entender direitinho. Me chama com o nome do produto, bairro, forma de pagamento ou pedido que eu te ajudo por aqui."
+  end
+
+  def human_handoff_answer
+    "Certo, vou deixar um atendente continuar por aqui."
   end
 
   def menu_url
@@ -275,6 +302,40 @@ class StoreAiService
       names = [zone["nome"], *Array(zone["aliases"])].map { |value| ReplymeshKnowledgeService.normalize(value) }
       names.any? { |name| name.present? && normalized_question.include?(name) }
     end
+  end
+
+  def current_store_time
+    Time.current.in_time_zone(store_timezone)
+  end
+
+  def store_timezone
+    @company.respond_to?(:timezone) && @company.timezone.present? ? @company.timezone : "America/Sao_Paulo"
+  end
+
+  def question_about_today?
+    ReplymeshKnowledgeService.normalize(@question).match?(/hoje|agora|aberto|aberta|fecha|fechado|fechada/)
+  end
+
+  def open_now?(hour)
+    return false unless hour&.dig("aberto")
+
+    open_minutes = minutes_for(hour["abre"])
+    close_minutes = minutes_for(hour["fecha"])
+    current_minutes = current_store_time.hour * 60 + current_store_time.min
+    return false if open_minutes.nil? || close_minutes.nil?
+
+    if close_minutes < open_minutes
+      current_minutes >= open_minutes || current_minutes <= close_minutes
+    else
+      current_minutes.between?(open_minutes, close_minutes)
+    end
+  end
+
+  def minutes_for(value)
+    hour, minute = value.to_s.split(":").map(&:to_i)
+    return if hour.nil?
+
+    hour * 60 + minute.to_i
   end
 
   def limit_reached?

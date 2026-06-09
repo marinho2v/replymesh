@@ -1,7 +1,7 @@
 class EvolutionMessagePayloadParser
   Result = Struct.new(
     :success, :phone, :text, :instance_name, :instance_uuid, :message_id,
-    :error, :ignored_reason, keyword_init: true
+    :error, :ignored_reason, :from_me, keyword_init: true
   ) do
     def success? = success
   end
@@ -16,22 +16,24 @@ class EvolutionMessagePayloadParser
   end
 
   def call
-    return ignored("Mensagem enviada pelo proprio sistema") if from_me?
-    return ignored("Mensagem de grupo") if group?
-    return ignored("Evento de localizacao") if location?
+    phone = extracted_phone
+    text = extract_text.to_s.strip.truncate(2_000)
 
-    phone = normalize_phone(first_present(info[:Sender], info[:Chat], key[:remoteJid], data[:sender], @payload[:sender], @payload[:from]))
-    text = extract_text
+    return ignored("Mensagem de grupo", phone: phone, text: text) if group?
+    return ignored("Mensagem enviada pelo proprio sistema", phone: phone, text: text, from_me: true) if from_me?
+    return ignored("Evento de localizacao", phone: phone, text: text) if location?
+
     return failure("Telefone nao identificado") if phone.blank?
     return ignored("Mensagem sem texto") if text.blank?
 
     Result.new(
       success: true,
       phone: phone,
-      text: text.to_s.strip.truncate(2_000),
+      text: text,
       instance_name: instance_name,
       instance_uuid: instance_uuid,
-      message_id: first_present(key[:id], info[:ID], data[:id], @payload[:id])
+      message_id: first_present(key[:id], info[:ID], data[:id], @payload[:id]),
+      from_me: false
     )
   end
 
@@ -79,6 +81,16 @@ class EvolutionMessagePayloadParser
     %i[locationMessage LocationMessage liveLocationMessage location].any? { |field| message[field].present? }
   end
 
+  def extracted_phone
+    source = if from_me?
+               first_present(info[:Chat], key[:remoteJid], data[:sender], @payload[:sender], @payload[:from])
+             else
+               first_present(info[:Sender], info[:Chat], key[:remoteJid], data[:sender], @payload[:sender], @payload[:from])
+             end
+
+    normalize_phone(source)
+  end
+
   def normalize_phone(value)
     value.to_s.split("@").first.gsub(/\D/, "")
   end
@@ -87,8 +99,16 @@ class EvolutionMessagePayloadParser
     values.compact_blank.first
   end
 
-  def ignored(reason)
-    Result.new(success: false, instance_name: instance_name, instance_uuid: instance_uuid, ignored_reason: reason)
+  def ignored(reason, phone: nil, text: nil, from_me: false)
+    Result.new(
+      success: false,
+      phone: phone,
+      text: text,
+      instance_name: instance_name,
+      instance_uuid: instance_uuid,
+      ignored_reason: reason,
+      from_me: from_me
+    )
   end
 
   def failure(error)
