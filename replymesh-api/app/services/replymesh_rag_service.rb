@@ -1,5 +1,6 @@
 class ReplymeshRagService
   KNOWLEDGE_PATH = Rails.root.join("docs", "REPLYMESH_AI_KNOWLEDGE_BASE.md")
+  CURATED_KNOWLEDGE_PATH = Rails.root.join("docs", "REPLYMESH_CARINA_ARTICLES.md")
   DEFAULT_TOP_K = 5
   MAX_CHUNK_CHARS = 1_800
 
@@ -18,7 +19,10 @@ class ReplymeshRagService
   end
 
   def search
-    source = File.exist?(KNOWLEDGE_PATH) ? File.read(KNOWLEDGE_PATH, encoding: "UTF-8") : ""
+    source = [CURATED_KNOWLEDGE_PATH, KNOWLEDGE_PATH]
+      .select { |path| File.exist?(path) }
+      .map { |path| File.read(path, encoding: "UTF-8") }
+      .join("\n\n")
     ranked = chunks(source)
       .map { |chunk| chunk.merge(score: score(chunk)) }
       .select { |chunk| chunk[:score].positive? }
@@ -75,7 +79,8 @@ class ReplymeshRagService
   end
 
   def terms
-    original = (@previous_questions + [@query]).join(" ").split.uniq
+    source_questions = ReplymeshKnowledgeService.continuation?(@query) ? @previous_questions.last(1) + [@query] : [@query]
+    original = source_questions.join(" ").split.uniq - ReplymeshKnowledgeService::STOP_WORDS
     expanded = original.dup
     SYNONYMS.each { |group| expanded.concat(group) if (group & original).any? }
     expanded.select { |term| term.length > 2 }.uniq

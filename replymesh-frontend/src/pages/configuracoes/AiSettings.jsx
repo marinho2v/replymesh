@@ -106,6 +106,15 @@ export function AiSettings({ onToast }) {
     }
   };
 
+  const copyGapDraft = async (draft) => {
+    try {
+      await navigator.clipboard.writeText(draft);
+      onToast?.("Rascunho copiado para revisao", "ok");
+    } catch {
+      onToast?.("Nao foi possivel copiar o rascunho", "err");
+    }
+  };
+
   if (loading) return <div className="page-stub">Carregando IA...</div>;
 
   return (
@@ -208,6 +217,31 @@ export function AiSettings({ onToast }) {
         <label className="field">
           <textarea rows="7" value={form.base_prompt || ""} onChange={(event) => update("base_prompt", event.target.value)} />
         </label>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title">
+          <Icon name="BookOpenCheck" size={18} />
+          Lacunas da base da Carina
+        </div>
+        <p className="muted">
+          Perguntas sem cobertura ficam aqui para revisao humana. Copie o rascunho, valide o fluxo real e publique na base por revisao de codigo.
+        </p>
+        <div className="ai-ranking">
+          {(usage?.knowledge_gaps || []).map((gap) => (
+            <div key={gap.id}>
+              <span>
+                <strong>{gap.probable_module}</strong>
+                <small>{gap.company_name} - {gap.question}</small>
+              </span>
+              <button className="btn" type="button" onClick={() => copyGapDraft(gap.article_draft)}>
+                <Icon name="Copy" size={15} />
+                Copiar rascunho
+              </button>
+            </div>
+          ))}
+          {!usage?.knowledge_gaps?.length && <p className="muted">Nenhuma lacuna pendente.</p>}
+        </div>
       </section>
 
       <section className="panel">

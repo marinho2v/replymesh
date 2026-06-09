@@ -38,7 +38,7 @@ class StoreRagService
   end
 
   def order_query?
-    @query.match?(/pedido|status|andamento|entrega/)
+    @query.match?(/pedido|status|andamento/)
   end
 
   def order_chunk
@@ -76,10 +76,10 @@ class StoreRagService
   def intent_boost(module_name, chunk_id)
     return 30 if @query.match?(/cupom|desconto|promocao|oferta/) && module_name == "promocoes"
     return 30 if @query.match?(/horario|abre|fecha|funcionamento/) && module_name == "horarios"
-    return 35 if @query.match?(/pedido|status|andamento|entrega/) && chunk_id == "latest-order"
-    return 25 if @query.match?(/produto|cardapio|lanche|preco|tem|vende/) && module_name == "produtos"
+    return 35 if @query.match?(/pedido|status|andamento/) && chunk_id == "latest-order"
+    return 25 if @query.match?(/produto|cardapio|lanche|hamburguer|burger|barato|preco|tem|vende/) && module_name == "produtos"
     return 30 if @query.match?(/pix|pagamento|dinheiro|cartao|credito|debito|aceita/) && module_name == "pagamentos"
-    return 30 if @query.match?(/entrega|taxa|frete|retirada|demora|tempo/) && module_name == "entrega"
+    return 30 if @query.match?(/entrega|taxa|frete|retir|demora|tempo/) && module_name == "entrega"
 
     0
   end
@@ -97,12 +97,15 @@ class StoreRagService
     return serialized unless chunk.module_name == "produtos"
 
     products = JSON.parse(chunk.content)
-    meaningful = query_terms - %w[tem vende produto produtos cardapio lanche hamburguer]
+    meaningful = query_terms - %w[qual quais mais barato barata menor preco tem vende produto produtos cardapio lanche hamburguer]
     matches = products.select do |product|
       name = normalize(product["nome"])
       meaningful.empty? || meaningful.any? { |term| name.include?(term) }
     end
     selected = meaningful.empty? ? similar_products(products) : (matches.presence || similar_products(products))
+    if @query.match?(/mais barato|mais barata|menor preco/)
+      selected = selected.sort_by { |product| product["promocional_centavos"].presence || product["preco_centavos"].to_i }
+    end
     serialized.merge(content: selected.first(6).to_json)
   rescue JSON::ParserError
     serialized

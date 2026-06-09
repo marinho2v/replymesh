@@ -33,8 +33,13 @@ class CarinaAssistantService
     end
 
     fallback = contextual_fallback
-    finish(fallback, fallback == ReplymeshKnowledgeService::UNKNOWN ? "error" : "success",
-           source: "knowledge_base", error: provider_result&.error)
+    gap = fallback == ReplymeshKnowledgeService::UNKNOWN
+    finish(
+      fallback,
+      gap ? "gap" : "success",
+      source: "knowledge_base",
+      error: gap ? knowledge_gap_message(provider_result&.error) : provider_result&.error
+    )
   end
 
   private
@@ -80,7 +85,8 @@ class CarinaAssistantService
       Nao use titulos gigantes, tabelas ou blocos longos.
       Nao coloque toda a resposta em negrito.
       Informe o caminho real do menu quando ele estiver na base.
-      Considere a memoria recente para entender perguntas de continuacao.
+      A pergunta atual sempre tem prioridade. Considere a memoria recente apenas
+      quando a pergunta atual for claramente uma continuacao.
       Termine com uma sugestao curta de proximo passo quando for util.
       Nao invente telas, configuracoes ou estados. Se a base nao cobrir a
       pergunta, diga: "#{ReplymeshKnowledgeService::UNKNOWN}"
@@ -98,6 +104,8 @@ class CarinaAssistantService
   end
 
   def conversation_memory
+    return "" unless ReplymeshKnowledgeService.continuation?(@question)
+
     recent_logs.reverse.flat_map do |entry|
       [
         "Usuario: #{entry.question.to_s.truncate(500)}",
@@ -116,6 +124,8 @@ class CarinaAssistantService
   end
 
   def previous_questions
+    return [] unless ReplymeshKnowledgeService.continuation?(@question)
+
     recent_logs.map(&:question)
   end
 
@@ -131,6 +141,11 @@ class CarinaAssistantService
       @question,
       previous_questions: previous_questions
     )
+  end
+
+  def knowledge_gap_message(provider_error)
+    probable_module = ReplymeshKnowledgeService.new(@question).relevant_topics.first || "nao_identificado"
+    ["knowledge_gap", "module=#{probable_module}", provider_error.presence].compact.join(" | ")
   end
 
   def safe_company_context

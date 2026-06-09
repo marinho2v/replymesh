@@ -1,6 +1,12 @@
 class StoreAiService
   MEMORY_MESSAGES = 10
-  OUT_OF_SCOPE = "Posso ajudar apenas com informacoes da loja e dos pedidos 😊"
+  OUT_OF_SCOPE = "Posso ajudar apenas com produtos, horarios, entrega, pagamento, promocoes e pedidos desta loja."
+  TECHNICAL_SCOPE_PATTERNS = [
+    /painel|dashboard|cadastrar produto|editar produto|configurar sistema/,
+    /replymesh|suporte|ticket|token|api key|webhook|evolution/,
+    /mercado pago tecnico|access token|public key|integracao/,
+    /como configurar whatsapp|qr code do whatsapp|usuario|permissao/
+  ].freeze
 
   def self.call(company:, user:, question:, phone: nil, simulate: false)
     new(company: company, user: user, question: question, phone: phone, simulate: simulate).call
@@ -130,8 +136,17 @@ class StoreAiService
     when "entrega"
       parts = []
       parts << (payload["entrega_ativa"] ? "🛵 Fazemos entrega." : "A entrega esta indisponivel no momento.")
-      parts << "💰 Taxa padrao: #{format_brl(payload['taxa_padrao_centavos'])}."
-      parts << "🕒 Tempo estimado: #{payload['tempo_estimado_minutos']} minutos." if payload["tempo_estimado_minutos"]
+      if (zone = matching_delivery_zone(payload["regioes"]))
+        parts << "Regiao: #{zone['nome']}."
+        parts << "Taxa: #{format_brl(zone['taxa_centavos'])}."
+        parts << "Pedido minimo: #{format_brl(zone['pedido_minimo_centavos'])}." if zone["pedido_minimo_centavos"].to_i.positive?
+        parts << "Tempo estimado: #{zone['tempo_estimado_minutos']} minutos." if zone["tempo_estimado_minutos"]
+      else
+        parts << "Taxa padrao: #{format_brl(payload['taxa_padrao_centavos'])}."
+        parts << "Tempo estimado: #{payload['tempo_estimado_minutos']} minutos." if payload["tempo_estimado_minutos"]
+        parts << "Informe seu bairro para eu conferir a regiao correta." if Array(payload["regioes"]).any?
+      end
+      parts << "Tambem e possivel retirar no local." if payload["retirada_ativa"]
       parts.join("\n")
     else
       chunk[:content].to_s.truncate(700)
@@ -216,7 +231,17 @@ class StoreAiService
   end
 
   def out_of_scope?
-    ReplymeshKnowledgeService::OUT_OF_SCOPE_PATTERNS.any? { |pattern| ReplymeshKnowledgeService.normalize(@question).match?(pattern) }
+    normalized = ReplymeshKnowledgeService.normalize(@question)
+    ReplymeshKnowledgeService::OUT_OF_SCOPE_PATTERNS.any? { |pattern| normalized.match?(pattern) } ||
+      TECHNICAL_SCOPE_PATTERNS.any? { |pattern| normalized.match?(pattern) }
+  end
+
+  def matching_delivery_zone(zones)
+    normalized_question = ReplymeshKnowledgeService.normalize(@question)
+    Array(zones).find do |zone|
+      names = [zone["nome"], *Array(zone["aliases"])].map { |value| ReplymeshKnowledgeService.normalize(value) }
+      names.any? { |name| name.present? && normalized_question.include?(name) }
+    end
   end
 
   def limit_reached?

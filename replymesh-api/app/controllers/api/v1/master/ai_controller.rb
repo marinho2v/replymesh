@@ -58,7 +58,8 @@ module Api
               store_ai: usage_for("store_ai"),
               top_companies: top_companies,
               top_users: top_users,
-              models: AiUsageLog.group(:assistant_type, :model).count.map { |(type, model), count| { assistant_type: type, model: model, messages: count } }
+              models: AiUsageLog.group(:assistant_type, :model).count.map { |(type, model), count| { assistant_type: type, model: model, messages: count } },
+              knowledge_gaps: knowledge_gaps
             }
           }
         end
@@ -94,6 +95,37 @@ module Api
               user = User.find_by(id: user_id)
               { user_id: user_id, user_name: user&.name || "Usuario removido", messages: messages }
             end
+        end
+
+        def knowledge_gaps
+          AiAssistantLog.includes(:company, :user).where(status: "gap").order(created_at: :desc).limit(20).map do |log|
+            probable_module = log.error_message.to_s[/module=([^|]+)/, 1].to_s.strip.presence || "A revisar"
+            {
+              id: log.id,
+              question: log.question,
+              company_id: log.company_id,
+              company_name: log.company&.name || "Empresa removida",
+              user_name: log.user&.name || "Usuario removido",
+              probable_module: probable_module,
+              created_at: log.created_at,
+              article_draft: article_draft(log.question, probable_module)
+            }
+          end
+        end
+
+        def article_draft(question, probable_module)
+          <<~MARKDOWN.strip
+            # #{probable_module}
+            <!-- keywords: revisar -->
+            **Modulo:** #{probable_module}
+            **Pergunta:** #{question}
+
+            **Resposta ideal:** Preencher apos validacao humana.
+
+            **Passo a passo:** 1. Revisar o fluxo real. 2. Documentar o caminho do menu. 3. Validar antes de publicar.
+            **Observacoes:** Nao incluir senhas, tokens ou dados de clientes.
+            **Quando abrir ticket:** Quando o fluxo documentado nao resolver.
+          MARKDOWN
         end
 
         def settings_params

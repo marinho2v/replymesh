@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { CoAvatar } from "../../components/ui/CoAvatar.jsx";
 import { Icon } from "../../components/ui/Icon.jsx";
+import { companyImpersonationUrl } from "../../lib/companyImpersonation.js";
 import { BRL } from "../../lib/utils.js";
 import { api, getStoredUser } from "../../services/api.js";
 
@@ -64,6 +65,7 @@ export function EmpresasList({ onToast }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusLoadingId, setStatusLoadingId] = useState(null);
+  const [impersonatingId, setImpersonatingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const masterUser = getStoredUser();
   const canImpersonate = masterUser?.global_role === "super_admin" ||
@@ -140,18 +142,17 @@ export function EmpresasList({ onToast }) {
     }
   };
 
-  const enterCompany = (company) => {
-    const confirmed = window.confirm(
-      `Entrar no painel de "${company.name}" como suporte Replymesh?\n\nA sessao sera temporaria e todas as acoes ficarao auditadas.`
-    );
-    if (!confirmed) return;
+  const enterCompany = async (company) => {
+    setImpersonatingId(company.id);
+    setOpenMenuId(null);
 
-    const popup = window.open(`/empresas/${company.id}/acesso`, "_blank", "noopener,noreferrer");
-    if (!popup) {
-      onToast?.("O navegador bloqueou a nova aba. Libere pop-ups para o Painel Master.", "err");
-      return;
+    try {
+      const data = await api.impersonateCompany(company.id);
+      window.location.assign(companyImpersonationUrl(data));
+    } catch (err) {
+      setImpersonatingId(null);
+      onToast?.(err.message || "Nao foi possivel entrar na empresa.", "err");
     }
-    onToast?.(`Preparando acesso seguro para ${company.name}`, "ok");
   };
 
   return (
@@ -260,7 +261,10 @@ export function EmpresasList({ onToast }) {
                           <button onClick={() => navigate("/financeiro")}><Icon name="ChartNoAxesCombined" size={15} />Relatorios</button>
                           <button onClick={() => navigate(`/empresas/${company.id}/importar-backup-2r`)}><Icon name="Archive" size={15} />Importar backup</button>
                           {canImpersonate && (
-                            <button onClick={() => enterCompany(company)}><Icon name="LogIn" size={15} />Entrar como empresa</button>
+                            <button disabled={impersonatingId === company.id} onClick={() => enterCompany(company)}>
+                              <Icon name={impersonatingId === company.id ? "LoaderCircle" : "LogIn"} size={15} className={impersonatingId === company.id ? "spin" : ""} />
+                              {impersonatingId === company.id ? "Entrando..." : "Entrar como empresa"}
+                            </button>
                           )}
                         </div>}
                       </div>

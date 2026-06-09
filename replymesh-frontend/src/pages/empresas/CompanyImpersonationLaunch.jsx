@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Icon } from "../../components/ui/Icon.jsx";
+import { companyImpersonationUrl } from "../../lib/companyImpersonation.js";
 import { api } from "../../services/api.js";
 
 export function CompanyImpersonationLaunch() {
@@ -13,22 +14,7 @@ export function CompanyImpersonationLaunch() {
     const launch = async () => {
       try {
         const data = await api.impersonateCompany(id);
-        const payload = new URLSearchParams({
-          token: data.token,
-          session_token: data.session_token,
-          company_id: String(data.company_id),
-          company_slug: data.company_slug,
-          company_name: data.company?.name || "",
-          master_name: data.user?.name || "Suporte Replymesh",
-          user: JSON.stringify(data.user),
-          expires_at: data.expires_at,
-        });
-        const slug = data.company_slug || "";
-        const fallbackUrl = `https://${slug}.replymesh.cloud/loja/${slug}/admin/impersonate`;
-        const loginUrl = data.login_url && !data.login_url.includes("127.0.0.1") && !data.login_url.includes("localhost")
-          ? data.login_url
-          : fallbackUrl;
-        window.location.replace(`${loginUrl}#${payload.toString()}`);
+        window.location.replace(companyImpersonationUrl(data));
       } catch (launchError) {
         if (active) setError(launchError.message || "Nao foi possivel abrir o painel da empresa.");
       }

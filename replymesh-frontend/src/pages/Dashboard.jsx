@@ -6,6 +6,7 @@ import { Donut } from "../components/ui/Donut.jsx";
 import { Icon } from "../components/ui/Icon.jsx";
 import { LineChart } from "../components/ui/LineChart.jsx";
 import { CardHead, SeeAll } from "../components/shared/CardHead.jsx";
+import { companyImpersonationUrl } from "../lib/companyImpersonation.js";
 import { api } from "../services/api.js";
 import { BRL } from "../lib/utils.js";
 
@@ -74,6 +75,7 @@ export function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [impersonatingId, setImpersonatingId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -109,10 +111,16 @@ export function Dashboard() {
     (charts.whatsapp_status || []).reduce((sum, item) => sum + Number(item.value || 0), 0)
   ), [charts.whatsapp_status]);
 
-  const enterCompany = (company) => {
-    if (!window.confirm(`Entrar em "${company.name}" como suporte Replymesh?`)) return;
-    const popup = window.open(`/empresas/${company.id}/acesso`, "_blank", "noopener,noreferrer");
-    if (!popup) alert("Libere pop-ups para abrir o painel da empresa.");
+  const enterCompany = async (company) => {
+    setImpersonatingId(company.id);
+
+    try {
+      const impersonation = await api.impersonateCompany(company.id);
+      window.location.assign(companyImpersonationUrl(impersonation));
+    } catch (err) {
+      setImpersonatingId(null);
+      setError(err.message || "Nao foi possivel entrar na empresa.");
+    }
   };
 
   return (
@@ -270,7 +278,9 @@ export function Dashboard() {
                           <td>
                             <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                               <button className="ra" title="Ver" onClick={() => navigate(`/empresas/${company.id}`)}><Icon name="Eye" size={16} /></button>
-                              <button className="ra" title="Entrar como empresa" onClick={() => enterCompany(company)}><Icon name="LogIn" size={16} /></button>
+                              <button className="ra" disabled={impersonatingId === company.id} title="Entrar como empresa" onClick={() => enterCompany(company)}>
+                                <Icon name={impersonatingId === company.id ? "LoaderCircle" : "LogIn"} size={16} className={impersonatingId === company.id ? "spin" : ""} />
+                              </button>
                               <button className="ra" title="WhatsApp" onClick={() => navigate("/whatsapp")}><Icon name="MessageCircle" size={16} /></button>
                             </div>
                           </td>

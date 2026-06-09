@@ -112,6 +112,16 @@ class StoreKnowledgeService
 
   def delivery_chunk
     store = @company.store_setting
+    zones = @company.delivery_zones.active.by_priority.map do |zone|
+      {
+        nome: zone.name,
+        aliases: Array(zone.aliases),
+        cidade: zone.city,
+        taxa_centavos: zone.delivery_fee_cents,
+        pedido_minimo_centavos: zone.minimum_order_cents,
+        tempo_estimado_minutos: zone.estimated_minutes
+      }
+    end
     Chunk.new(
       id: "delivery",
       module_name: "entrega",
@@ -121,7 +131,8 @@ class StoreKnowledgeService
         entrega_ativa: store&.delivery_enabled,
         retirada_ativa: store&.pickup_enabled,
         taxa_padrao_centavos: store&.delivery_fee_cents,
-        tempo_estimado_minutos: store&.estimated_delivery_minutes
+        tempo_estimado_minutos: store&.estimated_delivery_minutes,
+        regioes: zones
       }.to_json
     )
   end

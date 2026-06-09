@@ -1,5 +1,5 @@
 class AiAssistantLog < ApplicationRecord
-  STATUSES = %w[success blocked error limited disabled].freeze
+  STATUSES = %w[success blocked gap error limited disabled].freeze
 
   belongs_to :company, optional: true
   belongs_to :user, optional: true
