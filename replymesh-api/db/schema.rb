@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_07_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1009,9 +1009,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_000100) do
   end
 
   create_table "store_ai_settings", force: :cascade do |t|
+    t.boolean "allow_delivery", default: true, null: false
     t.boolean "allow_hours", default: true, null: false
     t.boolean "allow_order_status", default: true, null: false
     t.boolean "allow_orders", default: true, null: false
+    t.boolean "allow_payments", default: true, null: false
     t.boolean "allow_products", default: true, null: false
     t.boolean "allow_promotions", default: true, null: false
     t.string "assistant_name", default: "Assistente da Loja", null: false

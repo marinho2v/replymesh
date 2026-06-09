@@ -54,7 +54,7 @@ module Api
               instance_token: token
             )
             instance.save!
-            client.configure_location_webhook(token)
+            client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
             log!(instance, "ok", "Instancia WhatsApp criada", response)
 
             render json: { success: true, instance: serialize_instance(instance) }, status: :created
@@ -184,7 +184,7 @@ module Api
             instance.provider = "evolution_go"
             instance.base_url = response[:base_url].presence || remote_after_create[:base_url].presence || ENV["EVOLUTION_GO_BASE_URL"].presence
             instance.save!
-            client.configure_location_webhook(token)
+            client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
             WhatsappRemoteInstance.where(instance_name: TEST_INSTANCE_NAME).delete_all
             log!(instance, "ok", "Instancia teste criada na Evolution", remote_after_create)
 

@@ -3,55 +3,12 @@ module Api
     module Webhooks
       class EvolutionController < ApplicationController
         def messages
-          return render_error("Nao autorizado", :unauthorized) unless valid_webhook_key?
-
           payload = parse_payload
           parsed = EvolutionMessagePayloadParser.call(payload: payload, headers: normalized_headers)
           return render json: { success: true, ignored: true, reason: parsed.ignored_reason }, status: :ok if parsed.ignored_reason.present?
           return render json: { success: false, error: parsed.error }, status: :unprocessable_entity unless parsed.success?
 
-          instance = find_message_instance(parsed)
-          return render json: { success: false, error: "Instancia Evolution nao vinculada" }, status: :unprocessable_entity unless instance
-
-          setting = StoreAiSetting.for_company(instance.company)
-          unless setting.enabled? && setting.auto_reply_whatsapp?
-            log_ai_webhook(instance, parsed, "skipped", "IA ou resposta automatica desativada")
-            return render json: { success: true, ignored: true, reason: "IA ou resposta automatica desativada" }, status: :ok
-          end
-
-          if duplicate_message?(instance, parsed)
-            return render json: { success: true, ignored: true, reason: "Mensagem ja processada" }, status: :ok
-          end
-
-          result = StoreAiService.call(
-            company: instance.company,
-            user: nil,
-            question: parsed.text,
-            phone: parsed.phone,
-            simulate: false
-          )
-          answer = StoreAiWhatsappFormatter.format(result[:answer])
-
-          if result[:status] == "disabled" || answer.blank?
-            log_ai_webhook(instance, parsed, "skipped", result[:status])
-            return render json: { success: true, ignored: true, reason: result[:status] }, status: :ok
-          end
-
-          send_result = EvolutionGoClient.new.send_text(
-            instance.instance_token,
-            phone: parsed.phone,
-            message: answer
-          )
-          mark_message_processed(instance, parsed)
-          log_ai_webhook(instance, parsed, "sent", nil, answer: answer, response: send_result)
-
-          render json: {
-            success: true,
-            sent: true,
-            company_id: instance.company_id,
-            phone_last4: parsed.phone.last(4),
-            status: result[:status]
-          }, status: :ok
+          process_message(parsed)
         rescue EvolutionGoClient::Error => e
           log_ai_webhook(instance, parsed, "failed", e.message) if defined?(instance) && instance && defined?(parsed) && parsed
           render json: { success: false, error: "Nao foi possivel enviar a resposta pela Evolution" }, status: :bad_gateway
@@ -61,13 +18,21 @@ module Api
         end
 
         def location
-          return render_error("Nao autorizado", :unauthorized) unless valid_webhook_key?
-
           payload = parse_payload
-          parsed = EvolutionLocationPayloadParser.call(payload: payload, headers: normalized_headers)
-          instance = find_instance(parsed)
+          message = EvolutionMessagePayloadParser.call(payload: payload, headers: normalized_headers)
+          return process_message(message) if message.success?
+          if message.ignored_reason.present? && message.ignored_reason != "Evento de localizacao"
+            return render json: {
+              success: true,
+              ignored: true,
+              reason: message.ignored_reason
+            }, status: :ok
+          end
 
-          return render_error("Instancia Evolution nao vinculada", :unprocessable_entity) unless instance
+          parsed = EvolutionLocationPayloadParser.call(payload: payload, headers: normalized_headers)
+          instance = authorized_instance(parsed, require_token: false)
+
+          return render_error("Nao autorizado", :unauthorized) unless instance
 
           if parsed.ignored_reason.present?
             log_webhook(instance, "warn", "Localizacao ignorada: #{parsed.ignored_reason}", parsed)
@@ -100,6 +65,8 @@ module Api
             google_maps_url: order.google_maps_url,
             waze_url: order.waze_url
           }, status: :ok
+        rescue EvolutionGoClient::Error
+          render json: { success: false, error: "Nao foi possivel enviar a resposta pela Evolution" }, status: :bad_gateway
         rescue StandardError => e
           Rails.logger.error("Evolution location webhook error: #{e.class} #{e.message}")
           render json: { success: false, error: "Erro interno no webhook de localizacao" }, status: :internal_server_error
@@ -136,8 +103,9 @@ module Api
           ActiveSupport::SecurityUtils.secure_compare(provided.to_s, expected.to_s)
         end
 
-        def find_instance(parsed)
+        def find_instance(parsed, require_token: false)
           scope = WhatsappInstance.includes(:company)
+          scope = scope.where.not(instance_token: [nil, ""]) if require_token
           if parsed.instance_uuid.present?
             scope.find_by(instance_uuid: parsed.instance_uuid)
           elsif parsed.instance_name.present?
@@ -145,13 +113,75 @@ module Api
           end
         end
 
-        def find_message_instance(parsed)
-          scope = WhatsappInstance.includes(:company).where.not(instance_token: [nil, ""])
-          if parsed.instance_uuid.present?
-            scope.find_by(instance_uuid: parsed.instance_uuid)
-          elsif parsed.instance_name.present?
-            scope.find_by(instance_name: parsed.instance_name)
+        def authorized_instance(parsed, require_token:)
+          token_instance = EvolutionWebhookToken.resolve(params[:token])
+          if token_instance
+            return if parsed.instance_uuid.present? && token_instance.instance_uuid.present? &&
+                      parsed.instance_uuid.to_s != token_instance.instance_uuid.to_s
+            return if parsed.instance_name.present? && parsed.instance_name.to_s != token_instance.instance_name.to_s
+
+            return token_instance if !require_token || token_instance.instance_token.present?
           end
+
+          return unless valid_webhook_key?
+
+          find_instance(parsed, require_token: require_token)
+        end
+
+        def process_message(parsed)
+          instance = authorized_instance(parsed, require_token: true)
+          return render json: { success: false, error: "Nao autorizado" }, status: :unauthorized unless instance
+
+          setting = StoreAiSetting.for_company(instance.company)
+          unless setting.enabled? && setting.auto_reply_whatsapp?
+            log_ai_webhook(instance, parsed, "skipped", "IA ou resposta automatica desativada")
+            return render json: { success: true, ignored: true, reason: "IA ou resposta automatica desativada" }, status: :ok
+          end
+
+          if duplicate_message?(instance, parsed)
+            return render json: { success: true, ignored: true, reason: "Mensagem ja processada" }, status: :ok
+          end
+
+          unless StoreAiRateLimiter.allow?(company: instance.company, phone: parsed.phone)
+            log_ai_webhook(instance, parsed, "skipped", "rate_limit")
+            return render json: { success: true, ignored: true, reason: "rate_limit" }, status: :ok
+          end
+
+          result = StoreAiService.call(
+            company: instance.company,
+            user: nil,
+            question: parsed.text,
+            phone: parsed.phone,
+            simulate: false
+          )
+          answer = StoreAiWhatsappFormatter.format(result[:answer])
+
+          if %w[disabled ignored limited].include?(result[:status]) || answer.blank?
+            log_ai_webhook(instance, parsed, "skipped", result[:status], result: result)
+            return render json: { success: true, ignored: true, reason: result[:status] }, status: :ok
+          end
+
+          begin
+            send_result = EvolutionGoClient.new.send_text(
+              instance.instance_token,
+              phone: parsed.phone,
+              message: answer
+            )
+          rescue EvolutionGoClient::Error => e
+            log_ai_webhook(instance, parsed, "failed", e.message, answer: answer, result: result)
+            raise
+          end
+          mark_message_processed(instance, parsed)
+          log_ai_webhook(instance, parsed, "sent", nil, answer: answer, response: send_result, result: result)
+
+          render json: {
+            success: true,
+            sent: true,
+            company_id: instance.company_id,
+            phone_last4: parsed.phone.last(4),
+            status: result[:status],
+            intent: result[:intent]
+          }, status: :ok
         end
 
         def duplicate_message?(instance, parsed)
@@ -166,7 +196,7 @@ module Api
           Rails.cache.write("store-ai:evolution:#{instance.id}:#{parsed.message_id}", true, expires_in: 24.hours)
         end
 
-        def log_ai_webhook(instance, parsed, status, error = nil, answer: nil, response: nil)
+        def log_ai_webhook(instance, parsed, status, error = nil, answer: nil, response: nil, result: nil)
           WhatsappLog.create!(
             company: instance.company,
             whatsapp_instance: instance,
@@ -180,6 +210,10 @@ module Api
               question: parsed.text.to_s.truncate(500),
               answer: answer.to_s.truncate(1_200).presence,
               error: error.to_s.truncate(300).presence,
+              intent: result&.dig(:intent),
+              provider_called: result&.dig(:provider_called),
+              fallback: result&.dig(:fallback),
+              tokens_used: result&.dig(:tokens_estimated),
               evolution_message_id: response.is_a?(Hash) ? response[:message_id] : nil
             }.compact
           )

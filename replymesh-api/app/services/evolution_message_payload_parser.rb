@@ -70,7 +70,9 @@ class EvolutionMessagePayloadParser
   end
 
   def group?
-    [info[:Chat], key[:remoteJid], @payload[:remoteJid]].compact.any? { |value| value.to_s.include?("@g.us") }
+    [info[:Chat], key[:remoteJid], data[:sender], @payload[:remoteJid], @payload[:sender], @payload[:from]]
+      .compact
+      .any? { |value| value.to_s.include?("@g.us") }
   end
 
   def location?

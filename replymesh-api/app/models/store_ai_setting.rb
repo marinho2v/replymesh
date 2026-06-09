@@ -15,11 +15,11 @@ class StoreAiSetting < ApplicationRecord
       assistant_name: assistant_name,
       initial_message: initial_message,
       tone: tone,
-      model: model.presence || AiGlobalSetting.current.model,
-      daily_limit: daily_limit,
       allow_orders: allow_orders,
       allow_products: allow_products,
       allow_hours: allow_hours,
+      allow_delivery: allow_delivery,
+      allow_payments: allow_payments,
       allow_promotions: allow_promotions,
       allow_order_status: allow_order_status
     }

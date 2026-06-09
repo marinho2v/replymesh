@@ -14,6 +14,7 @@ class StoreKnowledgeService
       promotions_chunk,
       payments_chunk,
       delivery_chunk,
+      ordering_chunk,
       orders_chunk
     ].flatten.compact
   end
@@ -54,14 +55,30 @@ class StoreKnowledgeService
   end
 
   def products_chunk
-    rows = @company.products.active.includes(:category).ordered.limit(120).map do |product|
+    rows = @company.products.active
+      .includes(:category, product_option_groups: :product_option_items)
+      .ordered
+      .limit(120)
+      .map do |product|
       {
         nome: product.name,
+        slug: product.slug,
         categoria: product.category&.name,
         descricao: product.description,
         preco_centavos: product.price_cents,
         promocional_centavos: product.respond_to?(:promotional_price_cents) ? product.promotional_price_cents : nil,
-        disponivel: product.is_active
+        disponivel: product.is_active,
+        link: "https://#{@company.slug}.replymesh.cloud/menu?produto=#{product.slug}",
+        opcoes: product.product_option_groups.ordered.map do |group|
+          {
+            nome: group.name,
+            tipo: group.group_type,
+            obrigatorio: group.required,
+            itens: group.product_option_items.active.ordered.map do |item|
+              { nome: item.name, adicional_centavos: item.additional_price_cents }
+            end
+          }
+        end
       }
     end
     Chunk.new(id: "products", module_name: "produtos", title: "Produtos ativos",
@@ -97,16 +114,27 @@ class StoreKnowledgeService
 
   def payments_chunk
     store = @company.store_setting
+    configured = @company.payment_methods.where(enabled: true).order(:id).pluck(:method_type)
     Chunk.new(
       id: "payments",
       module_name: "pagamentos",
       title: "Formas de pagamento",
       keywords: %w[pagamento pagamentos pix dinheiro cartao credito debito aceita],
       content: {
-        formas: Array(store&.accepted_payment_methods),
+        formas: (configured + Array(store&.accepted_payment_methods)).compact_blank.uniq,
         pix_ativo: store&.pix_enabled,
         mercado_pago_ativo: store&.respond_to?(:mercadopago_enabled) && store.mercadopago_enabled
       }.to_json
+    )
+  end
+
+  def ordering_chunk
+    Chunk.new(
+      id: "ordering-link",
+      module_name: "pedido",
+      title: "Link para fazer pedido",
+      keywords: %w[quero pedir fazer pedido comprar link cardapio menu],
+      content: { link: "https://#{@company.slug}.replymesh.cloud/menu" }.to_json
     )
   end
 

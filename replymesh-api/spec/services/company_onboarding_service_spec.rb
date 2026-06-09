@@ -45,6 +45,9 @@ RSpec.describe CompanyOnboardingService do
     expect(instance.provider).to eq("evolution_go")
     expect(instance.status).to eq("created")
     expect(client).to have_received(:create_instance).with("replymesh_nova_loja", token: instance.instance_token)
-    expect(client).to have_received(:configure_location_webhook).with(instance.instance_token)
+    expect(client).to have_received(:configure_location_webhook).with(
+      instance.instance_token,
+      webhook_token: kind_of(String)
+    )
   end
 end

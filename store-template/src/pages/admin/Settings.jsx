@@ -27,7 +27,6 @@ import {
 import { getAllTemplates, getTemplateCategories } from '../../templates'
 import {
   railsGetStoreAiSettings,
-  railsSimulateStoreAi,
   railsUpdateStoreAiSettings,
 } from '../../services/storeApi'
 
@@ -352,23 +351,19 @@ const defaultStoreAiSettings = {
   assistant_name: 'Assistente da Loja',
   initial_message: 'Ola! Como posso ajudar?',
   tone: 'simpatico, objetivo e natural',
-  model: '',
-  daily_limit: 100,
   allow_orders: true,
   allow_products: true,
   allow_hours: true,
+  allow_delivery: true,
+  allow_payments: true,
   allow_promotions: true,
   allow_order_status: true,
 }
 
 const StoreAiSection = ({ openSection, setOpenSection }) => {
   const [settings, setSettings] = useState(defaultStoreAiSettings)
-  const [question, setQuestion] = useState('')
-  const [phone, setPhone] = useState('')
-  const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -403,26 +398,12 @@ const StoreAiSection = ({ openSection, setOpenSection }) => {
     }
   }
 
-  const simulate = async () => {
-    if (!question.trim()) return
-    setTesting(true)
-    setMessage('')
-    try {
-      const payload = await railsSimulateStoreAi({ message: question, phone })
-      setResult(payload)
-    } catch (error) {
-      setMessage(error.message || 'Nao foi possivel testar a IA.')
-    } finally {
-      setTesting(false)
-    }
-  }
-
   return (
     <SettingsSection
       id="store-ai"
       icon={Bot}
       title="Inteligencia Artificial"
-      description="Configure e teste a IA que futuramente atendera os clientes da loja."
+      description="Configure o atendimento automatico aos clientes da sua loja."
       openSection={openSection}
       setOpenSection={setOpenSection}
     >
@@ -430,10 +411,6 @@ const StoreAiSection = ({ openSection, setOpenSection }) => {
         <p className="text-sm text-gray-400">Carregando IA da loja...</p>
       ) : (
         <>
-          <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-3 text-sm text-amber-100">
-            O simulador funciona localmente. O atendimento automatico pelo WhatsApp permanece desativado nesta fase.
-          </div>
-
           {message && <div className="rounded-lg border border-dark-600 bg-dark-900 p-3 text-sm text-gray-200">{message}</div>}
 
           <label className={compactCheckboxClass}>
@@ -453,8 +430,6 @@ const StoreAiSection = ({ openSection, setOpenSection }) => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Input label="Nome da IA" value={settings.assistant_name} onChange={(event) => update('assistant_name', event.target.value)} />
             <Input label="Tom de voz" value={settings.tone} onChange={(event) => update('tone', event.target.value)} />
-            <Input label="Modelo" value={settings.model || ''} onChange={(event) => update('model', event.target.value)} placeholder="Usar modelo definido pelo master" />
-            <Input label="Limite diario" type="number" min="1" value={settings.daily_limit} onChange={(event) => update('daily_limit', event.target.value)} />
           </div>
           <Textarea label="Mensagem inicial" rows={2} value={settings.initial_message} onChange={(event) => update('initial_message', event.target.value)} />
 
@@ -463,6 +438,8 @@ const StoreAiSection = ({ openSection, setOpenSection }) => {
               ['allow_orders', 'Responder sobre pedidos'],
               ['allow_products', 'Responder sobre produtos'],
               ['allow_hours', 'Responder sobre horarios'],
+              ['allow_delivery', 'Responder sobre entrega'],
+              ['allow_payments', 'Responder sobre pagamentos'],
               ['allow_promotions', 'Responder sobre promocoes'],
               ['allow_order_status', 'Consultar status do pedido'],
             ].map(([field, label]) => (
@@ -475,39 +452,6 @@ const StoreAiSection = ({ openSection, setOpenSection }) => {
 
           <div className="flex justify-end">
             <Button type="button" onClick={save} loading={saving}>Salvar IA da loja</Button>
-          </div>
-
-          <div className="rounded-xl border border-dark-600 bg-dark-900/60 p-4 space-y-3">
-            <div>
-              <h3 className="font-semibold text-white">Testar IA</h3>
-              <p className="text-xs text-gray-400">Simule uma pergunta sem enviar mensagem para a Evolution.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
-              <Input label="Pergunta do cliente" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ex.: Tem X-Bacon?" />
-              <Input label="Telefone (opcional)" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Para consultar pedido" />
-            </div>
-            <Button type="button" onClick={simulate} loading={testing}>Enviar simulacao</Button>
-
-            {result && (
-              <div className="space-y-3 rounded-lg border border-dark-700 bg-black/20 p-4">
-                <div><p className="text-xs text-gray-400">Resposta</p><p className="mt-1 whitespace-pre-wrap text-sm text-white">{result.answer}</p></div>
-                <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-                  <span>{result.response_time_ms} ms</span>
-                  <span>{result.tokens_estimated} tokens estimados</span>
-                  <span>{result.status}</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-300">Chunks encontrados</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(result.chunks || []).map((chunk) => (
-                      <span key={chunk.id} className="rounded-full border border-dark-600 bg-dark-800 px-2 py-1 text-xs text-gray-300">
-                        {chunk.module}: {chunk.title}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </>
       )}

@@ -1,6 +1,6 @@
 class StoreAiService
   MEMORY_MESSAGES = 10
-  OUT_OF_SCOPE = "Posso ajudar apenas com produtos, horarios, entrega, pagamento, promocoes e pedidos desta loja."
+  OUT_OF_SCOPE = "Eu posso te ajudar com produtos, horarios, entrega, pagamento e pedidos da loja."
   TECHNICAL_SCOPE_PATTERNS = [
     /painel|dashboard|cadastrar produto|editar produto|configurar sistema/,
     /replymesh|suporte|ticket|token|api key|webhook|evolution/,
@@ -26,9 +26,11 @@ class StoreAiService
   def call
     return response("A IA da loja esta desativada.", "disabled", []) unless @settings.enabled? || @simulate
     return response("Escreva uma pergunta para testar a IA da loja.", "blocked", []) if @question.blank?
+    @intent = StoreAiIntentClassifier.call(@question)
+    return ignored_response if @intent == :trivial
     return response(greeting_answer, "success", []) if greeting?
-    return response(OUT_OF_SCOPE, "blocked", []) if out_of_scope?
-    return response("O limite diario de mensagens desta loja foi atingido.", "limited", []) if limit_reached?
+    return response(out_of_scope_answer, "blocked", []) if out_of_scope? || @intent.nil?
+    return response("", "limited", []) if limit_reached?
 
     chunks = StoreRagService.search(
       company: @company,
@@ -36,7 +38,7 @@ class StoreAiService
       permissions: permissions,
       phone: @phone
     )
-    return response("Nao encontrei essa informacao nos dados atuais da loja.", "fallback", []) if chunks.empty?
+    return response(fallback_answer, "fallback", []) if chunks.empty?
 
     conversation = find_or_create_conversation
     conversation.store_ai_messages.create!(role: "user", content: @question)
@@ -54,7 +56,14 @@ class StoreAiService
       response_time_ms: elapsed_ms
     )
     conversation.update!(last_message_at: Time.current)
-    response(answer, provider_result&.success? ? "success" : "fallback", chunks, tokens: tokens)
+    response(
+      answer,
+      provider_result&.success? ? "success" : "fallback",
+      chunks,
+      tokens: tokens,
+      provider_called: provider_result.present?,
+      fallback: !provider_result&.success?
+    )
   end
 
   private
@@ -83,6 +92,7 @@ class StoreAiService
       Nao mostre SKU, legacy_id, codigo de homologacao ou nomes tecnicos.
       Formate para WhatsApp com paragrafos curtos, quebras de linha e emojis moderados.
       Se faltar informacao, diga que nao encontrou nos dados atuais da loja.
+      Para concluir uma compra, use somente os links presentes nos chunks.
 
       CHUNKS:
       #{chunks.map { |chunk| "[#{chunk[:module]}] #{chunk[:title]}\n#{chunk[:content]}" }.join("\n\n")}
@@ -109,7 +119,8 @@ class StoreAiService
         price = product["promocional_centavos"].presence || product["preco_centavos"]
         ["🍔 #{product['nome']}", product["descricao"].presence, "💰 #{format_brl(price)}", product["categoria"].present? ? "Categoria: #{product['categoria']}" : nil].compact.join("\n")
       end.join("\n\n")
-      "#{intro}\n\n#{list}\n\nQuer que eu mostre outras opcoes do cardapio?"
+      product_link = products.first["link"].presence || menu_url
+      "#{intro}\n\n#{list}\n\nVoce pode pedir aqui: #{product_link}"
     when "horarios"
       days = %w[domingo segunda terca quarta quinta sexta sabado]
       Array(payload).map do |hour|
@@ -126,7 +137,11 @@ class StoreAiService
     when "pedidos"
       return chunk[:content] unless payload.is_a?(Hash)
 
-      "Seu pedido ##{payload['numero']} esta #{order_status_label(payload['status'])}. Total: #{format_brl(payload['total_centavos'])}."
+      details = ["Seu pedido ##{payload['numero']} esta #{order_status_label(payload['status'])}."]
+      details << "Situacao da entrega: #{delivery_status_label(payload['delivery_status'])}." if payload["delivery_status"].present?
+      details << "A localizacao para entrega ja foi recebida." if payload["location_received"]
+      details << "Total: #{format_brl(payload['total_centavos'])}."
+      details.join("\n")
     when "loja"
       "#{payload['nome']} esta com status #{payload['status']}. Endereco: #{payload['endereco'].presence || 'nao informado'}."
     when "pagamentos"
@@ -148,6 +163,8 @@ class StoreAiService
       end
       parts << "Tambem e possivel retirar no local." if payload["retirada_ativa"]
       parts.join("\n")
+    when "pedido"
+      "Para fazer seu pedido, acesse: #{payload['link'].presence || menu_url}"
     else
       chunk[:content].to_s.truncate(700)
     end
@@ -201,7 +218,9 @@ class StoreAiService
                when 12...18 then "Boa tarde"
                else "Boa noite"
                end
-    "#{greeting} 😊\nSeja bem-vindo a #{store_name}.\nComo posso ajudar voce hoje?"
+    initial_message = @settings.initial_message.to_s.strip
+    initial_message = "Como posso ajudar voce hoje?" if initial_message.blank?
+    "#{greeting}!\nSeja bem-vindo a #{store_name}.\n#{initial_message}\n\nPara fazer um pedido: #{menu_url}"
   end
 
   def find_or_create_conversation
@@ -209,7 +228,7 @@ class StoreAiService
     conversation = StoreAiConversation.recent_for(@company.id, phone).first if phone.present?
     conversation ||= @company.store_ai_conversations.create!(
       phone: phone,
-      channel: @simulate ? "simulator" : "web",
+      channel: @simulate ? "simulator" : "whatsapp",
       status: "open",
       last_message_at: Time.current
     )
@@ -225,6 +244,8 @@ class StoreAiService
       allow_orders: @settings.allow_orders,
       allow_products: @settings.allow_products,
       allow_hours: @settings.allow_hours,
+      allow_delivery: @settings.allow_delivery,
+      allow_payments: @settings.allow_payments,
       allow_promotions: @settings.allow_promotions,
       allow_order_status: @settings.allow_order_status
     }
@@ -234,6 +255,18 @@ class StoreAiService
     normalized = ReplymeshKnowledgeService.normalize(@question)
     ReplymeshKnowledgeService::OUT_OF_SCOPE_PATTERNS.any? { |pattern| normalized.match?(pattern) } ||
       TECHNICAL_SCOPE_PATTERNS.any? { |pattern| normalized.match?(pattern) }
+  end
+
+  def out_of_scope_answer
+    "#{OUT_OF_SCOPE} Para fazer um pedido, acesse: #{menu_url}"
+  end
+
+  def fallback_answer
+    "Nao encontrei essa informacao nos dados atuais da loja. Voce pode conferir aqui: #{menu_url}"
+  end
+
+  def menu_url
+    "https://#{@company.slug}.replymesh.cloud/menu"
   end
 
   def matching_delivery_zone(zones)
@@ -248,7 +281,7 @@ class StoreAiService
     AiUsageLog.today_for_company(@company.id).where(assistant_type: "store_ai").count >= @settings.daily_limit
   end
 
-  def response(answer, status, chunks, tokens: nil)
+  def response(answer, status, chunks, tokens: nil, provider_called: false, fallback: false)
     total_tokens = tokens || estimate_tokens(@question + answer.to_s)
     AiUsageLog.create!(
       company: @company,
@@ -265,10 +298,35 @@ class StoreAiService
     {
       answer: answer,
       status: status,
+      intent: @intent,
+      provider_called: provider_called,
+      fallback: fallback,
       chunks: chunks.map { |chunk| chunk.slice(:id, :module, :title, :score) },
       response_time_ms: elapsed_ms,
       tokens_estimated: total_tokens
     }
+  end
+
+  def ignored_response
+    {
+      answer: "",
+      status: "ignored",
+      intent: "trivial",
+      provider_called: false,
+      fallback: false,
+      chunks: [],
+      response_time_ms: elapsed_ms,
+      tokens_estimated: 0
+    }
+  end
+
+  def delivery_status_label(value)
+    {
+      "pending" => "aguardando atribuicao",
+      "assigned" => "atribuida ao motoboy",
+      "on_the_way" => "a caminho",
+      "delivered" => "entregue"
+    }[value.to_s] || value.to_s.humanize
   end
 
   def estimate_tokens(text)

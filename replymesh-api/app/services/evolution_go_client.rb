@@ -81,8 +81,8 @@ class EvolutionGoClient
     { success: true, mode: "real" }
   end
 
-  def configure_location_webhook(token)
-    connect_instance(token, webhook_url: location_webhook_url, subscribe: ["MESSAGE"])
+  def configure_location_webhook(token, webhook_token: nil)
+    connect_instance(token, webhook_url: location_webhook_url(webhook_token), subscribe: ["MESSAGE"])
   end
 
   def send_text(token, phone:, message:)
@@ -274,9 +274,9 @@ class EvolutionGoClient
     URI.encode_www_form_component(value.to_s)
   end
 
-  def location_webhook_url
+  def location_webhook_url(webhook_token = nil)
     base_url = ENV["EVOLUTION_LOCATION_WEBHOOK_URL"].presence
-    secret = ENV["EVOLUTION_LOCATION_WEBHOOK_SECRET"].presence
+    secret = webhook_token.presence || ENV["EVOLUTION_LOCATION_WEBHOOK_SECRET"].presence
     raise Error, "Webhook de localizacao nao configurado" if base_url.blank? || secret.blank?
 
     uri = URI(base_url)

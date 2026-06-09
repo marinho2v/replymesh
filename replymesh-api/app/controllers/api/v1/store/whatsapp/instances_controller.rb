@@ -117,7 +117,10 @@ module Api
           def ensure_location_webhook!(instance)
             return if instance.instance_token.blank?
 
-            client.configure_location_webhook(instance.instance_token)
+            client.configure_location_webhook(
+              instance.instance_token,
+              webhook_token: EvolutionWebhookToken.generate(instance)
+            )
           end
 
           def apply_remote_status!(instance, response)

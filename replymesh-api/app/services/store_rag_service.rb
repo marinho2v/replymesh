@@ -31,6 +31,8 @@ class StoreRagService
   def allowed?(module_name)
     return @permissions[:allow_products] if %w[produtos categorias].include?(module_name)
     return @permissions[:allow_hours] if module_name == "horarios"
+    return @permissions[:allow_delivery] if module_name == "entrega"
+    return @permissions[:allow_payments] if module_name == "pagamentos"
     return @permissions[:allow_promotions] if module_name == "promocoes"
     return @permissions[:allow_orders] || @permissions[:allow_order_status] if module_name == "pedidos"
 
@@ -42,12 +44,24 @@ class StoreRagService
   end
 
   def order_chunk
-    customer = @company.customers.find_by(phone: @phone) ||
-      @company.customers.where("regexp_replace(phone, '\\D', '', 'g') = ?", @phone).first
-    order = customer && @company.orders.where(customer_id: customer.id).order(created_at: :desc).first
+    local_phone = @phone.sub(/\A55/, "")
+    order = @company.orders
+      .where(
+        <<~SQL.squish,
+          regexp_replace(coalesce(customer_whatsapp, customer_phone, ''), '\\D', '', 'g') IN (?, ?)
+          OR ? LIKE '%' || regexp_replace(coalesce(customer_whatsapp, customer_phone, ''), '\\D', '', 'g')
+        SQL
+        @phone,
+        local_phone,
+        @phone
+      )
+      .order(created_at: :desc)
+      .first
     content = order ? {
       numero: order.order_number,
       status: order.status,
+      delivery_status: order.delivery_status,
+      location_received: order.delivery_location_received_at.present?,
       total_centavos: order.total_cents,
       criado_em: order.created_at
     }.to_json : "Nenhum pedido encontrado para o telefone informado."
@@ -80,6 +94,7 @@ class StoreRagService
     return 25 if @query.match?(/produto|cardapio|lanche|hamburguer|burger|barato|preco|tem|vende/) && module_name == "produtos"
     return 30 if @query.match?(/pix|pagamento|dinheiro|cartao|credito|debito|aceita/) && module_name == "pagamentos"
     return 30 if @query.match?(/entrega|taxa|frete|retir|demora|tempo/) && module_name == "entrega"
+    return 35 if @query.match?(/quero pedir|fazer um pedido|como pedir|comprar/) && module_name == "pedido"
 
     0
   end

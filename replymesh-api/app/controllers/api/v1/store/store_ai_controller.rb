@@ -33,8 +33,9 @@ module Api
 
         def setting_params
           params.require(:settings).permit(
-            :enabled, :auto_reply_whatsapp, :assistant_name, :initial_message, :tone, :model, :daily_limit,
-            :allow_orders, :allow_products, :allow_hours, :allow_promotions, :allow_order_status
+            :enabled, :auto_reply_whatsapp, :assistant_name, :initial_message, :tone,
+            :allow_orders, :allow_products, :allow_hours, :allow_delivery, :allow_payments,
+            :allow_promotions, :allow_order_status
           )
         end
 

@@ -23,7 +23,10 @@ module Api
               value.as_json.map { |item| scrub_secret(item) }
             when Hash
               value.as_json.each_with_object({}) do |(key, item), result|
-                next if %w[apikey api_key authorization token instance_token].include?(key.to_s.downcase)
+                next if %w[
+                  apikey api_key authorization token instance_token
+                  tokens_used provider_called provider model estimated_cost_usd
+                ].include?(key.to_s.downcase)
 
                 result[key] = scrub_secret(item)
               end

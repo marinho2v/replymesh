@@ -238,7 +238,7 @@ class CompanyOnboardingService
       connected_number: response[:connected_number],
       last_remote_sync_at: Time.current
     )
-    client.configure_location_webhook(token)
+    client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
     created_resources[:whatsapp_instance] = true
   rescue StandardError => e
     WhatsappLog.create!(company: @company, level: "warn", message: "Falha ao criar instancia WhatsApp: #{e.message}")

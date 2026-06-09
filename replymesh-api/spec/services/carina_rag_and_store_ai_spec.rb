@@ -156,7 +156,8 @@ RSpec.describe "Carina RAG and Store AI boundaries" do
       )
 
       expect(result[:status]).to eq("blocked")
-      expect(result[:answer]).to eq(StoreAiService::OUT_OF_SCOPE)
+      expect(result[:answer]).to start_with(StoreAiService::OUT_OF_SCOPE)
+      expect(result[:answer]).to include("replymesh.cloud/menu")
     end
 
     it "does not include products from another company" do
