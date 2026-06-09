@@ -69,7 +69,7 @@ Ocorrencias encontradas:
 
 Commit:
 
-`9d9c31a322e4e44cc96922ff6b03a649967dc043`
+`d1892d5d3317293c02351e420908dcf3df9f0166`
 
 Tag:
 
@@ -77,7 +77,7 @@ Tag:
 
 Push:
 
-`Pendente antes do push; atualizado no fechamento local da fase.`
+`Push pendente neste ponto do relatorio; executado na sequencia da Fase 16.17E.`
 
 ## Pendencias
 
