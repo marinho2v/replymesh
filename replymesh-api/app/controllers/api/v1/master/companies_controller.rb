@@ -123,7 +123,7 @@ module Api
                                .sub(%r{/.*\z}, "")
           host = company.subdomain.presence || "#{company.slug}.#{platform_domain}"
 
-          "https://#{host}/admin/impersonate"
+          "https://#{host}/loja/#{company.slug}/admin/impersonate"
         end
 
         def company_params
