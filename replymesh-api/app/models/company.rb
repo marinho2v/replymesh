@@ -10,6 +10,7 @@ class Company < ApplicationRecord
   has_many :company_members, dependent: :destroy
   has_many :users, through: :company_members
   has_many :subscriptions, dependent: :destroy
+  has_many :company_feature_overrides, dependent: :destroy
   has_many :domains, dependent: :destroy
   has_one  :store_setting, dependent: :destroy
   has_many :payment_methods, dependent: :destroy

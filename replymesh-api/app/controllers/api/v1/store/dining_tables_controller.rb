@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class DiningTablesController < BaseController
+        before_action -> { require_feature!("tables") }
+        before_action -> { require_feature!("table_qr") }, only: %i[set_qr_enabled regenerate_qr]
         before_action :set_table, only: %i[show update destroy set_qr_enabled regenerate_qr]
 
         def index

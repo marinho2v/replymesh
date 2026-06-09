@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe CompanyOnboardingService do
   before do
-    Plan.create!(name: "Essencial", slug: "essencial", price_cents: 9900)
+    Plan.create!(name: "START", slug: "start", price_cents: 29_900)
   end
 
   it "creates a company with a prepared Evolution instance and location webhook" do
@@ -39,7 +39,7 @@ RSpec.describe CompanyOnboardingService do
     expect(settings.logo_url).to eq("/logo.png")
     expect(settings.banner_url).to eq("/capa.jpeg")
     expect(settings.cover_url).to eq("/capa.jpeg")
-    expect(settings.visual_template_id).to eq("hamburgueria-classic")
+    expect(settings.visual_template_id).to eq("hamburgueria-premium")
     expect(company.app_banners.where(image_url: "/capa.jpeg", is_active: true)).to exist
     expect(instance.instance_token).to be_present
     expect(instance.provider).to eq("evolution_go")

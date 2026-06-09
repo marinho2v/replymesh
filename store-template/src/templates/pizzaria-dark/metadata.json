@@ -5,7 +5,7 @@
   "description": "Template escuro com acento vermelho intenso. Ideal para pizzarias e estabelecimentos com identidade forte.",
   "preview": "/templates/pizzaria-dark/preview.png",
   "version": "1.0",
-  "status": "coming_soon",
+  "status": "inactive",
   "colors": {
     "background": "#100810",
     "surface": "#180a18",

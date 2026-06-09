@@ -32,6 +32,29 @@ module ReplymeshTestHelpers
     CompanyMember.create!(user: user, company: company, role: role, status: "active")
   end
 
+  def create_plan(slug:, name: nil)
+    Plan.find_or_create_by!(slug: slug.to_s) do |plan|
+      plan.name = name || slug.to_s.titleize
+      plan.status = "active"
+      plan.billing_cycle = "monthly"
+      plan.price_cents = 0
+    end
+  end
+
+  def assign_plan(company, slug: "start", status: "active")
+    plan = create_plan(slug: slug)
+    Subscription.create!(
+      company: company,
+      plan: plan,
+      status: status,
+      started_at: Time.current,
+      current_period_start: Time.current,
+      current_period_end: 30.days.from_now
+    )
+    company.update!(plan_status: status == "active" ? "active" : status)
+    plan
+  end
+
   def create_store(company, status: "open", delivery_fee_cents: 700)
     StoreSetting.create!(
       company: company,

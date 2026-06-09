@@ -4,7 +4,7 @@ module Api
       class CompaniesController < ApplicationController
         before_action :authenticate_user!
         before_action :require_super_admin!
-        before_action :set_company, only: %i[show update activate deactivate impersonate]
+        before_action :set_company, only: %i[show update activate deactivate impersonate features update_features update_plan]
 
         def index
           companies = Company.includes(:domains, :company_members, subscriptions: :plan).order(created_at: :desc)
@@ -109,6 +109,92 @@ module Api
           }
         end
 
+        def features
+          render json: {
+            success: true,
+            company: serialize_company(@company),
+            feature_access: FeatureGate.access_map(@company),
+            catalog: FeatureCatalog.serialize,
+            plan_copy: FeatureCatalog::PLAN_COPY
+          }
+        end
+
+        def update_features
+          overrides = Array(params[:overrides])
+          changed = []
+
+          CompanyFeatureOverride.transaction do
+            overrides.each do |item|
+              attrs = item.respond_to?(:permit) ? item.permit(:feature_key, :mode, :internal_note, :expires_at) : item
+              feature_key = FeatureCatalog.canonical_key(attrs[:feature_key] || attrs["feature_key"])
+              mode = attrs[:mode] || attrs["mode"]
+              note = attrs[:internal_note] || attrs["internal_note"]
+              expires_at = attrs[:expires_at] || attrs["expires_at"]
+              next unless FeatureCatalog.find(feature_key)
+
+              if mode.blank? || mode == "default"
+                @company.company_feature_overrides.where(feature_key: feature_key).destroy_all
+                changed << { feature_key: feature_key, mode: "default" }
+              else
+                override = @company.company_feature_overrides.find_or_initialize_by(feature_key: feature_key)
+                override.mode = mode
+                override.internal_note = note
+                override.expires_at = expires_at.presence
+                override.created_by = current_user if override.new_record?
+                override.save!
+                changed << override.as_json_safe
+              end
+            end
+          end
+
+          audit!(
+            "company_features_updated",
+            company: @company,
+            resource: @company,
+            metadata: { changed: changed }
+          )
+
+          render json: { success: true, feature_access: FeatureGate.access_map(@company), changed: changed }
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
+        def update_plan
+          plan = Plan.find_by!(id: params[:plan_id] || params.dig(:company, :plan_id)) if (params[:plan_id] || params.dig(:company, :plan_id)).present?
+          plan ||= Plan.find_by!(slug: params[:plan_slug] || params.dig(:company, :plan_slug))
+          status = params[:status] || params.dig(:company, :plan_status) || "active"
+          subscription = @company.subscriptions.order(created_at: :desc).first
+          previous = {
+            plan_id: subscription&.plan_id,
+            status: subscription&.status,
+            plan_status: @company.plan_status
+          }
+
+          Subscription.transaction do
+            subscription ||= @company.subscriptions.build(started_at: Time.current)
+            subscription.plan = plan
+            subscription.status = status
+            subscription.price_cents = plan.price_cents
+            subscription.current_period_start ||= Time.current
+            subscription.current_period_end ||= 1.month.from_now
+            subscription.save!
+            @company.update!(plan_status: status, status: company_status_for_subscription(status))
+          end
+
+          audit!(
+            "company_plan_updated",
+            company: @company,
+            resource: subscription,
+            metadata: { previous: previous, current: { plan_id: plan.id, plan_slug: plan.slug, status: status } }
+          )
+
+          render json: { success: true, company: serialize_company(@company.reload), feature_access: FeatureGate.access_map(@company) }
+        rescue ActiveRecord::RecordNotFound => e
+          render json: { success: false, errors: [e.message] }, status: :not_found
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
         private
 
         def set_company
@@ -191,7 +277,8 @@ module Api
             plan:                    plan&.name,
             plan_slug:               plan&.slug,
             subscription_status:     subscription&.status,
-            subscription_price_cents: subscription&.price_cents
+            subscription_price_cents: subscription&.price_cents,
+            feature_summary:         FeatureGate.access_map(company).slice(:allowed, :blocked)
           }
         rescue StandardError => e
           Rails.logger.error("[CompaniesController] serialize_company error for #{company.id}: #{e.message}")
@@ -216,6 +303,16 @@ module Api
           render json: { success: true, company: serialize_company(@company) }
         rescue ActiveRecord::RecordInvalid => e
           render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
+        def company_status_for_subscription(status)
+          case status
+          when "active" then "active"
+          when "trial" then "trial"
+          when "overdue", "suspended" then "suspended"
+          when "canceled" then "canceled"
+          else "inactive"
+          end
         end
       end
     end

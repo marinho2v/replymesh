@@ -3,6 +3,7 @@ module Api
     module Store
       module Whatsapp
         class TemplatesController < Api::V1::Store::BaseController
+          before_action -> { require_feature!("whatsapp_templates") }
           before_action :set_template, only: %i[update]
 
           def index

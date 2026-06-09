@@ -5,7 +5,7 @@
   "description": "Template claro e delicado com acento rosa. Perfeito para docerias, confeitarias e bakeries.",
   "preview": "/templates/doceria-clean/preview.png",
   "version": "1.0",
-  "status": "coming_soon",
+  "status": "active",
   "colors": {
     "background": "#FFF8F0",
     "surface": "#FFFFFF",

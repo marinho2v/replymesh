@@ -34,6 +34,9 @@ Rails.application.routes.draw do
             patch :activate
             patch :deactivate
             post :impersonate
+            get :features
+            patch :features, action: :update_features
+            patch :plan, action: :update_plan
           end
           post "backup_import/dry_run", to: "companies/backup_imports#dry_run"
           post "backup_import", to: "companies/backup_imports#create"
@@ -128,6 +131,7 @@ Rails.application.routes.draw do
       namespace :store do
         get "dashboard",      to: "dashboard#show"
         get "reports",        to: "reports#show"
+        get "features",       to: "features#show"
         get "kitchen/orders", to: "orders#kitchen"
 
         # Cardápio

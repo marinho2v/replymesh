@@ -22,7 +22,7 @@ const BrandLogo = ({
 
   return (
     <div className={clsx('flex items-center gap-3 min-w-0', className)}>
-      <span className={clsx('shrink-0 overflow-hidden rounded-lg bg-black ring-1 ring-yellow-400/30', sizes[size] || sizes.md)}>
+      <span className={clsx('shrink-0 flex items-center justify-center', sizes[size] || sizes.md)}>
         <img
           src={logoUrl || '/logo.png'}
           alt={name}

@@ -4,8 +4,6 @@ import pizzariaDarkMeta from './pizzaria-dark/metadata.json'
 import doceiraCleanMeta from './doceria-clean/metadata.json'
 import bebidasNeonMeta from './bebidas-neon/metadata.json'
 
-export const DEFAULT_TEMPLATE_ID = 'hamburgueria-classic'
-
 export const TEMPLATE_CATEGORIES = [
   { id: 'all', label: 'Todos' },
   { id: 'hamburgueria', label: 'Hamburgueria' },
@@ -49,14 +47,18 @@ export const VISUAL_TEMPLATES = [
   },
 ]
 
-export const getAllTemplates = () => VISUAL_TEMPLATES
+export const DEFAULT_TEMPLATE_ID = 'hamburgueria-premium'
+
+export const ACTIVE_VISUAL_TEMPLATES = VISUAL_TEMPLATES.filter((template) => template.status !== 'inactive')
+
+export const getAllTemplates = () => ACTIVE_VISUAL_TEMPLATES
 
 export const getTemplateById = (id) =>
-  VISUAL_TEMPLATES.find((t) => t.id === id) || VISUAL_TEMPLATES[0]
+  VISUAL_TEMPLATES.find((t) => t.id === id) || getTemplateById(DEFAULT_TEMPLATE_ID)
 
 export const getTemplatesByCategory = (category) => {
-  if (!category || category === 'all') return VISUAL_TEMPLATES
-  return VISUAL_TEMPLATES.filter((t) => t.category === category)
+  if (!category || category === 'all') return ACTIVE_VISUAL_TEMPLATES
+  return ACTIVE_VISUAL_TEMPLATES.filter((t) => t.category === category)
 }
 
 export const getTemplateCategories = () => TEMPLATE_CATEGORIES

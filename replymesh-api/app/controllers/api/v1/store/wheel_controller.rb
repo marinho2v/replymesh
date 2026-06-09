@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class WheelController < BaseController
+        before_action -> { require_feature!("roulette") }
+
         def summary
           render_ok(WheelService.new(company: current_company).admin_summary)
         end

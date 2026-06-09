@@ -112,7 +112,7 @@ module Api
             pix_payload:             s.respond_to?(:pix_payload) ? s.pix_payload : nil,
             pix_qr_code_url:         s.respond_to?(:pix_qr_code_url) ? s.pix_qr_code_url : nil,
             print_footer:            s.respond_to?(:print_footer) ? s.print_footer : nil,
-            visual_template_id:      s.respond_to?(:visual_template_id) ? (s.visual_template_id.presence || 'hamburgueria-classic') : 'hamburgueria-classic',
+            visual_template_id:      s.respond_to?(:visual_template_id) ? (s.visual_template_id.presence || StoreSetting::DEFAULT_VISUAL_TEMPLATE_ID) : StoreSetting::DEFAULT_VISUAL_TEMPLATE_ID,
             hero_title:              s.respond_to?(:hero_title) ? s.hero_title : nil,
             hero_highlight:          s.respond_to?(:hero_highlight) ? s.hero_highlight : nil,
             hero_subtitle:           s.respond_to?(:hero_subtitle) ? s.hero_subtitle : nil,

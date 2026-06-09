@@ -4,6 +4,7 @@
   "category": "hamburgueria",
   "description": "Template escuro com destaque para lanches e combos. Visual padrão do sistema.",
   "version": "1.0",
+  "status": "inactive",
   "preview": "/templates/hamburgueria-classic/preview.png",
   "colors": {
     "background": "#0A0A0A",

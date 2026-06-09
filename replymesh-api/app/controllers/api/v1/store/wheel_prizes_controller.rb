@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class WheelPrizesController < BaseController
+        before_action -> { require_feature!("roulette") }
         before_action :set_prize, only: %i[update]
 
         def create

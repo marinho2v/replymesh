@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -31,6 +31,7 @@ import {
   Sparkles,
   ShieldCheck,
   RefreshCw,
+  Lock,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { signOut } from '../../services/auth'
@@ -42,11 +43,14 @@ import { useNotifications } from '../../hooks/useNotifications'
 import NotificationsDropdown from '../shared/NotificationsDropdown'
 import AiFloatingChat from '../ai/AiFloatingChat'
 import { revokeMasterImpersonation } from '../../services/replymeshApi'
+import { railsGetFeatureAccess } from '../../services/storeApi'
 
 export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [upgradeFeature, setUpgradeFeature] = useState(null)
+  const [featureAccess, setFeatureAccess] = useState({ allowed: [], features: [] })
   const location = useLocation()
   const navigate = useNavigate()
   const { profile } = useAuth()
@@ -56,6 +60,11 @@ export const AdminLayout = () => {
   const adminPath = (path) => path.replace('/admin', adminBasePath)
   const storeName = store?.name || store?.store_name || ''
   const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications()
+  const featureMap = useMemo(() => {
+    const map = new Map()
+    ;(featureAccess.features || []).forEach((feature) => map.set(feature.key, feature))
+    return map
+  }, [featureAccess])
   const impersonation = (() => {
     try {
       return JSON.parse(localStorage.getItem('replymesh_master_impersonation') || 'null')
@@ -89,6 +98,32 @@ export const AdminLayout = () => {
     window.dispatchEvent(new Event('replymesh-auth-changed'))
     const masterUrl = import.meta.env.VITE_MASTER_URL || 'https://app.replymesh.cloud'
     window.location.href = `${masterUrl}/empresas`
+  }
+
+  useEffect(() => {
+    let active = true
+    railsGetFeatureAccess()
+      .then((payload) => {
+        if (active) setFeatureAccess(payload)
+      })
+      .catch(() => {
+        if (active) setFeatureAccess({ allowed: [], features: [] })
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const isFeatureLocked = (featureKey) => {
+    if (!featureKey) return false
+    const feature = featureMap.get(featureKey)
+    return feature ? !feature.enabled : false
+  }
+
+  const lockedFeatureInfo = (featureKey) => featureMap.get(featureKey) || {
+    key: featureKey,
+    label: 'Recurso',
+    required_plan_label: 'PRO',
   }
 
   const handleSignOut = async () => {
@@ -133,32 +168,32 @@ export const AdminLayout = () => {
       title: 'Clientes & Promocoes',
       items: [
         { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin'] },
-        { path: '/admin/coupons', icon: Ticket, label: 'Cupons', roles: ['admin'] },
-        { path: '/admin/wheel', icon: Trophy, label: 'Roleta', roles: ['admin'] },
+        { path: '/admin/coupons', icon: Ticket, label: 'Cupons', roles: ['admin'], feature: 'coupons' },
+        { path: '/admin/wheel', icon: Trophy, label: 'Roleta', roles: ['admin'], feature: 'roulette' },
       ],
     },
     {
       title: 'Estoque',
       items: [
-        { path: '/admin/inventory', icon: Warehouse, label: 'Itens de Estoque', roles: ['admin'] },
-        { path: '/admin/inventory/movements', icon: History, label: 'Movimentacoes', roles: ['admin'] },
+        { path: '/admin/inventory', icon: Warehouse, label: 'Itens de Estoque', roles: ['admin'], feature: 'inventory' },
+        { path: '/admin/inventory/movements', icon: History, label: 'Movimentacoes', roles: ['admin'], feature: 'inventory_movements' },
       ],
     },
     {
       title: 'Financeiro',
       items: [
         { path: '/admin/cash-register', icon: Wallet, label: 'Caixa', roles: ['admin'] },
-        { path: '/admin/reports', icon: BarChart3, label: 'Relatorios', roles: ['admin'] },
+        { path: '/admin/reports', icon: BarChart3, label: 'Relatorios', roles: ['admin'], feature: 'advanced_reports' },
       ],
     },
     {
       title: 'Comunicacao',
       items: [
         { path: '/admin/whatsapp', icon: MessageSquare, label: 'WhatsApp', roles: ['admin'], exact: true },
-        { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'] },
-        { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'] },
-        { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Recuperador de Vendas', roles: ['admin'] },
-        { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'] },
+        { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'], feature: 'whatsapp_templates' },
+        { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
+        { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Recuperador de Vendas', roles: ['admin'], feature: 'sales_recovery' },
+        { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
         // IA removida do menu (Fase 15.12) — aparece como botão flutuante
       ],
     },
@@ -241,33 +276,51 @@ export const AdminLayout = () => {
                     {section.items.map((item) => {
                       const Icon = item.icon
                       const itemPath = adminPath(item.path)
+                      const locked = isFeatureLocked(item.feature)
+                      const featureInfo = lockedFeatureInfo(item.feature)
                       const isActive = location.pathname === itemPath || (!item.exact &&
                         itemPath !== adminPath('/admin/dashboard') && location.pathname.startsWith(`${itemPath}/`)
                       )
 
                       return (
-                        <Link
+                        locked ? (
+                        <button
                           key={item.path}
-                          to={itemPath}
-                          title={sidebarCollapsed ? item.label : undefined}
+                          type="button"
+                          onClick={() => setUpgradeFeature(featureInfo)}
+                          title={sidebarCollapsed ? `${item.label} - Plano ${featureInfo.required_plan_label}` : undefined}
                           className={`flex items-center rounded-lg transition-colors ${
                             sidebarCollapsed ? 'lg:justify-center lg:px-0 px-3' : 'px-3'
-                          } py-2.5 ${
-                            isActive
-                                ? 'bg-dark-800 text-yellow-300 ring-1 ring-yellow-500/35'
-                                : item.highlight
-                                  ? 'border border-dark-700 text-gray-300 hover:border-yellow-500/70 hover:bg-yellow-500/10 hover:text-yellow-200'
-                                  : 'text-gray-300 hover:bg-dark-800 hover:text-white'
-                          }`}
+                          } py-2.5 w-full text-left text-gray-500 hover:bg-dark-800 hover:text-gray-300`}
                         >
                           <Icon size={19} className={sidebarCollapsed ? 'lg:mr-0 mr-3' : 'mr-3'} />
                           <span className={`flex-1 truncate ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
-                          {item.badge && (
-                            <span className={`rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold uppercase text-black ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
-                              {item.badge}
-                            </span>
-                          )}
-                        </Link>
+                          <Lock size={14} className={sidebarCollapsed ? 'lg:hidden' : ''} />
+                        </button>
+                        ) : (
+                          <Link
+                            key={item.path}
+                            to={itemPath}
+                            title={sidebarCollapsed ? item.label : undefined}
+                            className={`flex items-center rounded-lg transition-colors ${
+                              sidebarCollapsed ? 'lg:justify-center lg:px-0 px-3' : 'px-3'
+                            } py-2.5 ${
+                              isActive
+                                  ? 'bg-dark-800 text-yellow-300 ring-1 ring-yellow-500/35'
+                                  : item.highlight
+                                    ? 'border border-dark-700 text-gray-300 hover:border-yellow-500/70 hover:bg-yellow-500/10 hover:text-yellow-200'
+                                    : 'text-gray-300 hover:bg-dark-800 hover:text-white'
+                            }`}
+                          >
+                            <Icon size={19} className={sidebarCollapsed ? 'lg:mr-0 mr-3' : 'mr-3'} />
+                            <span className={`flex-1 truncate ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
+                            {item.badge && (
+                              <span className={`rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold uppercase text-black ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
                       )
                     })}
                   </div>
@@ -381,6 +434,33 @@ export const AdminLayout = () => {
           <AiFloatingChat />
         </div>
       </div>
+      {upgradeFeature && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-lg border border-dark-700 bg-dark-900 p-5 text-white shadow-2xl">
+            <div className="mb-3 flex items-center gap-2">
+              <Lock size={19} className="text-yellow-300" />
+              <h2 className="text-lg font-bold">Recurso disponivel no Plano {upgradeFeature.required_plan_label || 'PRO'}</h2>
+            </div>
+            <p className="text-sm leading-6 text-gray-300">
+              Este recurso ajuda sua loja a vender mais e automatizar a operacao. Fale com o suporte Replymesh para liberar.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="rounded-lg border border-dark-700 px-4 py-2 text-sm text-gray-200 hover:bg-dark-800" onClick={() => setUpgradeFeature(null)}>
+                Agora nao
+              </button>
+              <button
+                className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
+                onClick={() => {
+                  setUpgradeFeature(null)
+                  navigate(adminPath('/admin/support'))
+                }}
+              >
+                Solicitar upgrade
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

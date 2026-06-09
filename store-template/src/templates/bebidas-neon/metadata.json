@@ -5,7 +5,7 @@
   "description": "Template ultra-escuro com acento ciano neon. Estilo moderno para bares, açaí e bebidas.",
   "preview": "/templates/bebidas-neon/preview.png",
   "version": "1.0",
-  "status": "coming_soon",
+  "status": "active",
   "colors": {
     "background": "#020712",
     "surface": "#060E1E",

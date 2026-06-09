@@ -20,6 +20,8 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [featureAccess, setFeatureAccess] = useState(null);
+  const [savingFeature, setSavingFeature] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -33,6 +35,20 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [id, onToast]);
+
+  useEffect(() => {
+    if (edit) return undefined;
+    let alive = true;
+    api.getCompanyFeatures(id)
+      .then((data) => {
+        if (!alive) return;
+        setFeatureAccess(data.feature_access);
+      })
+      .catch(() => {
+        if (alive) setFeatureAccess(null);
+      });
+    return () => { alive = false; };
+  }, [id, edit]);
 
   const save = async () => {
     setSaving(true);
@@ -59,6 +75,19 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       onToast?.(error.message, "err");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const changeFeatureMode = async (featureKey, mode, expiresAt = null) => {
+    setSavingFeature(featureKey);
+    try {
+      const data = await api.updateCompanyFeatures(id, [{ feature_key: featureKey, mode, expires_at: expiresAt || null }]);
+      setFeatureAccess(data.feature_access);
+      onToast?.("Recurso atualizado com sucesso", "ok");
+    } catch (error) {
+      onToast?.(error.message, "err");
+    } finally {
+      setSavingFeature("");
     }
   };
 
@@ -107,6 +136,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         <InfoCard icon="UserRound" title="Responsavel" items={[["Nome", company.responsible_name], ["Email", company.responsible_email], ["Telefone", company.responsible_phone], ["Usuarios", company.users_count]]} />
         <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Trial ate", formatDate(company.trial_ends_at)]]} />
         <InfoCard icon="Globe" title="Acesso" items={[["Dominio", company.primary_domain], ["Timezone", company.timezone], ["Idioma", company.default_locale], ["Atualizada", formatDate(company.updated_at)]]} />
+        <FeatureCard featureAccess={featureAccess} savingFeature={savingFeature} onChange={changeFeatureMode} />
       </div>}
     </div>
   );
@@ -118,6 +148,89 @@ function Field({ label, value, onChange, type = "text" }) {
 
 function InfoCard({ icon, title, items }) {
   return <section className="card card-pad company-info-card"><div className="company-info-title"><Icon name={icon} size={18} />{title}</div>{items.map(([label, value]) => <div className="company-info-row" key={label}><span>{label}</span><strong>{value || "-"}</strong></div>)}</section>;
+}
+
+function FeatureCard({ featureAccess, savingFeature, onChange }) {
+  if (!featureAccess) {
+    return <section className="card card-pad company-info-card"><div className="company-info-title"><Icon name="Lock" size={18} />Recursos</div><p className="muted">Carregando recursos...</p></section>;
+  }
+
+  const features = featureAccess.features || [];
+  const overrides = Object.fromEntries((featureAccess.overrides || []).map((item) => [item.feature_key, item]));
+  const inherited = featureAccess.inherited?.length || 0;
+  const manualAllowed = featureAccess.manual_allowed?.length || 0;
+  const manualBlocked = featureAccess.manual_blocked?.length || 0;
+
+  return (
+    <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}>
+      <div className="company-info-title"><Icon name="Lock" size={18} />Plano e Recursos</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10, marginTop: 8 }}>
+        <div className="company-info-row"><span>Plano atual</span><strong>{featureAccess.plan?.name || "-"}</strong></div>
+        <div className="company-info-row"><span>Status</span><strong>{featureAccess.subscription_status || "-"}</strong></div>
+        <div className="company-info-row"><span>Herdados do plano</span><strong>{inherited}</strong></div>
+        <div className="company-info-row"><span>Extras liberados</span><strong>{manualAllowed}</strong></div>
+        <div className="company-info-row"><span>Bloqueados</span><strong>{manualBlocked}</strong></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(310px,1fr))", gap: 10, marginTop: 14 }}>
+        {features.map((feature) => (
+          <FeatureToggle
+            key={feature.key}
+            feature={feature}
+            override={overrides[feature.key]}
+            saving={savingFeature === feature.key}
+            onChange={onChange}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FeatureToggle({ feature, override, saving, onChange }) {
+  const mode = feature.source === "manual_allow" ? "allow" : feature.source === "manual_block" ? "block" : "default";
+  const expiresAt = toInputDate(override?.expires_at);
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 9, padding: 11, display: "grid", gap: 9 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+              <strong style={{ display: "block", fontSize: 13 }}>{feature.label}</strong>
+          <span className="muted" style={{ fontSize: 12 }}>{feature.enabled ? statusLabel(feature.source) : `Exige plano ${feature.required_plan_label}`}</span>
+        </div>
+        <select
+          value={mode}
+          disabled={saving}
+          onChange={(event) => onChange(feature.key, event.target.value, expiresAt)}
+          style={{ height: 32, border: "1px solid var(--border)", borderRadius: 8, padding: "0 8px", background: "#fff" }}
+        >
+          <option value="default">Herdar plano</option>
+          <option value="allow">Liberar manual</option>
+          <option value="block">Bloquear manual</option>
+        </select>
+      </div>
+      <div className="field" style={{ margin: 0 }}>
+        <label>Expira em</label>
+        <input
+          type="date"
+          value={expiresAt}
+          disabled={saving || mode === "block"}
+          onChange={(event) => onChange(feature.key, mode === "default" ? "allow" : mode, event.target.value)}
+        />
+      </div>
+      {override?.expired && <span className="status-chip red">Liberacao expirada</span>}
+    </div>
+  );
+}
+
+function statusLabel(source) {
+  if (source === "manual_allow") return "Liberado manualmente";
+  if (source === "manual_block") return "Bloqueado manualmente";
+  return "Herdado do plano";
+}
+
+function toInputDate(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
 }
 
 function formatDate(value) {

@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class ReportsController < BaseController
+        before_action -> { require_feature!("advanced_reports") }
+
         def show
           orders = filtered_orders.includes(:customer, :order_items)
           serialized_orders = orders.map { |order| serialize_order(order) }

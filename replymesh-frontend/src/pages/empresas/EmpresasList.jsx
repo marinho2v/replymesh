@@ -16,9 +16,16 @@ const STATUS_BADGE = {
 };
 
 const PLAN_BADGE = {
+  start: "blue",
   essencial: "blue",
+  pro: "green",
   profissional: "green",
-  premium_ia: "amber",
+};
+
+const normalizePlanSlug = (slug) => {
+  if (["essencial", "basico", "basic"].includes(slug)) return "start";
+  if (["profissional", "professional", "premium_ia"].includes(slug)) return "pro";
+  return slug;
 };
 
 const EMP_TABS = [
@@ -121,7 +128,7 @@ export function EmpresasList({ onToast }) {
 
     return companies
       .filter(base.filter)
-      .filter((company) => plan === "all" || company.plan_slug === plan)
+      .filter((company) => plan === "all" || normalizePlanSlug(company.plan_slug) === plan)
       .filter((company) => `${company.name || ""} ${company.primary_domain || ""} ${company.responsible_email || ""}`.toLowerCase().includes(needle));
   }, [companies, tab, q, plan]);
 
@@ -188,9 +195,8 @@ export function EmpresasList({ onToast }) {
         </div>
         <select value={plan} onChange={(event) => setPlan(event.target.value)} style={{ height: 38, border: "1px solid var(--border)", borderRadius: 9, padding: "0 12px", background: "#fff", fontWeight: 550, fontSize: 13, color: "var(--text)" }}>
           <option value="all">Todos os planos</option>
-          <option value="essencial">Essencial</option>
-          <option value="profissional">Profissional</option>
-          <option value="premium_ia">Premium IA</option>
+          <option value="start">START</option>
+          <option value="pro">PRO</option>
         </select>
       </div>
 

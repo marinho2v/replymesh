@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class TableSessionsController < BaseController
+        before_action -> { require_feature!("table_orders") }
         before_action :set_session, only: %i[show update]
 
         def index

@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class InventoryMovementsController < BaseController
+        before_action -> { require_feature!("inventory_movements") }
+
         def index
           scope = company_scope(InventoryMovement).includes(:inventory_item).recent
 

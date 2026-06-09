@@ -85,6 +85,9 @@ export const api = {
   activateCompany: (id) => request(`/master/companies/${id}/activate`, { method: "PATCH" }),
   deactivateCompany: (id) => request(`/master/companies/${id}/deactivate`, { method: "PATCH" }),
   impersonateCompany: (id) => request(`/master/companies/${id}/impersonate`, { method: "POST" }),
+  getCompanyFeatures: (id) => request(`/master/companies/${id}/features`),
+  updateCompanyFeatures: (id, overrides) => request(`/master/companies/${id}/features`, { method: "PATCH", body: JSON.stringify({ overrides }) }),
+  updateCompanyPlan: (id, payload) => request(`/master/companies/${id}/plan`, { method: "PATCH", body: JSON.stringify(payload) }),
   dryRunCompanyBackupImport: (id, backup) => request(`/master/companies/${id}/backup_import/dry_run`, {
     method: "POST",
     body: JSON.stringify({ backup }),

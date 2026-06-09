@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class CouponsController < BaseController
+        before_action -> { require_feature!("coupons") }
         before_action :set_coupon, only: %i[show update destroy]
 
         def index

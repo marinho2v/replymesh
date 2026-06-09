@@ -111,6 +111,12 @@ export const getDashboardStats = (options = {}) => (
   })
 )
 
+export const railsGetFeatureAccess = (options = {}) => (
+  request('/store/features', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
 // ── Public (kept for menu/checkout) ──────────────────────────────────────────
 
 export const getStoreCategories = (options = {}) => (

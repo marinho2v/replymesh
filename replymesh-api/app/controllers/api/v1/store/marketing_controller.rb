@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class MarketingController < BaseController
+        before_action :require_marketing_feature!
+
         def customers
           scope = current_company.customers.includes(:customer_addresses).where.not(phone: [nil, ""])
           scope = apply_audience_filter(scope)
@@ -79,6 +81,11 @@ module Api
         end
 
         private
+
+        def require_marketing_feature!
+          feature = action_name == "recovery_customers" ? "sales_recovery" : "marketing_whatsapp"
+          require_feature!(feature)
+        end
 
         def apply_audience_filter(scope)
           case params[:filter]

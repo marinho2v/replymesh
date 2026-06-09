@@ -2,6 +2,7 @@ class StoreSetting < ApplicationRecord
   STATUSES = %w[open closed paused].freeze
   PIX_KEY_TYPES = %w[cpf cnpj email phone random].freeze
   DEFAULT_ACCEPTED_PAYMENT_METHODS = %w[cash pix debit_card credit_card].freeze
+  DEFAULT_VISUAL_TEMPLATE_ID = "hamburgueria-premium".freeze
   DEFAULT_OPENING_HOURS = {
     "monday" => { "enabled" => true, "open" => "18:00", "close" => "23:00" },
     "tuesday" => { "enabled" => true, "open" => "18:00", "close" => "23:00" },
@@ -134,7 +135,7 @@ class StoreSetting < ApplicationRecord
       opening_hours: opening_hours.presence || DEFAULT_OPENING_HOURS,
       order_message_template: order_message_template,
       accepted_payment_methods: accepted_payment_methods.presence || DEFAULT_ACCEPTED_PAYMENT_METHODS,
-      visual_template_id: respond_to?(:visual_template_id) ? (visual_template_id.presence || 'hamburgueria-classic') : 'hamburgueria-classic',
+      visual_template_id: respond_to?(:visual_template_id) ? (visual_template_id.presence || DEFAULT_VISUAL_TEMPLATE_ID) : DEFAULT_VISUAL_TEMPLATE_ID,
       hero_title: respond_to?(:hero_title) ? hero_title : nil,
       hero_highlight: respond_to?(:hero_highlight) ? hero_highlight : nil,
       hero_subtitle: respond_to?(:hero_subtitle) ? hero_subtitle : nil,

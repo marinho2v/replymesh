@@ -27,6 +27,7 @@ const AiSettings = lazy(() => import("../pages/configuracoes/AiSettings.jsx").th
 const SystemUpdates = lazy(() => import("../pages/configuracoes/SystemUpdates.jsx").then((module) => ({ default: module.SystemUpdates })));
 const MasterBranding = lazy(() => import("../pages/configuracoes/MasterBranding.jsx").then((module) => ({ default: module.MasterBranding })));
 const AndroidApps = lazy(() => import("../pages/AndroidApps.jsx").then((module) => ({ default: module.AndroidApps })));
+const LandingPage = lazy(() => import("../pages/LandingPage.jsx").then((module) => ({ default: module.LandingPage })));
 
 const page = (element) => (
   <Suspense fallback={<div className="route-loader" role="status">Carregando pagina...</div>}>
@@ -38,7 +39,8 @@ const protectedPage = (element) => <RequireAuth>{page(element)}</RequireAuth>;
 
 export const routes = (onToast, authHandlers = {}) => [
   { path: "/login", element: page(<Login onToast={onToast} onLogin={authHandlers.onLogin} />) },
-  { path: "/", element: <Navigate to="/dashboard" replace /> },
+  { path: "/", element: page(<LandingPage />) },
+  { path: "/home", element: page(<LandingPage />) },
   { path: "/dashboard", element: protectedPage(<Dashboard />) },
   { path: "/empresas", element: protectedPage(<EmpresasList onToast={onToast} />) },
   { path: "/empresas/nova", element: protectedPage(<NovaEmpresa onToast={onToast} />) },

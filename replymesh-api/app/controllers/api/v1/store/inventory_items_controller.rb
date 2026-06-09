@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class InventoryItemsController < BaseController
+        before_action -> { require_feature!("inventory") }
         before_action :set_item, only: %i[show update destroy entry adjust]
 
         def index

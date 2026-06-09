@@ -1,5 +1,6 @@
 import { COMPANY_SLUG, request } from './replymeshApi'
 import { getEffectiveStoreStatus } from '../utils/storeSchedule'
+import { DEFAULT_TEMPLATE_ID } from '../templates'
 
 const OFFICIAL_STORE_PHONE = '+55 21 97714-9837'
 const DEFAULT_LOGO_URL = '/logo.png'
@@ -32,7 +33,7 @@ export const getStoreSettings = async () => {
       logo_url: settings.logo_url || DEFAULT_LOGO_URL,
       banner_url: settings.banner_url || settings.cover_url || '',
       cover_url: settings.cover_url || settings.banner_url || '',
-      visual_template_id: settings.visual_template_id || 'hamburgueria-classic',
+      visual_template_id: settings.visual_template_id || DEFAULT_TEMPLATE_ID,
     }
   } catch (error) {
     console.error('Error fetching Rails store settings:', error)
@@ -47,7 +48,7 @@ export const getPublicStoreSettings = async () => {
       ...(payload.store || {}),
       ...(payload.store_settings || {}),
       logo_url: payload.store?.logo_url || payload.store_settings?.logo_url || DEFAULT_LOGO_URL,
-      visual_template_id: payload.store?.visual_template_id || payload.store_settings?.visual_template_id || 'hamburgueria-classic',
+      visual_template_id: payload.store?.visual_template_id || payload.store_settings?.visual_template_id || DEFAULT_TEMPLATE_ID,
     }
   } catch (error) {
     console.error('Error fetching public Rails store settings:', error)
@@ -170,7 +171,7 @@ const sanitizeStoreSettings = (settingsData = {}, includeOptionalColumns = true)
     payload.evolution_api_key = emptyToNull(settingsData.evolution_api_key)
     payload.evolution_instance = emptyToNull(settingsData.evolution_instance)
     payload.order_status_flow = normalizeOrderStatusFlow(settingsData.order_status_flow || DEFAULT_ORDER_STATUS_FLOW)
-    payload.visual_template_id = settingsData.visual_template_id || 'hamburgueria-classic'
+    payload.visual_template_id = settingsData.visual_template_id || DEFAULT_TEMPLATE_ID
     payload.pix_provider = settingsData.pix_provider || 'manual'
     payload.mercadopago_public_key = emptyToNull(settingsData.mercadopago_public_key)
     // Só envia o token se o usuário digitou algo novo (não é o token mascarado)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -24,7 +24,7 @@ import {
   Truck,
   Upload,
 } from 'lucide-react'
-import { getAllTemplates, getTemplateCategories } from '../../templates'
+import { DEFAULT_TEMPLATE_ID, getAllTemplates, getTemplateById, getTemplateCategories } from '../../templates'
 import {
   railsGetStoreAiSettings,
   railsUpdateStoreAiSettings,
@@ -35,7 +35,7 @@ const TEMPLATE_CATEGORY_LABELS = {
   pizzaria: 'Pizzaria',
   doceria: 'Doceria',
   bebidas: 'Bebidas',
-  acai: 'Açaí',
+  acai: 'AÃ§aÃ­',
   restaurante: 'Restaurante',
 }
 
@@ -159,21 +159,21 @@ const TemplateSelectorSection = ({ currentTemplateId, onSelect, openSection, set
     ? allTemplates
     : allTemplates.filter((t) => t.category === activeCategory)
 
-  const currentTemplate = allTemplates.find((t) => t.id === currentTemplateId)
+  const currentTemplate = allTemplates.find((t) => t.id === currentTemplateId) || getTemplateById(currentTemplateId)
 
   return (
     <SettingsSection
       id="template"
       icon={Palette}
       title="Template da loja"
-      description={`Visual da loja pública. Atual: ${currentTemplate?.name || 'Hamburgueria Classic'}`}
+      description={`Visual da loja publica. Atual: ${currentTemplate?.name || 'Hamburgueria Premium'}`}
       openSection={openSection}
       setOpenSection={setOpenSection}
     >
       <div className="rounded-xl border border-dark-600 bg-dark-900/60 p-3 text-sm text-gray-300">
         <p className="text-xs text-gray-400">
-          Cada template é um visual completo da loja pública. Não afeta pedidos, pagamentos, WhatsApp nem o painel admin.
-          Templates marcados como <strong className="text-gray-300">"Em breve"</strong> aparecerão em versões futuras.
+          Cada template e um visual completo da loja publica. Nao afeta pedidos, pagamentos, WhatsApp nem o painel admin.
+          Apenas templates ativos aparecem para novas escolhas.
         </p>
       </div>
 
@@ -228,7 +228,7 @@ const TemplateSelectorSection = ({ currentTemplateId, onSelect, openSection, set
       </div>
 
       <p className="text-xs text-gray-500">
-        Após selecionar um template, clique em <strong className="text-gray-300">"Salvar configurações"</strong> para aplicar.
+        ApÃ³s selecionar um template, clique em <strong className="text-gray-300">"Salvar configuraÃ§Ãµes"</strong> para aplicar.
       </p>
     </SettingsSection>
   )
@@ -274,7 +274,7 @@ const defaultSettings = {
   recurring_customer_min_orders: 2,
   app_cache_version: '1',
   app_cache_updated_at: '',
-  visual_template_id: 'hamburgueria-classic',
+  visual_template_id: DEFAULT_TEMPLATE_ID,
   pix_provider: 'manual',
   mercadopago_public_key: '',
   mercadopago_access_token: '',
@@ -498,10 +498,10 @@ const Settings = () => {
   const effectiveStatus = getEffectiveStoreStatus(localSettings, localHours)
   const effectiveStatusText = effectiveStatus.isOpen ? 'Loja aberta agora' : 'Loja fechada agora'
   const effectiveStatusHelper = effectiveStatus.isOpen && effectiveStatus.closesAt
-    ? `Fecha automaticamente às ${normalizeTime(effectiveStatus.closesAt)}`
+    ? `Fecha automaticamente Ã s ${normalizeTime(effectiveStatus.closesAt)}`
     : !effectiveStatus.isOpen && effectiveStatus.opensAt
-      ? `Abre automaticamente às ${normalizeTime(effectiveStatus.opensAt)}`
-      : 'Status calculado pelos horários cadastrados.'
+      ? `Abre automaticamente Ã s ${normalizeTime(effectiveStatus.opensAt)}`
+      : 'Status calculado pelos horÃ¡rios cadastrados.'
 
   const updateSetting = (field, value) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }))
@@ -653,7 +653,7 @@ const Settings = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Input label="URL publica da loja" value={publicUrl} readOnly />
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-200">Status automático da loja</label>
+              <label className="mb-2 block text-sm font-medium text-gray-200">Status automÃ¡tico da loja</label>
               <div className={`rounded-lg border px-4 py-3 ${
                 effectiveStatus.isOpen
                   ? 'border-green-700 bg-green-950/30'
@@ -955,12 +955,12 @@ const Settings = () => {
             Se preencher o payload, o checkout mostra o copia e cola. Se nao preencher, usa a chave PIX como fallback.
           </p>
 
-          {/* ── Mercado Pago ─────────────────────────────────────────────── */}
+          {/* â”€â”€ Mercado Pago â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="mt-2 rounded-xl border border-dark-600 bg-dark-900/60 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Mercado Pago — Pix automático</p>
-                <p className="text-xs text-gray-400 mt-0.5">Quando ativo, o Pix é processado automaticamente via API.</p>
+                <p className="text-sm font-semibold text-white">Mercado Pago â€” Pix automÃ¡tico</p>
+                <p className="text-xs text-gray-400 mt-0.5">Quando ativo, o Pix Ã© processado automaticamente via API.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${localSettings.mercadopago_enabled ? 'bg-green-400' : 'bg-gray-600'}`} />
@@ -973,8 +973,8 @@ const Settings = () => {
                 <Select
                   label="Modo Pix"
                   options={[
-                    { value: 'manual', label: 'Manual — chave Pix acima' },
-                    { value: 'mercadopago', label: 'Mercado Pago — automático' },
+                    { value: 'manual', label: 'Manual â€” chave Pix acima' },
+                    { value: 'mercadopago', label: 'Mercado Pago â€” automÃ¡tico' },
                   ]}
                   value={localSettings.pix_provider || 'manual'}
                   onChange={(e) => updateSetting('pix_provider', e.target.value)}
@@ -995,13 +995,13 @@ const Settings = () => {
               {localSettings.pix_provider === 'mercadopago' && (
                 <>
                   <Input
-                    label="Public Key (começa com APP_USR- ou TEST-)"
+                    label="Public Key (comeÃ§a com APP_USR- ou TEST-)"
                     value={localSettings.mercadopago_public_key || ''}
                     onChange={(e) => updateSetting('mercadopago_public_key', e.target.value)}
                     placeholder="APP_USR-xxxxxxxx-xxxx-xxxx..."
                   />
                   <Input
-                    label="Access Token (não será exibido após salvar)"
+                    label="Access Token (nÃ£o serÃ¡ exibido apÃ³s salvar)"
                     type="password"
                     value={localSettings.mercadopago_access_token || ''}
                     onChange={(e) => updateSetting('mercadopago_access_token', e.target.value)}
@@ -1103,7 +1103,7 @@ const Settings = () => {
         </SettingsSection>
 
         <TemplateSelectorSection
-          currentTemplateId={localSettings.visual_template_id || 'hamburgueria-classic'}
+          currentTemplateId={localSettings.visual_template_id || DEFAULT_TEMPLATE_ID}
           onSelect={(id) => updateSetting('visual_template_id', id)}
           openSection={openSection}
           setOpenSection={setOpenSection}

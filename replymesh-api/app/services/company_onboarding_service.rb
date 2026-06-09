@@ -21,6 +21,7 @@ class CompanyOnboardingService
 
   DEFAULT_LOGO_URL = "/logo.png".freeze
   DEFAULT_BANNER_URL = "/capa.jpeg".freeze
+  DEFAULT_VISUAL_TEMPLATE_ID = "hamburgueria-premium".freeze
 
   def self.call(company_params, options = {}, actor: nil)
     new(company_params, options, actor: actor).call
@@ -112,7 +113,7 @@ class CompanyOnboardingService
   end
 
   def create_subscription!
-    plan = Plan.find_by!(slug: company_params[:plan_slug].presence || "essencial")
+    plan = resolve_plan(company_params[:plan_slug].presence || "start")
 
     Subscription.create!(
       company: @company,
@@ -164,7 +165,7 @@ class CompanyOnboardingService
       cover_url: DEFAULT_BANNER_URL,
       primary_color: "#16a34a",
       secondary_color: "#0b0b0d",
-      visual_template_id: "hamburgueria-classic",
+      visual_template_id: DEFAULT_VISUAL_TEMPLATE_ID,
       accepted_payment_methods: StoreSetting::DEFAULT_ACCEPTED_PAYMENT_METHODS,
       opening_hours: StoreSetting::DEFAULT_OPENING_HOURS
     )
@@ -181,6 +182,12 @@ class CompanyOnboardingService
       sort_order: 0
     )
     created_resources[:app_banner] = true
+  end
+
+  def resolve_plan(slug)
+    normalized = FeatureCatalog.normalize_plan_slug(slug)
+    legacy_slugs = normalized == "pro" ? %w[pro profissional premium_ia] : %w[start essencial]
+    Plan.find_by(slug: legacy_slugs) || Plan.find_by!(slug: slug)
   end
 
   def create_business_hours!

@@ -37,7 +37,7 @@
     notify_company(
       company: order.company,
       title: "Novo pedido ##{order.order_number}",
-      message: "#{order.customer_name} â€” #{format_money(order_amount(order))}",
+      message: "#{order.customer_name} - #{format_money(order_amount(order))}",
       type: 'order',
       link_url: "/admin/orders/#{order.id}",
       metadata: { order_id: order.id, order_number: order.order_number, total: order_amount(order) }
@@ -76,7 +76,7 @@
     notify_company(
       company: company,
       title: "Estoque baixo: #{item_name}",
-      message: "Atual: #{current_qty} | MÃ­nimo: #{min_qty}",
+      message: "Atual: #{current_qty} | Minimo: #{min_qty}",
       type: 'stock',
       link_url: "/admin/inventory",
       metadata: { item_name: item_name, current_qty: current_qty, min_qty: min_qty }
@@ -86,7 +86,7 @@
   # System update announcement
   def self.system_update(version:, notes:, company: nil)
     params = {
-      title: "AtualizaÃ§Ã£o do sistema #{version}",
+      title: "Atualizacao do sistema #{version}",
       message: notes,
       type: 'system_update',
       link_url: "/admin/updates",

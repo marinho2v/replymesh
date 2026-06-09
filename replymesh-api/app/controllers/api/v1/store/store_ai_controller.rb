@@ -2,6 +2,8 @@ module Api
   module V1
     module Store
       class StoreAiController < BaseController
+        before_action -> { require_feature!("store_ai") }
+
         def settings
           render_ok(settings: setting.as_json_safe)
         end

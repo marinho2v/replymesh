@@ -4,6 +4,7 @@ class Plan < ApplicationRecord
 
   has_many :subscriptions, dependent: :restrict_with_error
   has_many :companies, through: :subscriptions
+  has_many :plan_features, dependent: :destroy
 
   normalizes :slug, with: ->(slug) { slug.strip.downcase }
 

@@ -7,6 +7,8 @@ RSpec.describe "Store multi-tenant isolation", type: :request do
 
   before do
     add_member(user_a, company_a)
+    assign_plan(company_a, slug: "pro")
+    assign_plan(company_b, slug: "pro")
     create_store(company_a)
     create_store(company_b)
     _category_a, @product_a = create_catalog(company_a)

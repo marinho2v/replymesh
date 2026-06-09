@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_09_211500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -266,6 +266,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
     t.index ["status"], name: "index_companies_on_status"
     t.index ["store_order_counter"], name: "index_companies_on_store_order_counter"
     t.index ["subdomain"], name: "index_companies_on_subdomain", unique: true
+  end
+
+  create_table "company_feature_overrides", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "expires_at"
+    t.string "feature_key", null: false
+    t.text "internal_note"
+    t.string "mode", default: "allow", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "feature_key"], name: "idx_company_feature_overrides_unique", unique: true
+    t.index ["company_id"], name: "index_company_feature_overrides_on_company_id"
+    t.index ["created_by_id"], name: "index_company_feature_overrides_on_created_by_id"
+    t.index ["expires_at"], name: "index_company_feature_overrides_on_expires_at"
+    t.index ["feature_key"], name: "index_company_feature_overrides_on_feature_key"
+    t.index ["mode"], name: "index_company_feature_overrides_on_mode"
   end
 
   create_table "company_members", force: :cascade do |t|
@@ -896,6 +913,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
     t.index ["company_id"], name: "index_payment_methods_on_company_id"
   end
 
+  create_table "plan_features", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: true, null: false
+    t.string "feature_key", null: false
+    t.text "notes"
+    t.bigint "plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feature_key"], name: "index_plan_features_on_feature_key"
+    t.index ["plan_id", "feature_key"], name: "index_plan_features_on_plan_id_and_feature_key", unique: true
+    t.index ["plan_id"], name: "index_plan_features_on_plan_id"
+  end
+
   create_table "plans", force: :cascade do |t|
     t.text "billing_cycle", default: "monthly", null: false
     t.datetime "created_at", null: false
@@ -992,8 +1021,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
     t.string "phone"
     t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
-    t.index ["company_id", "phone", "status"], name: "index_store_ai_conversations_lookup"
     t.index ["company_id", "phone", "paused_until"], name: "index_store_ai_conversations_pause_lookup"
+    t.index ["company_id", "phone", "status"], name: "index_store_ai_conversations_lookup"
     t.index ["company_id"], name: "index_store_ai_conversations_on_company_id"
     t.index ["customer_id"], name: "index_store_ai_conversations_on_customer_id"
   end
@@ -1095,7 +1124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
     t.string "theme_primary_color"
     t.text "trade_name"
     t.datetime "updated_at", null: false
-    t.string "visual_template_id", default: "hamburgueria-classic", null: false
+    t.string "visual_template_id", default: "hamburgueria-premium", null: false
     t.text "whatsapp"
     t.text "whatsapp_number"
     t.text "zip_code"
@@ -1411,6 +1440,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
   add_foreign_key "cash_sessions", "users", column: "closed_by_id", on_delete: :nullify
   add_foreign_key "cash_sessions", "users", column: "opened_by_id", on_delete: :restrict
   add_foreign_key "categories", "companies", on_delete: :cascade
+  add_foreign_key "company_feature_overrides", "companies", on_delete: :cascade
+  add_foreign_key "company_feature_overrides", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "company_members", "companies", on_delete: :cascade
   add_foreign_key "company_members", "users", on_delete: :cascade
   add_foreign_key "coupons", "companies", on_delete: :cascade
@@ -1467,6 +1498,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_183000) do
   add_foreign_key "orders", "motoboys", on_delete: :nullify
   add_foreign_key "orders", "users", column: "attendant_id", on_delete: :nullify
   add_foreign_key "payment_methods", "companies", on_delete: :cascade
+  add_foreign_key "plan_features", "plans"
   add_foreign_key "product_option_groups", "companies", on_delete: :cascade
   add_foreign_key "product_option_groups", "products", on_delete: :cascade
   add_foreign_key "product_option_items", "companies", on_delete: :cascade

@@ -8,16 +8,14 @@ import { PLATFORM_URLS, RESERVED_SLUGS } from "../../config/platform.js";
 import { slugify } from "../../lib/utils.js";
 import { api } from "../../services/api.js";
 
-const PLANS = [
-  { id: "essencial", label: "Essencial", price: "R$ 300/mes", desc: "Base para operacao inicial" },
-  { id: "profissional", label: "Profissional", price: "R$ 500/mes", desc: "Operacao completa do delivery" },
-  { id: "premium_ia", label: "Premium IA", price: "Sob consulta", desc: "Automacoes avancadas e suporte dedicado" },
-];
+  const PLANS = [
+    { id: "start", label: "START", price: "R$ 299/mes", desc: "Cardapio, pedidos, WhatsApp basico, caixa e gestao inicial" },
+    { id: "pro", label: "PRO", price: "R$ 499/mes", desc: "START + IA, automacoes, cupons, roleta, estoque, salao e relatorios avancados" },
+  ];
 
 const PLAN_BADGE = {
-  essencial: "blue",
-  profissional: "green",
-  premium_ia: "amber",
+    start: "blue",
+    pro: "green",
 };
 
 const STATUS_BADGE = {
@@ -37,7 +35,7 @@ export function NovaEmpresa({ onToast }) {
     phone: "",
     doc: "",
     adminPassword: "admin123456",
-    plan: "profissional",
+    plan: "start",
     status: "trial",
     whatsapp: false,
     customDomain: false,

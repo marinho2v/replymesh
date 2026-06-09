@@ -85,6 +85,20 @@ module Api
           render_error("#{resource} nao encontrado", status: :not_found)
         end
 
+        def require_feature!(feature_key)
+          gate = FeatureGate.check(current_company, feature_key)
+          return true if gate.enabled?
+
+          render json: {
+            success: false,
+            error: "feature_not_available",
+            feature: gate.feature,
+            required_plan: gate.required_plan,
+            message: "Recurso disponivel no Plano #{FeatureCatalog.required_plan_label(gate.required_plan)}."
+          }, status: :forbidden
+          false
+        end
+
         def render_record_errors(record)
           render_error(
             record.errors.full_messages.first,

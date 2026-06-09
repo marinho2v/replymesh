@@ -59,7 +59,7 @@ export default function App() {
 
   const element = useRoutes(routes(showToast, { onLogin: handleLogin }));
 
-  if (location.pathname === "/login") {
+  if (location.pathname === "/" || location.pathname === "/login" || location.pathname === "/home") {
     return (
       <>
         {element}

@@ -152,11 +152,11 @@ const Success = () => {
         <div className="rounded-xl border border-dark-600 bg-dark-800 p-5 sm:p-8">
           {store && (
             <div className="mb-6 flex items-center justify-center gap-3">
-              {store.logo_url && store.logo_url !== '/logo.png' && (
+              {store.logo_url && (
                 <img
                   src={store.logo_url}
                   alt={store.name || 'Logo'}
-                  className="h-12 w-12 rounded-full object-cover"
+                  className="h-12 w-16 object-contain"
                 />
               )}
               {store.name && <span className="text-lg font-bold text-white">{store.name}</span>}
