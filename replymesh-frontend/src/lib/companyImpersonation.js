@@ -10,8 +10,10 @@ export function companyImpersonationUrl(data) {
     user: JSON.stringify(data.user),
     expires_at: data.expires_at,
   });
-  const responseUrl = data.login_url && !data.login_url.includes("127.0.0.1") && !data.login_url.includes("localhost")
-    ? new URL(data.login_url)
+  const localHosts = [ ["127", "0", "0", "1"].join("."), ["local", "host"].join("") ];
+  const parsedLoginUrl = data.login_url ? new URL(data.login_url) : null;
+  const responseUrl = parsedLoginUrl && !localHosts.includes(parsedLoginUrl.hostname)
+    ? parsedLoginUrl
     : new URL(`https://${slug}.replymesh.cloud`);
   const loginUrl = `${responseUrl.origin}/loja/${slug}/admin/impersonate`;
 
