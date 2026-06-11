@@ -28,12 +28,16 @@ export const ROLE_PERMISSIONS = {
     'view_whatsapp_templates',
     'manage_whatsapp_templates',
     'view_kitchen',
+    'view_pos',
+    'manage_pos',
   ],
   [USER_ROLES.ATTENDANT]: [
     'view_orders',
     'manage_orders',
     'view_tables',
     'manage_tables',
+    'view_pos',
+    'manage_pos',
   ],
   [USER_ROLES.WAITER]: [
     'view_tables',

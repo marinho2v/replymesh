@@ -125,6 +125,11 @@ class OrderStatusService
       return statuses
     end
 
+    if @order.pos?
+      statuses << "completed"
+      return statuses
+    end
+
     statuses << "preparing" if template_enabled_for_status?("preparing")
     statuses << "ready" if template_enabled_for_status?("ready")
     statuses << "out_for_delivery" if @order.order_type == "delivery" && template_enabled_for_status?("out_for_delivery", default: true)
@@ -148,9 +153,9 @@ class OrderStatusService
       result = InventoryService.deduct_for_order(order: @order, user: @user)
       raise ServiceError, result.error unless result.success?
     when "completed"
-      # Pedido de mesa entra no caixa apenas no fechamento da sessao,
-      # com a forma de pagamento real informada pelo garcom/atendente.
-      unless @order.dine_in?
+      # Pedido de mesa entra no caixa apenas no fechamento da sessao.
+      # Pedido PDV ja foi registrado no caixa no momento da venda.
+      unless @order.dine_in? || @order.pos?
         result = CashService.record_payment(order: @order, user: @user)
         if !result.success? && result.error != "Nenhum caixa aberto"
           raise ServiceError, result.error
@@ -171,6 +176,7 @@ class OrderStatusService
 
   def prepare_whatsapp_update
     return if @order.dine_in?
+    return if @order.pos?
 
     WhatsappStatusDispatcher.call(order: @order, status: @new_status, user: @user)
   rescue StandardError => e

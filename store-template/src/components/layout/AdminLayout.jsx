@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Lock,
+  MonitorPlay,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { signOut } from '../../services/auth'
@@ -162,6 +163,7 @@ export const AdminLayout = () => {
       items: [
         { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant'] },
         { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter'] },
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'], feature: 'pos_counter' },
       ],
     },
     {

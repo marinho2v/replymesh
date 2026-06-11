@@ -53,6 +53,7 @@ const CreateKitchenUser = lazy(() => import('../pages/admin/CreateKitchenUser'))
 const AppBanners = lazy(() => import('../pages/admin/AppBanners'))
 const Support = lazy(() => import('../pages/admin/Support'))
 const SystemUpdates = lazy(() => import('../pages/admin/SystemUpdates'))
+const PosSale = lazy(() => import('../pages/admin/PosSale'))
 
 // Kitchen Pages
 const KitchenBoard = lazy(() => import('../pages/kitchen/KitchenBoard'))
@@ -185,6 +186,7 @@ const adminChildren = [
   { path: 'app-banners', element: protectedPage(AppBanners, ['admin']) },
   { path: 'support',  element: protectedPage(Support, ['admin']) },
   { path: 'updates',  element: protectedPage(SystemUpdates, ['admin']) },
+  { path: 'pos', element: protectedPage(PosSale, ['admin', 'attendant']) },
 ]
 
 export const router = createBrowserRouter([

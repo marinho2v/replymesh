@@ -153,6 +153,9 @@ Rails.application.routes.draw do
                     only: %i[index show create update destroy]
         end
 
+        # PDV / Balcao
+        post "pos/sale", to: "pos#sale"
+
         # Pedidos (ações de status e entrega como member actions)
         resources :orders, only: %i[index show create] do
           member do

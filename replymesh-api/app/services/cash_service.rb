@@ -112,6 +112,7 @@ class CashService
              when "delivery" then "delivery"
              when "dine_in"  then "table"
              when "pickup"   then "pickup"
+             when "pos"      then "pos"
              else "other"
              end
 

@@ -1,5 +1,5 @@
 class Order < ApplicationRecord
-  ORDER_TYPES       = %w[delivery pickup dine_in].freeze
+  ORDER_TYPES       = %w[delivery pickup dine_in pos].freeze
   STATUSES          = %w[pending accepted preparing ready out_for_delivery completed cancelled].freeze
   PAYMENT_METHODS   = %w[money pix card_on_delivery].freeze
   PAYMENT_STATUSES  = %w[not_required pending_payment pending paid failed expired refunded cancelled].freeze
@@ -42,6 +42,7 @@ class Order < ApplicationRecord
   def delivery?    = order_type == "delivery"
   def dine_in?     = order_type == "dine_in"
   def pickup?      = order_type == "pickup"
+  def pos?         = order_type == "pos"
   def pending?     = status == "pending"
   def completed?   = status == "completed"
   def cancelled?   = status == "cancelled"

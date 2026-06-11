@@ -52,12 +52,14 @@ export const ORDER_TYPES = {
   DELIVERY: 'delivery',
   PICKUP: 'pickup',
   DINE_IN: 'dine_in',
+  POS: 'pos',
 }
 
 export const ORDER_TYPE_LABELS = {
   [ORDER_TYPES.DELIVERY]: 'Entrega',
   [ORDER_TYPES.PICKUP]: 'Retirada',
   [ORDER_TYPES.DINE_IN]: 'Mesa',
+  [ORDER_TYPES.POS]: 'PDV / Balcao',
 }
 
 export const DISCOUNT_TYPES = {

@@ -4,6 +4,7 @@ class FeatureCatalog
   START = %w[
     dashboard orders products categories customers delivery_zones motoboys
     motoboy_panel cashier basic_reports users whatsapp_basic support updates
+    pos_counter
   ].freeze
 
   PRO = %w[
@@ -46,7 +47,8 @@ class FeatureCatalog
     ["waiter_history", "Historico por garcom", "pro", "restaurante_salao", "Historico de atendimento por garcom."],
     ["waiter_commands", "Comandas", "pro", "restaurante_salao", "Comandas e consumo de mesa."],
     ["advanced_reports", "Relatorios avancados", "pro", "gestao_avancada", "Relatorios detalhados."],
-    ["priority_support", "Suporte prioritario", "pro", "gestao_avancada", "Atendimento priorizado."]
+    ["priority_support", "Suporte prioritario", "pro", "gestao_avancada", "Atendimento priorizado."],
+    ["pos_counter", "PDV / Balcao", "start", "vendas", "Venda presencial rapida no balcao."]
   ].map { |key, label, minimum_plan, group, description| Feature.new(key:, label:, group:, minimum_plan:, description:) }.freeze
 
   PLAN_COPY = {
