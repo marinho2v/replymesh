@@ -9,10 +9,13 @@ class CashMovement < ApplicationRecord
   validates :movement_type,         inclusion: { in: TYPES }
   validates :amount_cents,          numericality: { only_integer: true }
 
+  ORIGINS = %w[delivery table pickup pos other].freeze
+
   scope :for_company, ->(cid) { where(company_id: cid) }
   scope :sales,      -> { where(movement_type: %w[sale_cash sale_pix sale_card]) }
   scope :cash_only,  -> { where(affects_physical_cash: true) }
   scope :recent,     -> { order(created_at: :desc) }
+  scope :by_origin,  ->(o) { where(origin: o) }
 
   def amount_brl = amount_cents.to_f / 100
 end

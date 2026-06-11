@@ -86,17 +86,16 @@ const CashRegister = () => {
   const counted = Number(countedAmount || 0)
   const difference = countedAmount === '' ? 0 : counted - expectedCash
 
-  const orderOriginLabel = (orderType) => ({
-    dine_in: 'Mesa',
-    delivery: 'Delivery',
-    pickup: 'Retirada',
-  }[orderType] || '-')
+  const orderOriginLabel = (movement) => {
+    const map = { delivery: 'Delivery', table: 'Mesa', pickup: 'Retirada', pos: 'PDV' }
+    return map[movement?.origin] || '-'
+  }
 
   const exportRows = useMemo(() => movements.map((movement) => ({
     data: new Date(movement.created_at).toLocaleString('pt-BR'),
     tipo: allMovementLabels[movement.type] || movement.type,
     valor: Number(movement.amount || 0).toFixed(2),
-    origem: orderOriginLabel(movement.orders?.order_type),
+    origem: orderOriginLabel(movement),
     atendente: movement.orders?.profiles?.full_name || movement.profiles?.full_name || '',
     caixa_fisico: movement.affects_physical_cash ? 'Sim' : 'Nao',
     pedido: movement.orders?.order_number ? `#${movement.orders.order_number}` : '',
@@ -293,7 +292,6 @@ const CashRegister = () => {
               </thead>
               <tbody>
                 {movements.map((movement) => {
-                  const origin = orderOriginLabel(movement.orders?.order_type)
                   const attendantName = movement.orders?.profiles?.full_name || movement.profiles?.full_name || '-'
                   return (
                     <tr key={movement.id} className="border-b border-dark-800 text-gray-200 hover:bg-dark-800/50 transition-colors">
@@ -305,12 +303,17 @@ const CashRegister = () => {
                       </td>
                       <td className="px-4 py-2.5 font-semibold text-white whitespace-nowrap">{formatCurrency(movement.amount)}</td>
                       <td className="px-4 py-2.5">
-                        {movement.orders?.order_type === 'dine_in' ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-pink-400">
-                            <Store size={11} />Mesa
+                        {movement.origin === 'table' ? (
+                          <span className="inline-flex flex-col gap-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-pink-400">
+                              <Store size={11} />{movement.origin_table_name || 'Mesa'}
+                            </span>
+                            {movement.origin_waiter_name && (
+                              <span className="text-[10px] text-gray-500">Garçom: {movement.origin_waiter_name}</span>
+                            )}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">{origin}</span>
+                          <span className="text-xs text-gray-400">{orderOriginLabel(movement)}</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-400">

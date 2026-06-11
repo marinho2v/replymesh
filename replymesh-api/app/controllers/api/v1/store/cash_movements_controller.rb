@@ -3,7 +3,9 @@ module Api
     module Store
       class CashMovementsController < BaseController
         def index
-          scope = company_scope(CashMovement).includes(:order).recent
+          scope = company_scope(CashMovement)
+                    .includes(order: [:dining_table, :customer])
+                    .recent
 
           scope = scope.where(cash_session_id: params[:cash_session_id]) if params[:cash_session_id].present?
           scope = scope.where(movement_type: params[:type])               if params[:type].present?
@@ -37,9 +39,16 @@ module Api
         private
 
         def serialize(m)
-          m.as_json(only: %i[id movement_type amount_cents affects_physical_cash notes created_at])
-           .merge(amount_brl: m.amount_brl,
-                  order_number: m.order&.order_number)
+          m.as_json(only: %i[id movement_type amount_cents affects_physical_cash notes created_at
+                             origin origin_table_name origin_waiter_name])
+           .merge(
+             amount_brl: m.amount_brl,
+             orders: m.order ? {
+               order_number:  m.order.order_number,
+               order_type:    m.order.order_type,
+               customer_name: m.order.customer_name
+             } : nil
+           )
         end
       end
     end

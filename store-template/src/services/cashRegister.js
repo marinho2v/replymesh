@@ -31,7 +31,10 @@ const normalizeMovement = (movement) => ({
   ...movement,
   type: movement.movement_type || movement.type,
   amount: movement.amount_brl ?? toBrl(movement.amount_cents),
-  orders: movement.order_number ? { order_number: movement.order_number } : movement.orders,
+  orders: movement.orders ?? (movement.order_number ? { order_number: movement.order_number } : null),
+  origin: movement.origin || null,
+  origin_table_name: movement.origin_table_name || null,
+  origin_waiter_name: movement.origin_waiter_name || null,
 })
 
 export const getOpenCashSession = async () => {

@@ -31,6 +31,7 @@ module Api
             },
             status_totals: grouped_totals(orders, &:status),
             payment_totals: grouped_totals(completed, &:payment_method),
+            origin_totals: origin_totals(completed),
             top_products: top_products(completed),
             hourly_sales: hourly_sales(completed),
             orders: serialized_orders
@@ -69,6 +70,13 @@ module Api
               profitMargin: revenue.positive? ? ((revenue - cost) * 100.0 / revenue).round(2) : 0
             }
           end.sort_by { |item| -item[:quantity] }.first(10)
+        end
+
+        def origin_totals(orders)
+          origin_map = { "delivery" => "delivery", "dine_in" => "table", "pickup" => "pickup" }
+          orders.group_by { |o| origin_map[o.order_type] || "other" }.transform_values do |items|
+            { count: items.size, total: items.sum(&:total_cents) / 100.0 }
+          end
         end
 
         def hourly_sales(orders)

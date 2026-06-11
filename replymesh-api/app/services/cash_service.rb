@@ -61,7 +61,8 @@ class CashService
     session = CashSession.current_for(order.company_id)
     return Result.new(success: false, error: "Nenhum caixa aberto") unless session
 
-    movements = movements_for_order(order)
+    movements   = movements_for_order(order)
+    origin_info = build_origin_info(order)
 
     ActiveRecord::Base.transaction do
       movements.each do |attrs|
@@ -69,6 +70,7 @@ class CashService
           company_id:          order.company_id,
           order:               order,
           created_by:          user,
+          **origin_info,
           **attrs
         )
       end
@@ -103,6 +105,24 @@ class CashService
     Result.new(success: true, data: movement)
   rescue ActiveRecord::RecordInvalid => e
     Result.new(success: false, error: e.record.errors.full_messages.join(", "))
+  end
+
+  private_class_method def self.build_origin_info(order)
+    origin = case order.order_type
+             when "delivery" then "delivery"
+             when "dine_in"  then "table"
+             when "pickup"   then "pickup"
+             else "other"
+             end
+
+    return { origin: origin } unless order.order_type == "dine_in"
+
+    ts = order.table_session
+    {
+      origin:             "table",
+      origin_table_name:  ts&.dining_table&.name,
+      origin_waiter_name: ts&.opened_by&.name
+    }
   end
 
   private_class_method def self.movements_for_order(order)

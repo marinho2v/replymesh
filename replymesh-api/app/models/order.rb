@@ -18,6 +18,7 @@ class Order < ApplicationRecord
   has_one    :delivery_history,     dependent: :destroy
   has_many   :cash_movements
   has_many   :whatsapp_message_logs
+  has_one    :table_session, foreign_key: :order_id, inverse_of: :order
 
   validates :order_type,       inclusion: { in: ORDER_TYPES }
   validates :status,           inclusion: { in: STATUSES }
