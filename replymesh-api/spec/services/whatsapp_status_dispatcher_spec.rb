@@ -70,4 +70,28 @@ RSpec.describe WhatsappStatusDispatcher do
 
     expect(result.sent).to be(true)
   end
+
+  it "maps pending orders to pedido_recebido and avoids duplicate sends" do
+    WhatsappTemplate.create!(
+      company: company, template_key: "pedido_recebido",
+      title: "Recebido", message: 'Pedido #{{numero_pedido}} recebido', enabled: true
+    )
+    WhatsappInstance.create!(
+      company: company,
+      instance_name: "replymesh_whatsapp_test",
+      instance_token: "instance-token",
+      provider: "evolution_go",
+      status: "connected"
+    )
+    client = instance_double(EvolutionGoClient, send_text: { success: true, mode: "test" })
+    allow(EvolutionGoClient).to receive(:new).and_return(client)
+
+    first = described_class.call(order: order, status: "pending")
+    second = described_class.call(order: order, status: "pending")
+
+    expect(first.sent).to be(true)
+    expect(second.sent).to be(false)
+    expect(second.error).to eq("notificacao ja enviada")
+    expect(client).to have_received(:send_text).once
+  end
 end

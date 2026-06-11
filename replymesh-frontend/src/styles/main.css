@@ -156,7 +156,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
   top:calc(100% + 10px);
   right:0;
   width:260px;
-  background:#fff;
+  background:linear-gradient(135deg,#101116 0%,#17181f 54%,#111827 100%);
   border:1px solid var(--border);
   border-radius:12px;
   box-shadow:var(--shadow-pop);
@@ -179,7 +179,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
   height:34px;
   border:1px solid var(--border);
   border-radius:8px;
-  background:#fff;
+  background:linear-gradient(135deg,#101116 0%,#17181f 54%,#111827 100%);
   color:var(--text);
   font-size:12.5px;
   font-weight:600;
@@ -576,7 +576,7 @@ html[data-theme="dark"] .android-search input{background:var(--card);color:var(-
   align-items:center;
   justify-content:center;
   padding:28px;
-  background:linear-gradient(135deg,#101116 0%,#17181f 54%,#111827 100%);
+  background:#fff;
 }
 .login-card{
   width:min(100%,390px);
@@ -594,6 +594,23 @@ html[data-theme="dark"] .android-search input{background:var(--card);color:var(-
   align-items:center;
   gap:12px;
   margin-bottom:4px;
+}
+.login-logo{
+  width:42px;
+  height:42px;
+  border-radius:10px;
+  background:#f4f4f5;
+  border:1px solid #e4e4e7;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  overflow:hidden;
+}
+.login-logo img{
+  width:30px;
+  height:30px;
+  object-fit:contain;
+  display:block;
 }
 .login-title{
   font-size:21px;
@@ -709,14 +726,19 @@ html[data-theme="dark"]{
 html[data-theme="dark"] .topbar{background:rgba(16,17,20,.9)}
 html[data-theme="dark"] .search input,
 html[data-theme="dark"] .compact-select,
-html[data-theme="dark"] .user-menu,
-html[data-theme="dark"] .login-card{background:var(--card);color:var(--text)}
+html[data-theme="dark"] .user-menu{background:var(--card);color:var(--text)}
+html[data-theme="dark"] .login-card{background:#fff;color:#111827}
+html[data-theme="dark"] .login-screen{background:linear-gradient(135deg,#101116 0%,#17181f 54%,#111827 100%)}
 html[data-theme="dark"] .search .kbd span{background:#202126}
 html[data-theme="dark"] .icon-btn:hover,
 html[data-theme="dark"] .top-user:hover,
 html[data-theme="dark"] .top-user.active{background:#24262b}
 html[data-theme="dark"] .card,
 html[data-theme="dark"] .panel{background:var(--card)}
+
+.login-screen{
+  background:linear-gradient(135deg,#101116 0%,#17181f 54%,#111827 100%);
+}
 
 @media(max-width:800px){
   .update-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

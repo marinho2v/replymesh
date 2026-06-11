@@ -116,7 +116,7 @@ export const useNotificationSound = (scope = 'global') => {
             ? 'Retirada'
             : 'Entrega',
         order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : null,
-      ].filter(Boolean).join(' • ')
+      ].filter(Boolean).join(' - ')
 
       const notification = new Notification(title, {
         body,

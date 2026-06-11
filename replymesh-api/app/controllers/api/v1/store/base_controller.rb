@@ -4,6 +4,7 @@ module Api
       class BaseController < ApplicationController
         before_action :authenticate_user!
         before_action :resolve_current_company!
+        before_action :authorize_store_role!
 
         attr_reader :current_company
 
@@ -63,7 +64,66 @@ module Api
             return nil
           end
 
+          @current_company_member = membership
           membership.company
+        end
+
+        def authorize_store_role!
+          return true if performed? || current_user.super_admin?
+          return true if store_admin?
+
+          role = current_company_member&.role
+          return forbidden_role unless role
+
+          return true if role == "employee" && employee_allowed?
+          return true if role == "waiter" && waiter_allowed?
+          return true if role == "kitchen" && kitchen_allowed?
+
+          forbidden_role
+        end
+
+        def current_company_member
+          @current_company_member ||= current_user.company_members.active.find_by(company_id: current_company&.id)
+        end
+
+        def store_admin?
+          current_company_member&.role == "store_admin"
+        end
+
+        def employee_allowed?
+          controller_path.in?(
+            %w[
+              api/v1/store/dashboard
+              api/v1/store/orders
+              api/v1/store/dining_tables
+              api/v1/store/table_sessions
+              api/v1/store/categories
+              api/v1/store/products
+              api/v1/store/motoboys
+              api/v1/store/deliveries
+              api/v1/store/features
+              api/v1/store/notifications
+            ]
+          )
+        end
+
+        def waiter_allowed?
+          return true if controller_path.in?(%w[api/v1/store/features api/v1/store/notifications])
+          return %w[index show].include?(action_name) if controller_path.in?(%w[api/v1/store/categories api/v1/store/products])
+          return %w[index show].include?(action_name) if controller_path == "api/v1/store/dining_tables"
+          return %w[index show create update].include?(action_name) if controller_path == "api/v1/store/table_sessions"
+          return %w[index show status].include?(action_name) if controller_path == "api/v1/store/orders"
+
+          false
+        end
+
+        def kitchen_allowed?
+          controller_path == "api/v1/store/orders" && action_name.in?(%w[kitchen status])
+        end
+
+        def forbidden_role
+          render json: { success: false, error: "Perfil sem permissao para este recurso" }, status: :forbidden
+          false
         end
 
         def render_ok(data = {}, status: :ok, **kwargs)

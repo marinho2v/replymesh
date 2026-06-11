@@ -6,8 +6,8 @@ import { api, getAuthToken, saveSession } from "../services/api.js";
 export function Login({ onLogin, onToast }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("admin@replymesh.cloud");
-  const [password, setPassword] = useState("admin123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,7 +38,9 @@ export function Login({ onLogin, onToast }) {
     <div className="login-screen">
       <form className="login-card" onSubmit={submit}>
         <div className="login-brand">
-          <div className="mark">R</div>
+          <div className="login-logo">
+            <img src="/mark.png" alt="" />
+          </div>
           <div>
             <div className="login-title">Replymesh</div>
             <div className="login-sub">Painel Master</div>

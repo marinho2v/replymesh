@@ -27,6 +27,16 @@ RSpec.describe "Wheel and local AI services" do
     expect(coupon.expires_at).to be_within(5.seconds).of(7.days.from_now)
   end
 
+  it "uses product subtotal, not delivery fee, to grant wheel spins" do
+    order = create_order(company: company, customer: customer, status: "completed", total_cents: 3_000)
+    order.update!(subtotal_cents: 2_000, delivery_fee_cents: 1_000, total_cents: 3_000)
+
+    grant = WheelService.grant_for_order(order)
+
+    expect(grant.payload[:created]).to eq(0)
+    expect(grant.payload[:eligible_spins]).to eq(0)
+  end
+
   it "allows a wheel coupon only for its owner and only once" do
     other_customer = create_customer(company, phone: "21977776666")
     coupon = Coupon.create!(

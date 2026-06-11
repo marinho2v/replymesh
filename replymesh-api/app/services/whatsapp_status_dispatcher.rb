@@ -21,6 +21,7 @@ class WhatsappStatusDispatcher
     template = WhatsappTemplate.find_by(company_id: @order.company_id, template_key: template_key)
     return log_skip("template nao encontrado", template_key) unless template
     return log_skip("template desativado", template_key, template: template) unless template.enabled?
+    return log_skip("notificacao ja enviada", template_key, template: template) if notification_already_sent?(template_key)
     return log_skip("pedido nao identificado como teste seguro", template_key, template: template) if @test_mode && !test_order?
 
     instance = WhatsappInstance.primary_for_company(@order.company)
@@ -92,6 +93,13 @@ class WhatsappStatusDispatcher
     Result.new(success: true, sent: false, error: reason, log: log)
   end
 
+  def notification_already_sent?(template_key)
+    WhatsappLog.where(company_id: @order.company_id, level: "ok")
+               .where("metadata_json ->> 'order_id' = ?", @order.id.to_s)
+               .where("metadata_json ->> 'template_key' = ?", template_key.to_s)
+               .where("metadata_json ->> 'status' = ?", @status)
+               .exists?
+  end
   def base_metadata(template_key, template)
     {
       template_key: template_key,
@@ -101,8 +109,9 @@ class WhatsappStatusDispatcher
 
   def normalize_phone(value)
     digits = value.to_s.gsub(/\D/, "")
-    return "" if digits.blank?
-    return digits if digits.start_with?("55")
+    # exige no minimo DDD + numero (10 digitos) para ser um destino valido
+    return "" if digits.length < 10
+    return digits if digits.start_with?("55") && digits.length >= 12
 
     "55#{digits}"
   end

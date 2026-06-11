@@ -35,7 +35,8 @@ module Api
         # GET /api/v1/store/kitchen/orders
         def kitchen
           scope = company_scope(Order).includes(:customer, :order_items, :delivery_zone, :dining_table)
-                                      .where(status: %w[pending accepted preparing ready])
+                                      .where(status: %w[pending accepted preparing ready completed])
+                                      .where("orders.status <> ? OR orders.completed_at >= ?", "completed", Time.current.beginning_of_day)
                                       .where.not(payment_status: "pending_payment")
                                       .recent
 
@@ -64,9 +65,12 @@ module Api
 
         # PATCH /api/v1/store/orders/:id/status
         def status
+          new_status = params.require(:status)
+          return render_error("Perfil sem permissao para este status", status: :forbidden) unless status_allowed_for_role?(new_status)
+
           result = OrderStatusService.call(
             order:      @order,
-            new_status: params.require(:status),
+            new_status: new_status,
             user:       current_user,
             skip_side_effects: ActiveModel::Type::Boolean.new.cast(params[:skip_side_effects])
           )
@@ -163,6 +167,19 @@ module Api
           }
         end
 
+        def status_allowed_for_role?(new_status)
+          return true if current_user.super_admin? || current_company_member&.role.in?(%w[store_admin employee])
+
+          case current_company_member&.role
+          when "kitchen"
+            new_status.in?(%w[accepted preparing ready])
+          when "waiter"
+            @order.dine_in? && @order.status == "ready" && new_status == "completed"
+          else
+            false
+          end
+        end
+
         def serialize_list(o)
           {
             id:             o.id,
@@ -192,6 +209,8 @@ module Api
             order_items:    serialize_items(o),
             created_at:     o.created_at,
             delivery_zone:  o.delivery_zone&.slice("id", "name", "delivery_fee_cents"),
+            dining_table:   o.dining_table&.slice("id", "name", "number"),
+            dining_tables:  o.dining_table&.slice("id", "name", "number"),
             motoboy:        o.motoboy&.slice("id", "name")
           }
         end
@@ -233,7 +252,7 @@ module Api
             notes: order.notes,
             source: order.legacy_source,
             table_id: order.dining_table_id,
-            table_session_id: nil,
+            table_session_id: TableSession.find_by(order_id: order.id)&.id,
             attendant_id: order.attendant_id,
             dining_tables: order.dining_table&.slice("id", "name", "number"),
             profiles: order.attendant&.slice("id", "name", "global_role"),

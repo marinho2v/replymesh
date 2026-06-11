@@ -39,6 +39,10 @@ export const hasPermission = (userRole, permission) => {
       'view_motoboys',
       'manage_motoboys',
     ],
+    waiter: [
+      'view_tables',
+      'manage_tables',
+    ],
     kitchen: [
       'view_kitchen_board',
       'view_orders',
@@ -54,7 +58,7 @@ export const canAccessRoute = (userRole, route) => {
     '/admin/dashboard': ['admin'],
     '/admin/orders': ['admin', 'attendant'],
     '/admin/orders/:id': ['admin', 'attendant'],
-    '/admin/tables': ['admin', 'attendant'],
+    '/admin/tables': ['admin', 'attendant', 'waiter'],
     '/admin/products': ['admin'],
     '/admin/categories': ['admin'],
     '/admin/delivery-zones': ['admin'],
@@ -115,6 +119,9 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/orders', label: 'Pedidos' },
       { path: '/admin/tables', label: 'Mesas' },
       { path: '/admin/motoboys', label: 'Motoboys' },
+    ],
+    waiter: [
+      { path: '/admin/tables', label: 'Mesas' },
     ],
     kitchen: [
       { path: '/kitchen', label: 'Painel Cozinha' },

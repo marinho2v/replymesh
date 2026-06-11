@@ -30,6 +30,8 @@ const Login = () => {
     if (profile) {
       if (profile.role === 'kitchen') {
         navigate('/kitchen')
+      } else if (profile.role === 'waiter') {
+        navigate(`${basePath}/admin/tables`)
       } else if (profile.role === 'attendant') {
         navigate(`${basePath}/admin/orders`)
       } else if (profile.role === 'motoboy') {

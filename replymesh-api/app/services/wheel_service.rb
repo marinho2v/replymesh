@@ -22,7 +22,7 @@ class WheelService
     return Result.new(success: true, payload: { created: 0, eligible_spins: 0 }, message: "Pedido ainda nao finalizado") unless order.completed?
     return Result.new(success: true, payload: { created: 0, eligible_spins: 0 }, message: "Pedido sem cliente") unless order.customer
 
-    eligible_spins = (order.total_cents.to_i / CENTS_PER_SPIN).floor
+    eligible_spins = (order.subtotal_cents.to_i / CENTS_PER_SPIN).floor
     return Result.new(success: true, payload: { created: 0, eligible_spins: 0 }, message: "Pedido abaixo do minimo de R$ 25 para giro") if eligible_spins < 1
 
     created = 0

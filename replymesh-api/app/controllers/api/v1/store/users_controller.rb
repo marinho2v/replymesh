@@ -9,6 +9,8 @@ module Api
           "admin" => "store_admin",
           "attendant" => "employee",
           "employee" => "employee",
+          "waiter" => "waiter",
+          "garcom" => "waiter",
           "kitchen" => "kitchen",
           "motoboy" => "motoboy"
         }.freeze
@@ -82,6 +84,7 @@ module Api
         def public_role(member)
           case member.role
           when "store_admin" then "admin"
+          when "waiter" then "waiter"
           when "kitchen" then "kitchen"
           when "motoboy" then "motoboy"
           else "attendant"

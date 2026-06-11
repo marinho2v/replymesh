@@ -9,10 +9,20 @@ import { formatSelectedOptions } from '../../utils/productOptions'
 import { updateStoreOrderStatus } from '../../services/storeApi'
 import { toast } from 'sonner'
 
-const actionButtons = {
-  [ORDER_STATUSES.ACCEPTED]: { label: 'Aceitar', icon: CheckCircle, variant: 'primary' },
-  [ORDER_STATUSES.PREPARING]: { label: 'Marcar preparo', icon: ChefHat, variant: 'warning' },
-  [ORDER_STATUSES.READY]: { label: 'Marcar pronto', icon: Package, variant: 'info' },
+const actionButtonFor = (status, orderType) => {
+  const isDineIn = orderType === ORDER_TYPES.DINE_IN
+  const isPickup = orderType === ORDER_TYPES.PICKUP
+  const buttons = {
+    [ORDER_STATUSES.ACCEPTED]: { label: isDineIn ? 'Aceitar / cozinha' : 'Aceitar', icon: CheckCircle, variant: 'primary' },
+    [ORDER_STATUSES.PREPARING]: { label: 'Marcar preparo', icon: ChefHat, variant: 'warning' },
+    [ORDER_STATUSES.READY]: {
+      label: isDineIn ? 'Pronto para mesa' : isPickup ? 'Pronto para retirada' : 'Marcar pronto',
+      icon: Package,
+      variant: 'info',
+    },
+  }
+
+  return buttons[status] || null
 }
 
 const KitchenOrderCard = ({ order, onStatusChange, statusFlow }) => {
@@ -97,9 +107,9 @@ const KitchenOrderCard = ({ order, onStatusChange, statusFlow }) => {
   const getActionButton = () => {
     const nextStatus = getNextStatuses(order.status, order.order_type, 'kitchen', statusFlow)
       .find(status => status !== ORDER_STATUSES.CANCELLED)
-    if (!nextStatus || !actionButtons[nextStatus]) return null
+    const button = actionButtonFor(nextStatus, order.order_type)
+    if (!nextStatus || !button) return null
 
-    const button = actionButtons[nextStatus]
     const Icon = button.icon
 
     return (
@@ -121,8 +131,17 @@ const KitchenOrderCard = ({ order, onStatusChange, statusFlow }) => {
     <div className={`bg-dark-800 rounded-xl border-2 ${isQrOrder ? 'border-lime-500' : order.order_type === ORDER_TYPES.DINE_IN ? 'border-emerald-500' : isDelayed && order.status !== ORDER_STATUSES.READY ? 'border-red-500' : meta.borderColor} p-4 ${isDelayed && !isDineIn && order.status !== ORDER_STATUSES.READY ? 'animate-pulse' : ''}`}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xl font-bold text-white">#{order.order_number}</span>
+            <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+              isDineIn
+                ? 'bg-emerald-500/20 text-emerald-300'
+                : order.order_type === ORDER_TYPES.DELIVERY
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'bg-amber-500/20 text-amber-300'
+            }`}>
+              {isDineIn ? 'MESA / SALAO' : order.order_type === ORDER_TYPES.DELIVERY ? 'DELIVERY' : 'RETIRADA'}
+            </span>
             <span className={`text-xs px-2 py-1 rounded-full ${meta.bgColor} ${meta.textColor}`}>
               {meta.label}
             </span>

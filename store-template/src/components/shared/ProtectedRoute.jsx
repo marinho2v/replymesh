@@ -19,6 +19,8 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   if (allowedRoles.length > 0 && !allowedRoles.includes(profile?.role)) {
     const fallbackPath = profile?.role === 'attendant'
       ? `${basePath}/admin/orders`
+      : profile?.role === 'waiter'
+        ? `${basePath}/admin/tables`
       : profile?.role === 'kitchen'
         ? '/kitchen'
         : profile?.role === 'admin'

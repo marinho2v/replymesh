@@ -1,6 +1,8 @@
 class WhatsappTemplate < ApplicationRecord
-  ENABLED_BY_DEFAULT = %w[pedido_aceito saiu_para_entrega pedido_finalizado].freeze
+  ENABLED_BY_DEFAULT = %w[pedido_recebido pedido_aceito saiu_para_entrega pedido_finalizado].freeze
   STATUS_TEMPLATE_KEYS = {
+    "pending" => "pedido_recebido",
+    "order_created" => "pedido_recebido",
     "accepted" => "pedido_aceito",
     "preparing" => "pedido_em_preparo",
     "ready" => "pedido_pronto",
@@ -13,8 +15,8 @@ class WhatsappTemplate < ApplicationRecord
     {
       template_key: "pedido_recebido",
       title: "Pedido Recebido",
-      message: "🧾 Pedido recebido!\n\nOlá, *{{nome_cliente}}* 👋\nRecebemos seu pedido e vamos confirmar em instantes.\n\n*{{nome_loja}}* 🍔",
-      enabled: false
+      message: "🧾 Pedido recebido!\n\nOlá, *{{nome_cliente}}* 👋\nRecebemos seu pedido \#{{numero_pedido}}.\n\nEstamos analisando e em breve vamos confirmar por aqui.\n\n*{{nome_loja}}* 🍔",
+      enabled: true
     },
     {
       template_key: "pedido_aceito",

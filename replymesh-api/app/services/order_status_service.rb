@@ -112,6 +112,19 @@ class OrderStatusService
 
   def active_status_sequence
     statuses = %w[pending accepted]
+
+    if @order.dine_in?
+      statuses << "ready"
+      statuses << "completed"
+      return statuses
+    end
+
+    if @order.pickup?
+      statuses << "ready"
+      statuses << "completed"
+      return statuses
+    end
+
     statuses << "preparing" if template_enabled_for_status?("preparing")
     statuses << "ready" if template_enabled_for_status?("ready")
     statuses << "out_for_delivery" if @order.order_type == "delivery" && template_enabled_for_status?("out_for_delivery", default: true)
@@ -135,11 +148,15 @@ class OrderStatusService
       result = InventoryService.deduct_for_order(order: @order, user: @user)
       raise ServiceError, result.error unless result.success?
     when "completed"
-      result = CashService.record_payment(order: @order, user: @user)
-      if !result.success? && result.error != "Nenhum caixa aberto"
-        raise ServiceError, result.error
-      elsif !result.success?
-        Rails.logger.warn("Cash record skipped for order #{@order.id}: #{result.error}")
+      # Pedido de mesa entra no caixa apenas no fechamento da sessao,
+      # com a forma de pagamento real informada pelo garcom/atendente.
+      unless @order.dine_in?
+        result = CashService.record_payment(order: @order, user: @user)
+        if !result.success? && result.error != "Nenhum caixa aberto"
+          raise ServiceError, result.error
+        elsif !result.success?
+          Rails.logger.warn("Cash record skipped for order #{@order.id}: #{result.error}")
+        end
       end
 
       @order.customer&.increment_stats!(@order.total_cents)
@@ -153,6 +170,8 @@ class OrderStatusService
   end
 
   def prepare_whatsapp_update
+    return if @order.dine_in?
+
     WhatsappStatusDispatcher.call(order: @order, status: @new_status, user: @user)
   rescue StandardError => e
     Rails.logger.warn("WhatsApp status dispatch skipped: #{e.class} #{e.message}")

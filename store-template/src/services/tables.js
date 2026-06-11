@@ -119,7 +119,10 @@ export const sendTableOrderToKitchen = async (session) => {
   const payload = await request(`/store/table_sessions/${encodeURIComponent(session.id)}`, {
     method: 'PATCH',
     headers: h(),
-    body: { table_session: { status: 'sent_to_kitchen', sent_to_kitchen_at: new Date().toISOString() } },
+    body: {
+      table_session: { status: 'sent_to_kitchen', sent_to_kitchen_at: new Date().toISOString(), notes: session.notes },
+      items: session.local_items || [],
+    },
   })
   return normalizeSession(payload.table_session)
 }

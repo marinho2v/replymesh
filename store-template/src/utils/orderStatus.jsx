@@ -44,6 +44,13 @@ const getStatusSequence = (orderType, flow = DEFAULT_ORDER_STATUS_FLOW) => {
   ]
 
   if (normalizedFlow.accepted) sequence.push(ORDER_STATUSES.ACCEPTED)
+
+  if (orderType === 'dine_in' || orderType === 'pickup') {
+    sequence.push(ORDER_STATUSES.READY)
+    if (normalizedFlow.completed) sequence.push(ORDER_STATUSES.COMPLETED)
+    return sequence
+  }
+
   if (normalizedFlow.preparing) sequence.push(ORDER_STATUSES.PREPARING)
   if (normalizedFlow.ready) sequence.push(ORDER_STATUSES.READY)
 

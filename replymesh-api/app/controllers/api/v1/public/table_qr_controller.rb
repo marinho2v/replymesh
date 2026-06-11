@@ -27,6 +27,7 @@ module Api
 
             order = current_company.orders.create!(
               dining_table: @table,
+              legacy_source: "table_qr",
               order_type: "dine_in",
               status: "pending",
               payment_method: "money",

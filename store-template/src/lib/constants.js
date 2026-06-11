@@ -31,6 +31,7 @@ export const ORDER_STATUS_COLORS = {
 export const USER_ROLES = {
   ADMIN: 'admin',
   ATTENDANT: 'attendant',
+  WAITER: 'waiter',
   KITCHEN: 'kitchen',
   MOTOBOY: 'motoboy',
 }

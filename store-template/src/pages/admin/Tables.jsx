@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Armchair, CircleDollarSign, Copy, Download, ExternalLink, Plus, Printer, QrCode, RefreshCw, Send, SquarePen, User, Utensils } from 'lucide-react'
 import { useDiningTables, useTableActions } from '../../hooks/useTables'
 import { useProducts } from '../../hooks/useProducts'
@@ -6,6 +6,7 @@ import { useCategories } from '../../hooks/useCategories'
 import { useAuth } from '../../hooks/useAuth'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import { getUsers } from '../../services/auth'
+import { getOrders, updateOrderStatus } from '../../services/orders'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
@@ -35,6 +36,7 @@ const statusMeta = {
 
 const getRoleLabel = (role) => {
   if (role === 'admin') return 'Admin'
+  if (role === 'waiter') return 'Garcom'
   if (role === 'attendant') return 'Atendente'
   return 'Responsavel'
 }
@@ -45,6 +47,7 @@ const Tables = () => {
   const { products } = useProducts({ activeOnly: true })
   const { categories } = useCategories(true)
   const { profile } = useAuth()
+  const isWaiter = profile?.role === 'waiter'
   const basePath = useCompanyBasePath()
   const [tableModalOpen, setTableModalOpen] = useState(false)
   const [sessionModalOpen, setSessionModalOpen] = useState(false)
@@ -63,6 +66,7 @@ const Tables = () => {
   const [transferUsers, setTransferUsers] = useState([])
   const [transferUserId, setTransferUserId] = useState('')
   const [qrModalTable, setQrModalTable] = useState(null)
+  const [readyTableOrders, setReadyTableOrders] = useState([])
 
   const activeProducts = useMemo(() => products || [], [products])
   const visibleCategories = useMemo(() => categories || [], [categories])
@@ -83,6 +87,19 @@ const Tables = () => {
   const qrImageUrl = qrLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=20&data=${encodeURIComponent(qrLink)}`
     : ''
+
+  const loadReadyTableOrders = async () => {
+    try {
+      const orders = await getOrders({ orderType: 'dine_in', status: 'ready', limit: 30 })
+      setReadyTableOrders(orders)
+    } catch (error) {
+      console.error('Error loading ready table orders:', error)
+    }
+  }
+
+  useEffect(() => {
+    loadReadyTableOrders()
+  }, [])
 
   const resetTableForm = () => {
     setEditingTable(null)
@@ -152,7 +169,7 @@ const Tables = () => {
       const users = await getUsers()
       const availableUsers = (users || []).filter(user =>
         user.is_active !== false &&
-        ['admin', 'attendant'].includes(user.role) &&
+        ['admin', 'attendant', 'waiter'].includes(user.role) &&
         user.id !== session?.attendant_id
       )
 
@@ -290,7 +307,18 @@ const Tables = () => {
     if (result.success) {
       const loadResult = await tableActions.loadSession(currentSession.id)
       if (loadResult.success) setSession(loadResult.data)
+      loadReadyTableOrders()
       refetch()
+    }
+  }
+
+  const markServed = async (order) => {
+    try {
+      await updateOrderStatus(order.id, 'completed')
+      await loadReadyTableOrders()
+      refetch()
+    } catch (error) {
+      console.error('Error marking table order served:', error)
     }
   }
 
@@ -372,10 +400,12 @@ const Tables = () => {
           <h1 className="text-2xl font-bold text-white">Mesas e Comandas</h1>
           <p className="mt-0.5 text-sm text-gray-400">Atendimento local · {tables.length} mesa{tables.length !== 1 ? 's' : ''} cadastrada{tables.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => openTableForm()} className="w-full sm:w-auto">
-          <Plus size={18} className="mr-2" />
-          Nova mesa
-        </Button>
+        {!isWaiter && (
+          <Button onClick={() => openTableForm()} className="w-full sm:w-auto">
+            <Plus size={18} className="mr-2" />
+            Nova mesa
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -388,10 +418,12 @@ const Tables = () => {
           <Armchair size={40} className="mb-3 text-gray-600" />
           <p className="text-sm font-medium text-gray-400">Nenhuma mesa cadastrada</p>
           <p className="mt-1 text-xs text-gray-500">Clique em "Nova mesa" para configurar o salão.</p>
-          <Button className="mt-4" onClick={() => openTableForm()}>
-            <Plus size={16} className="mr-2" />
-            Criar primeira mesa
-          </Button>
+          {!isWaiter && (
+            <Button className="mt-4" onClick={() => openTableForm()}>
+              <Plus size={16} className="mr-2" />
+              Criar primeira mesa
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
@@ -432,25 +464,59 @@ const Tables = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className={`grid gap-1.5 ${isWaiter ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     <Button size="sm" onClick={() => openSession(table)} disabled={!table.is_active} className="text-xs">
                       <Utensils size={14} className="mr-1" />
                       Abrir
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openTableForm(table)} className="text-xs">
-                      <SquarePen size={14} className="mr-1" />
-                      Editar
-                    </Button>
-                    <Button size="sm" variant="info" className="col-span-2 text-xs" onClick={() => setQrModalTable(table)}>
-                      <QrCode size={14} className="mr-1" />
-                      QR Code
-                    </Button>
+                    {!isWaiter && (
+                      <>
+                        <Button size="sm" variant="secondary" onClick={() => openTableForm(table)} className="text-xs">
+                          <SquarePen size={14} className="mr-1" />
+                          Editar
+                        </Button>
+                        <Button size="sm" variant="info" className="col-span-2 text-xs" onClick={() => setQrModalTable(table)}>
+                          <QrCode size={14} className="mr-1" />
+                          QR Code
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             )
           })}
         </div>
+      )}
+
+      {readyTableOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-bold text-white">Prontos para servir</h2>
+            <p className="text-sm text-gray-400">Pedidos de mesa marcados pela cozinha como prontos.</p>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {readyTableOrders.map(order => (
+              <div key={order.id} className="rounded-lg border border-purple-700 bg-dark-900 p-3">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-white">Pedido #{order.order_number}</p>
+                    <p className="text-sm text-gray-400">{order.dining_tables?.name || order.customer_name || 'Mesa'}</p>
+                  </div>
+                  <Badge variant="info">Pronto</Badge>
+                </div>
+                <div className="mb-3 space-y-1 text-sm text-gray-300">
+                  {(order.order_items || []).slice(0, 4).map(item => (
+                    <p key={item.id}>{item.quantity}x {item.product_name}</p>
+                  ))}
+                </div>
+                <Button className="w-full" variant="success" onClick={() => markServed(order)}>
+                  Marcar servido
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       <Modal isOpen={tableModalOpen} onClose={() => setTableModalOpen(false)} title={editingTable ? 'Editar mesa' : 'Nova mesa'}>
@@ -720,7 +786,7 @@ const Tables = () => {
               { value: '', label: transferUsers.length ? 'Selecione o usuario' : 'Nenhum usuario disponivel' },
               ...transferUsers.map(user => ({
                 value: user.id,
-                label: `${user.full_name} (${user.role === 'admin' ? 'Admin' : 'Atendente'})`,
+                label: `${user.full_name} (${getRoleLabel(user.role)})`,
               })),
             ]}
           />

@@ -35,7 +35,10 @@ class WhatsappMessageRenderer
   def context
     @context ||= {
       "nome_cliente" => @order.customer_name.presence || "Cliente",
+      "customer_name" => @order.customer_name.presence || "Cliente",
       "cliente" => @order.customer_name.presence || "Cliente",
+      "numero_pedido" => @order.order_number,
+      "order_number" => @order.order_number,
       "telefone_cliente" => @order.customer_whatsapp.presence || @order.customer_phone,
       "status_pedido" => STATUS_LABELS[@order.status] || @order.status,
       "status" => STATUS_LABELS[@order.status] || @order.status,
@@ -50,6 +53,7 @@ class WhatsappMessageRenderer
       "referencia" => @order.reference,
       "observacoes" => @order.notes,
       "nome_loja" => store_name,
+      "store_name" => store_name,
       "telefone_loja" => @order.company.store_setting&.whatsapp.presence || @order.company.store_setting&.whatsapp_number
     }
   end

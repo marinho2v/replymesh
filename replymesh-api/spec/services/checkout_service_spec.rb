@@ -28,12 +28,15 @@ RSpec.describe CheckoutService do
   end
 
   it "creates a delivery order and calculates delivery fee and change" do
+    allow(WhatsappStatusDispatcher).to receive(:call)
+
     result = described_class.call(company: company, params: checkout_params)
 
     expect(result).to be_success
     expect(result.order.delivery_fee_cents).to eq(700)
     expect(result.order.total_cents).to eq(3_200)
     expect(result.order.change_for_cents).to eq(5_000)
+    expect(WhatsappStatusDispatcher).to have_received(:call).with(order: result.order, status: "pending")
   end
 
   it "creates a pickup order without delivery fee" do

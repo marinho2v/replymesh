@@ -55,6 +55,7 @@ class CheckoutService
     end
 
     record_attempt("created", order)
+    dispatch_order_received(order)
     Result.new(success: true, order: order)
   rescue ActiveRecord::RecordInvalid => e
     record_attempt("blocked", nil, reason: e.message)
@@ -343,5 +344,11 @@ class CheckoutService
     )
   rescue StandardError
     nil # não quebrar o fluxo por falha de audit log
+  end
+  def dispatch_order_received(order)
+    WhatsappStatusDispatcher.call(order: order, status: "pending")
+  rescue StandardError => e
+    Rails.logger.warn("CheckoutService WhatsApp pending dispatch failed: #{e.class} #{e.message}")
+    nil
   end
 end

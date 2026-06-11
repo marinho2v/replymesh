@@ -169,8 +169,12 @@
 ---------------------------------- */
 .lp .hero {
   position: relative;
-  padding: 60px 0 36px;
+  padding: 56px 0 20px;
   overflow: visible;
+  min-height: 660px;
+}
+.lp .hero > .wrap {
+  width: 100%;
 }
 .lp .hero::before {
   content: "";
@@ -184,8 +188,8 @@
 
 .lp .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0,1fr) minmax(0,1.1fr);
-  gap: 32px;
+  grid-template-columns: minmax(0,1fr) minmax(0,1.35fr);
+  gap: 24px;
   align-items: center;
   position: relative;
 }
@@ -209,12 +213,13 @@
 .lp .badge svg { width: 13px; height: 13px; color: #f5b50a; }
 
 .lp .hero h1 {
-  font-size: clamp(40px, 4.6vw, 60px);
+  font-size: clamp(36px, 4.2vw, 58px);
   font-weight: 800;
-  margin: 22px 0 18px;
-  letter-spacing: -.035em;
-  line-height: 1.0;
+  margin: 0 0 20px;
+  letter-spacing: -.04em;
+  line-height: 1.05;
   color: #fff;
+  white-space: nowrap;
 }
 
 .lp .hero p.lead {
@@ -255,6 +260,8 @@
   position: relative;
   overflow: visible;
   align-self: center;
+  width: 130%;
+  margin-right: -30%;
 }
 
 .lp .mockup-img {
@@ -263,14 +270,14 @@
   display: block;
   position: relative;
   z-index: 2;
-  filter: drop-shadow(0 32px 64px rgba(0,0,0,.6));
+  filter: drop-shadow(0 40px 80px rgba(0,0,0,.7));
 }
 
 /* floating cards */
 .lp .float-cards {
   position: absolute;
-  right: -20px;
-  top: 14%;
+  right: -10px;
+  top: 12%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -339,25 +346,29 @@
 }
 .lp .feat-grid {
   display: grid;
-  grid-template-columns: minmax(190px, 1.05fr) repeat(4, minmax(0, 1fr));
-  gap: 30px 34px;
+  grid-template-columns: max-content repeat(4, minmax(0, 1fr));
+  gap: 30px 40px;
   align-items: start;
 }
 .lp .feat-title {
   font-family: 'Sora', sans-serif;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -.03em;
-  line-height: 1.16;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1.15;
   color: #15161a;
+  text-align: left;
   grid-row: span 3;
+  align-self: start;
+  white-space: nowrap;
 }
 .lp .feat-title .ln {
-  width: 40px;
+  width: 36px;
   height: 3px;
   background: #15161a;
   border-radius: 2px;
-  margin-top: 22px;
+  margin-top: 18px;
+  display: block;
 }
 .lp .feat {
   display: grid;
@@ -702,10 +713,14 @@
   .lp .nav-links { display: none; }
   .lp .menu-btn { display: block; }
   .lp .hero-grid { grid-template-columns: 1fr; }
-  .lp .mockup { margin-top: 16px; }
-  .lp .float-cards { right: 0; width: 200px; top: 10%; }
+  /* reset mockup para mobile — sem overflow */
+  .lp .mockup { width: 100%; margin-right: 0; margin-top: 24px; }
+  .lp .float-cards { right: 0; width: 190px; top: 8%; gap: 7px; }
+  .lp .fcard { padding: 8px 10px; }
+  .lp .fcard b { font-size: 11px; }
+  .lp .fcard small { font-size: 9.5px; }
   .lp .feat-grid { grid-template-columns: 1fr 1fr; }
-  .lp .feat-title { grid-row: auto; grid-column: 1 / -1; }
+  .lp .feat-title { grid-row: auto; grid-column: 1 / -1; white-space: normal; }
   .lp .feat p { max-width: none; }
   .lp .show-grid { grid-template-columns: repeat(2,1fr); }
   .lp .cat-grid { grid-template-columns: repeat(4,1fr); }
@@ -719,11 +734,19 @@
 
 @media (max-width: 560px) {
   .lp .wrap { padding: 0 16px; }
-  .lp .feat-panel { padding: 30px 22px; }
+  .lp .feat-panel { padding: 30px 20px; }
   .lp .feat-grid { grid-template-columns: 1fr; }
   .lp .show-grid { grid-template-columns: 1fr; }
   .lp .cat-grid { grid-template-columns: repeat(2,1fr); }
   .lp .foot-grid { grid-template-columns: 1fr; }
   .lp .feat-title { grid-column: auto; }
-  .lp .hero h1 { font-size: 36px; }
+  .lp .hero h1 { font-size: 30px; white-space: normal; line-height: 1.1; }
+  .lp .hero { min-height: unset; padding: 40px 0 24px; }
+  /* float cards menores no celular */
+  .lp .float-cards { width: 160px; right: 0; gap: 5px; top: 6%; }
+  .lp .fcard { padding: 6px 9px; gap: 6px; }
+  .lp .fcard b { font-size: 10px; }
+  .lp .fcard small { font-size: 8.5px; }
+  .lp .fi { width: 26px; height: 26px; }
+  .lp .fi svg { width: 13px; height: 13px; }
 }

@@ -36,9 +36,12 @@ module Api
         end
 
         def update
+          create_order_for_kitchen! if sending_to_kitchen_without_order?
+
           if @session.update(session_params)
             @session.dining_table.update!(status: table_status_for(@session.status)) if table_status_for(@session.status)
-            render_ok(table_session: serialize(@session))
+            finalize_order_payment! if closing_with_payment?
+            render_ok(table_session: serialize(@session.reload))
           else
             render_record_errors(@session)
           end
@@ -57,6 +60,123 @@ module Api
             :subtotal_cents, :total_cents, :discount_cents, :service_fee_cents,
             :requested_close_at, :sent_to_kitchen_at, :paid_at, :closed_at
           )
+        end
+
+        def closing_with_payment?
+          @session.status.in?(%w[paid closed]) &&
+            @session.payment_status == "paid" &&
+            @session.order.present?
+        end
+
+        # No fechamento da mesa o pedido recebe a forma de pagamento real,
+        # o total com desconto/taxa de servico, e entra no caixa uma unica vez.
+        def finalize_order_payment!
+          order = @session.order
+
+          unless order.financial_recorded_at.present?
+            order_updates = {}
+            order_updates[:payment_method] = @session.payment_method if @session.payment_method.in?(Order::PAYMENT_METHODS)
+            order_updates[:payment_status] = "paid"
+            order_updates[:discount_cents] = @session.discount_cents.to_i if @session.discount_cents.present?
+            order_updates[:total_cents] = @session.total_cents.to_i if @session.total_cents.to_i.positive?
+            order.update!(order_updates)
+          end
+
+          advance_order_to_completed!(order)
+
+          cash_result = CashService.record_payment(order: order.reload, user: current_user)
+          Rails.logger.warn("Mesa #{@session.id}: caixa nao registrado para pedido #{order.id}: #{cash_result.error}") unless cash_result.success?
+        rescue StandardError => e
+          Rails.logger.warn("Mesa #{@session.id}: erro ao finalizar pagamento: #{e.class} #{e.message}")
+        end
+
+        # Avanca o pedido passo a passo ate completed (aceitar tambem baixa o estoque).
+        def advance_order_to_completed!(order)
+          %w[accepted ready completed].each do |step|
+            break if order.status.in?(%w[completed cancelled])
+
+            result = OrderStatusService.call(order: order, new_status: step, user: current_user)
+            if result.success?
+              order.reload
+            elsif result.error.to_s.start_with?("Transicao invalida")
+              next
+            else
+              Rails.logger.warn("Mesa #{@session.id}: pedido #{order.id} parou em #{order.status}: #{result.error}")
+              break
+            end
+          end
+        end
+
+        def sending_to_kitchen_without_order?
+          params.dig(:table_session, :status).to_s == "sent_to_kitchen" &&
+            @session.order_id.blank? &&
+            Array(params[:items]).any?
+        end
+
+        def create_order_for_kitchen!
+          calculated_items = calculate_items
+          subtotal_cents = calculated_items.sum { |item| item[:total_price_cents] }
+          order = nil
+
+          ActiveRecord::Base.transaction do
+            order = current_company.orders.create!(
+              dining_table: @session.dining_table,
+              attendant: current_user,
+              legacy_source: "table_waiter",
+              order_type: "dine_in",
+              status: "pending",
+              payment_method: @session.payment_method.presence || "money",
+              payment_status: "pending",
+              delivery_status: "pending",
+              customer_name: @session.notes.presence || @session.dining_table.name || "Mesa #{@session.dining_table.number}",
+              customer_phone: "mesa-#{@session.dining_table_id}",
+              customer_whatsapp: "mesa-#{@session.dining_table_id}",
+              subtotal_cents: subtotal_cents,
+              delivery_fee_cents: 0,
+              discount_cents: 0,
+              total_cents: subtotal_cents,
+              notes: params.dig(:table_session, :notes)
+            )
+
+            calculated_items.each do |item|
+              order.order_items.create!(
+                company: current_company,
+                product: item[:product],
+                product_name: item[:product_name],
+                unit_price_cents: item[:unit_price_cents],
+                quantity: item[:quantity],
+                total_price_cents: item[:total_price_cents],
+                selected_options: [],
+                notes: item[:notes]
+              )
+            end
+
+            @session.update!(
+              order: order,
+              attendant: current_user,
+              subtotal_cents: subtotal_cents,
+              total_cents: subtotal_cents
+            )
+          end
+        end
+
+        def calculate_items
+          Array(params[:items]).map do |item_params|
+            product = current_company.products.active.find_by(id: item_params[:product_id])
+            raise ActiveRecord::RecordInvalid.new(OrderItem.new.tap { |item| item.errors.add(:product, "invalido") }) unless product
+
+            quantity = [item_params[:quantity].to_i, 1].max
+            unit_price_cents = product.promotional_price_cents.presence || product.price_cents
+
+            {
+              product: product,
+              product_name: product.name,
+              unit_price_cents: unit_price_cents.to_i,
+              quantity: quantity,
+              total_price_cents: unit_price_cents.to_i * quantity,
+              notes: item_params[:notes]
+            }
+          end
         end
 
         def serialize(s)

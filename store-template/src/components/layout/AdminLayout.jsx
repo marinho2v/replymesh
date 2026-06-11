@@ -114,6 +114,20 @@ export const AdminLayout = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const handleFeatureUnavailable = (event) => {
+      const featureKey = event.detail?.feature
+      setUpgradeFeature({
+        ...lockedFeatureInfo(featureKey),
+        ...event.detail,
+        required_plan_label: event.detail?.required_plan_label || 'PRO',
+      })
+    }
+
+    window.addEventListener('replymesh:feature-unavailable', handleFeatureUnavailable)
+    return () => window.removeEventListener('replymesh:feature-unavailable', handleFeatureUnavailable)
+  }, [featureMap])
+
   const isFeatureLocked = (featureKey) => {
     if (!featureKey) return false
     const feature = featureMap.get(featureKey)
@@ -147,7 +161,7 @@ export const AdminLayout = () => {
       title: 'Operacao',
       items: [
         { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant'] },
-        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant'] },
+        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter'] },
       ],
     },
     {
@@ -231,7 +245,7 @@ export const AdminLayout = () => {
           <div className="flex flex-col h-full">
             <div className={`flex items-center h-16 border-b border-dark-700 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : 'justify-between px-3'}`}>
               <Link
-                to={profile?.role === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
+                to={profile?.role === 'waiter' ? adminPath('/admin/tables') : profile?.role === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
                 className={`flex flex-1 items-center min-w-0 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}
                 title={storeName}
               >
@@ -439,14 +453,17 @@ export const AdminLayout = () => {
           <div className="w-full max-w-md rounded-lg border border-dark-700 bg-dark-900 p-5 text-white shadow-2xl">
             <div className="mb-3 flex items-center gap-2">
               <Lock size={19} className="text-yellow-300" />
-              <h2 className="text-lg font-bold">Recurso disponivel no Plano {upgradeFeature.required_plan_label || 'PRO'}</h2>
+              <h2 className="text-lg font-bold">Recurso disponivel no Plano PRO</h2>
             </div>
             <p className="text-sm leading-6 text-gray-300">
-              Este recurso ajuda sua loja a vender mais e automatizar a operacao. Fale com o suporte Replymesh para liberar.
+              Este recurso nao esta incluso no plano atual da sua loja. Fale com o suporte Replymesh para liberar ou testar este recurso.
             </p>
             <div className="mt-5 flex justify-end gap-2">
-              <button className="rounded-lg border border-dark-700 px-4 py-2 text-sm text-gray-200 hover:bg-dark-800" onClick={() => setUpgradeFeature(null)}>
-                Agora nao
+              <button className="rounded-lg border border-dark-700 px-4 py-2 text-sm text-gray-200 hover:bg-dark-800" onClick={() => {
+                setUpgradeFeature(null)
+                navigate(adminPath('/admin/dashboard'))
+              }}>
+                Voltar ao painel
               </button>
               <button
                 className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
@@ -455,7 +472,7 @@ export const AdminLayout = () => {
                   navigate(adminPath('/admin/support'))
                 }}
               >
-                Solicitar upgrade
+                Solicitar liberacao
               </button>
             </div>
           </div>

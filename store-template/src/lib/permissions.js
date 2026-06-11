@@ -35,6 +35,10 @@ export const ROLE_PERMISSIONS = {
     'view_tables',
     'manage_tables',
   ],
+  [USER_ROLES.WAITER]: [
+    'view_tables',
+    'manage_tables',
+  ],
   [USER_ROLES.KITCHEN]: [
     'view_kitchen',
     'manage_kitchen_orders',

@@ -123,6 +123,15 @@ export const request = async (path, options = {}) => {
     } else if (response.status === 403 && payload?.error === 'Sessao master vinculada a outra empresa') {
       clearImpersonationSession()
       window.dispatchEvent(new Event('replymesh-auth-changed'))
+    } else if (response.status === 403 && payload?.error === 'feature_not_available') {
+      window.dispatchEvent(new CustomEvent('replymesh:feature-unavailable', {
+        detail: {
+          feature: payload?.feature,
+          required_plan: payload?.required_plan,
+          required_plan_label: payload?.required_plan_label || 'PRO',
+          message: payload?.message,
+        },
+      }))
     }
 
     throw new ReplymeshApiError(

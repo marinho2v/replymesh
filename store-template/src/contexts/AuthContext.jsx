@@ -98,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAdmin: profile?.role === 'admin',
     isAttendant: profile?.role === 'attendant',
+    isWaiter: profile?.role === 'waiter',
     isKitchen: profile?.role === 'kitchen',
     isMotoboy: profile?.role === 'motoboy',
   }

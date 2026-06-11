@@ -43,6 +43,7 @@ const KitchenBoard = () => {
     { status: ORDER_STATUSES.ACCEPTED, title: 'Aceitos', icon: CheckCircle, color: 'border-blue-500' },
     { status: ORDER_STATUSES.PREPARING, title: 'Em Preparo', icon: ChefHat, color: 'border-orange-500' },
     { status: ORDER_STATUSES.READY, title: 'Prontos / Mesa', icon: Utensils, color: 'border-purple-500' },
+    { status: ORDER_STATUSES.COMPLETED, title: 'Finalizados', icon: CheckCircle, color: 'border-green-500' },
   ]
 
   const getOrdersByStatus = (status) => {

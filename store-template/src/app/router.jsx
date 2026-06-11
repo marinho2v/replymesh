@@ -77,7 +77,11 @@ const protectedPage = (Component, allowedRoles) => (
 const AdminIndexRedirect = () => {
   const { profile } = useAuth()
   const basePath = useCompanyBasePath()
-  const target = profile?.role === 'attendant' ? `${basePath}/admin/orders` : `${basePath}/admin/dashboard`
+  const target = profile?.role === 'waiter'
+    ? `${basePath}/admin/tables`
+    : profile?.role === 'attendant'
+      ? `${basePath}/admin/orders`
+      : `${basePath}/admin/dashboard`
   return <Navigate to={target} replace />
 }
 
@@ -109,7 +113,7 @@ const SluggedAdminLayout = () => {
   const { companySlug } = useParams()
   return (
     <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      <ProtectedRoute allowedRoles={['admin', 'attendant']}>
+      <ProtectedRoute allowedRoles={['admin', 'attendant', 'waiter']}>
         <AdminLayout />
       </ProtectedRoute>
     </CompanySlugProvider>
@@ -164,7 +168,7 @@ const adminChildren = [
   { path: 'reports', element: protectedPage(Reports, ['admin']) },
   { path: 'cash', element: protectedPage(CashRegister, ['admin']) },
   { path: 'cash-register', element: protectedPage(CashRegister, ['admin']) },
-  { path: 'tables', element: page(Tables) },
+  { path: 'tables', element: protectedPage(Tables, ['admin', 'attendant', 'waiter']) },
   { path: 'settings', element: protectedPage(Settings, ['admin']) },
   { path: 'whatsapp', element: protectedPage(Whatsapp, ['admin']) },
   { path: 'whatsapp/qrcode', element: protectedPage(WhatsappQrCode, ['admin']) },
@@ -243,7 +247,7 @@ export const router = createBrowserRouter([
     path: '/admin',
     element: (
       <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
-        <ProtectedRoute allowedRoles={['admin', 'attendant']}>
+        <ProtectedRoute allowedRoles={['admin', 'attendant', 'waiter']}>
           <AdminLayout />
         </ProtectedRoute>
       </CompanySlugProvider>
