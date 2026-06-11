@@ -103,6 +103,7 @@ module Api
               api/v1/store/deliveries
               api/v1/store/features
               api/v1/store/notifications
+              api/v1/store/pos
             ]
           )
         end

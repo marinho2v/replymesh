@@ -164,8 +164,10 @@ class OrderStatusService
         end
       end
 
-      @order.customer&.increment_stats!(@order.total_cents)
-      WheelService.grant_for_order(@order)
+      unless @order.pos?
+        @order.customer&.increment_stats!(@order.total_cents)
+        WheelService.grant_for_order(@order)
+      end
     when "cancelled"
       return unless @order.inventory_deducted?
 

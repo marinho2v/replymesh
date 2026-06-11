@@ -45,6 +45,11 @@ const getStatusSequence = (orderType, flow = DEFAULT_ORDER_STATUS_FLOW) => {
 
   if (normalizedFlow.accepted) sequence.push(ORDER_STATUSES.ACCEPTED)
 
+  if (orderType === 'pos') {
+    if (normalizedFlow.completed) sequence.push(ORDER_STATUSES.COMPLETED)
+    return sequence
+  }
+
   if (orderType === 'dine_in' || orderType === 'pickup') {
     sequence.push(ORDER_STATUSES.READY)
     if (normalizedFlow.completed) sequence.push(ORDER_STATUSES.COMPLETED)
@@ -223,7 +228,7 @@ export const getNextStatuses = (currentStatus, orderType, userRole, flow = DEFAU
 }
 
 export const getTemplateKeyByStatus = (status, orderType) => {
-  if (orderType === 'dine_in') return null
+  if (orderType === 'dine_in' || orderType === 'pos') return null
 
   const templates = {
     [ORDER_STATUSES.PENDING]: 'pedido_recebido',

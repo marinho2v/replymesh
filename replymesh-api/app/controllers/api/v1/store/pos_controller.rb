@@ -22,6 +22,7 @@ module Api
             order.reload
             advance_to_completed!(order)
             CashService.record_payment(order: order.reload, user: current_user)
+            order.reload.update_column(:payment_status, "paid")
           end
 
           render_created(order: serialize_pos(order.reload))
@@ -126,7 +127,7 @@ module Api
             subtotal_brl:  order.subtotal_brl,
             discount_brl:  order.discount_cents.to_f / 100,
             change_brl:    [order.change_for_cents.to_i - order.total_cents.to_i, 0].max.to_f / 100,
-            store_name:    current_company.store_name.presence || current_company.name,
+            store_name:    current_company.store_setting&.store_name.presence || current_company.name,
             attendant:     current_user&.name,
             items:         order.order_items.map do |item|
               {
