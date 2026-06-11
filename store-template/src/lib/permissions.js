@@ -1,5 +1,11 @@
 import { USER_ROLES } from './constants'
 
+const normalizeStoreRole = (role) => {
+  if (role === 'store_admin' || role === 'super_admin') return USER_ROLES.ADMIN
+  if (role === 'employee') return USER_ROLES.ATTENDANT
+  return role
+}
+
 export const ROLE_PERMISSIONS = {
   [USER_ROLES.ADMIN]: [
     'view_dashboard',
@@ -50,17 +56,19 @@ export const ROLE_PERMISSIONS = {
 }
 
 export const hasPermission = (role, permission) => {
-  const permissions = ROLE_PERMISSIONS[role] || []
+  const permissions = ROLE_PERMISSIONS[normalizeStoreRole(role)] || []
   return permissions.includes(permission)
 }
 
 export const canAccessRoute = (role, route) => {
+  const normalizedRole = normalizeStoreRole(role)
   const routePermissions = {
     '/admin/dashboard': ['view_dashboard'],
     '/admin/orders': ['view_orders'],
     '/admin/tables': ['view_tables'],
     '/admin/motoboys': ['view_motoboys'],
     '/admin/cash-register': ['view_cash_register'],
+    '/admin/pos': ['view_pos'],
     '/admin/products': ['view_products'],
     '/admin/categories': ['view_categories'],
     '/admin/delivery-zones': ['view_delivery_zones'],
@@ -76,5 +84,5 @@ export const canAccessRoute = (role, route) => {
   const requiredPermissions = routePermissions[route] || []
   if (requiredPermissions.length === 0) return true
 
-  return requiredPermissions.some(perm => hasPermission(role, perm))
+  return requiredPermissions.some(perm => hasPermission(normalizedRole, perm))
 }

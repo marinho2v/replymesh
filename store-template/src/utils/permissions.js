@@ -1,4 +1,11 @@
+const normalizeStoreRole = (role) => {
+  if (role === 'store_admin' || role === 'super_admin') return 'admin'
+  if (role === 'employee') return 'attendant'
+  return role
+}
+
 export const hasPermission = (userRole, permission) => {
+  const normalizedRole = normalizeStoreRole(userRole)
   const permissions = {
     admin: [
       'view_dashboard',
@@ -50,10 +57,11 @@ export const hasPermission = (userRole, permission) => {
     ],
   }
 
-  return permissions[userRole]?.includes(permission) || false
+  return permissions[normalizedRole]?.includes(permission) || false
 }
 
 export const canAccessRoute = (userRole, route) => {
+  const normalizedRole = normalizeStoreRole(userRole)
   const routes = {
     '/admin/dashboard': ['admin'],
     '/admin/orders': ['admin', 'attendant'],
@@ -65,6 +73,7 @@ export const canAccessRoute = (userRole, route) => {
     '/admin/customers': ['admin'],
     '/admin/coupons': ['admin'],
     '/admin/cash-register': ['admin'],
+    '/admin/pos': ['admin', 'attendant'],
     '/admin/reports': ['admin'],
     '/admin/settings': ['admin'],
     '/admin/whatsapp-templates': ['admin'],
@@ -77,15 +86,16 @@ export const canAccessRoute = (userRole, route) => {
   const routePattern = route.replace(/\/[^/]+$/, '/:id')
   const allowedRoles = routes[route] || routes[routePattern]
 
-  return allowedRoles?.includes(userRole) || false
+  return allowedRoles?.includes(normalizedRole) || false
 }
 
 export const canUpdateOrderStatus = (userRole, currentStatus, newStatus) => {
-  if (!hasPermission(userRole, 'update_order_status') && !hasPermission(userRole, 'update_order_status_kitchen')) {
+  const normalizedRole = normalizeStoreRole(userRole)
+  if (!hasPermission(normalizedRole, 'update_order_status') && !hasPermission(normalizedRole, 'update_order_status_kitchen')) {
     return false
   }
 
-  if (userRole === 'kitchen') {
+  if (normalizedRole === 'kitchen') {
     const allowedTransitions = {
       'pending': ['accepted'],
       'accepted': ['preparing'],
@@ -98,11 +108,13 @@ export const canUpdateOrderStatus = (userRole, currentStatus, newStatus) => {
 }
 
 export const getAccessibleRoutes = (userRole) => {
+  const normalizedRole = normalizeStoreRole(userRole)
   const allRoutes = {
     admin: [
       { path: '/admin/dashboard', label: 'Dashboard' },
       { path: '/admin/orders', label: 'Pedidos' },
       { path: '/admin/tables', label: 'Mesas' },
+      { path: '/admin/pos', label: 'PDV / Balcao' },
       { path: '/admin/motoboys', label: 'Motoboys' },
       { path: '/admin/products', label: 'Produtos' },
       { path: '/admin/categories', label: 'Categorias' },
@@ -118,6 +130,7 @@ export const getAccessibleRoutes = (userRole) => {
     attendant: [
       { path: '/admin/orders', label: 'Pedidos' },
       { path: '/admin/tables', label: 'Mesas' },
+      { path: '/admin/pos', label: 'PDV / Balcao' },
       { path: '/admin/motoboys', label: 'Motoboys' },
     ],
     waiter: [
@@ -128,5 +141,5 @@ export const getAccessibleRoutes = (userRole) => {
     ],
   }
 
-  return allRoutes[userRole] || []
+  return allRoutes[normalizedRole] || []
 }

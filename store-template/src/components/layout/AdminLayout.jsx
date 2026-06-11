@@ -46,6 +46,12 @@ import AiFloatingChat from '../ai/AiFloatingChat'
 import { revokeMasterImpersonation } from '../../services/replymeshApi'
 import { railsGetFeatureAccess } from '../../services/storeApi'
 
+const normalizeStoreRole = (role) => {
+  if (role === 'store_admin' || role === 'super_admin') return 'admin'
+  if (role === 'employee') return 'attendant'
+  return role
+}
+
 export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -55,6 +61,7 @@ export const AdminLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { profile } = useAuth()
+  const profileRole = normalizeStoreRole(profile?.role || profile?.company_member_role)
   const { store } = usePublicStoreInfo()
   const basePath = useCompanyBasePath()
   const adminBasePath = `${basePath}/admin`
@@ -105,7 +112,7 @@ export const AdminLayout = () => {
     let active = true
     railsGetFeatureAccess()
       .then((payload) => {
-        if (active) setFeatureAccess(payload)
+        if (active) setFeatureAccess(payload?.feature_access || payload)
       })
       .catch(() => {
         if (active) setFeatureAccess({ allowed: [], features: [] })
@@ -132,6 +139,7 @@ export const AdminLayout = () => {
   const isFeatureLocked = (featureKey) => {
     if (!featureKey) return false
     const feature = featureMap.get(featureKey)
+    if (!feature && Array.isArray(featureAccess.allowed)) return !featureAccess.allowed.includes(featureKey)
     return feature ? !feature.enabled : false
   }
 
@@ -232,7 +240,7 @@ export const AdminLayout = () => {
   const visibleSections = menuSections
     .map(section => ({
       ...section,
-      items: section.items.filter(item => item.roles.includes(profile?.role)),
+      items: section.items.filter(item => item.roles.includes(profileRole)),
     }))
     .filter(section => section.items.length > 0)
 
@@ -247,7 +255,7 @@ export const AdminLayout = () => {
           <div className="flex flex-col h-full">
             <div className={`flex items-center h-16 border-b border-dark-700 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : 'justify-between px-3'}`}>
               <Link
-                to={profile?.role === 'waiter' ? adminPath('/admin/tables') : profile?.role === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
+                to={profileRole === 'waiter' ? adminPath('/admin/tables') : profileRole === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
                 className={`flex flex-1 items-center min-w-0 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}
                 title={storeName}
               >
@@ -343,7 +351,7 @@ export const AdminLayout = () => {
                 </div>
               ))}
 
-              {profile?.role === 'kitchen' && (
+              {profileRole === 'kitchen' && (
                 <Link
                   to="/kitchen"
                   title={sidebarCollapsed ? 'Painel Cozinha' : undefined}
@@ -426,7 +434,7 @@ export const AdminLayout = () => {
                 </div>
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-white leading-tight">{profile?.full_name}</p>
-                  <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
+                  <p className="text-xs text-gray-400 capitalize">{profileRole}</p>
                 </div>
               </div>
             </div>
