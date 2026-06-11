@@ -74,6 +74,7 @@ export function EmpresasList({ onToast }) {
   const [statusLoadingId, setStatusLoadingId] = useState(null);
   const [impersonatingId, setImpersonatingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState(null);
   const masterUser = getStoredUser();
   const canImpersonate = masterUser?.global_role === "super_admin" ||
     Boolean(masterUser?.master_role?.permissions?.impersonate_company);
@@ -132,6 +133,45 @@ export function EmpresasList({ onToast }) {
       .filter((company) => `${company.name || ""} ${company.primary_domain || ""} ${company.responsible_email || ""}`.toLowerCase().includes(needle));
   }, [companies, tab, q, plan]);
 
+  const menuCompany = useMemo(
+    () => rows.find((company) => company.id === openMenuId) || companies.find((company) => company.id === openMenuId),
+    [companies, openMenuId, rows]
+  );
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+    setMenuPosition(null);
+  };
+
+  const openCompanyMenu = (company, event) => {
+    event.stopPropagation();
+
+    if (openMenuId === company.id) {
+      closeMenu();
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setOpenMenuId(company.id);
+    setMenuPosition({
+      top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 430)),
+      right: Math.max(16, window.innerWidth - rect.right),
+    });
+  };
+
+  useEffect(() => {
+    if (!openMenuId) return undefined;
+
+    const onClose = () => closeMenu();
+    window.addEventListener("resize", onClose);
+    window.addEventListener("scroll", onClose, true);
+
+    return () => {
+      window.removeEventListener("resize", onClose);
+      window.removeEventListener("scroll", onClose, true);
+    };
+  }, [openMenuId]);
+
   const changeStatus = async (company) => {
     setStatusLoadingId(company.id);
 
@@ -151,7 +191,7 @@ export function EmpresasList({ onToast }) {
 
   const enterCompany = async (company) => {
     setImpersonatingId(company.id);
-    setOpenMenuId(null);
+    closeMenu();
 
     try {
       const data = await api.impersonateCompany(company.id);
@@ -255,24 +295,7 @@ export function EmpresasList({ onToast }) {
                     <td className="muted" style={{ fontSize: 12.5 }}>{formatDate(company.created_at)}</td>
                     <td>
                       <div className="company-actions">
-                        <button className="ra" title="Mais acoes" onClick={() => setOpenMenuId((current) => current === company.id ? null : company.id)}><Icon name="EllipsisVertical" size={16} /></button>
-                        {openMenuId === company.id && <div className="company-action-menu">
-                          <button onClick={() => navigate(`/empresas/${company.id}`)}><Icon name="Eye" size={15} />Visualizar</button>
-                          <button onClick={() => navigate(`/empresas/${company.id}/editar`)}><Icon name="Pencil" size={15} />Editar</button>
-                          <button disabled={statusLoadingId === company.id} onClick={() => { setOpenMenuId(null); changeStatus(company); }}><Icon name={company.status === "active" ? "PauseCircle" : "CircleCheck"} size={15} />{company.status === "active" ? "Suspender" : "Reativar"}</button>
-                          <button onClick={() => navigate("/assinaturas")}><Icon name="CreditCard" size={15} />Assinatura</button>
-                          <button onClick={() => navigate("/dominios")}><Icon name="Globe" size={15} />Dominio</button>
-                          <button onClick={() => navigate("/whatsapp")}><Icon name="MessageCircle" size={15} />WhatsApp</button>
-                          <button onClick={() => navigate(`/tickets?company_id=${company.id}`)}><Icon name="LifeBuoy" size={15} />Tickets</button>
-                          <button onClick={() => navigate("/financeiro")}><Icon name="ChartNoAxesCombined" size={15} />Relatorios</button>
-                          <button onClick={() => navigate(`/empresas/${company.id}/importar-backup-2r`)}><Icon name="Archive" size={15} />Importar backup</button>
-                          {canImpersonate && (
-                            <button disabled={impersonatingId === company.id} onClick={() => enterCompany(company)}>
-                              <Icon name={impersonatingId === company.id ? "LoaderCircle" : "LogIn"} size={15} className={impersonatingId === company.id ? "spin" : ""} />
-                              {impersonatingId === company.id ? "Entrando..." : "Entrar como empresa"}
-                            </button>
-                          )}
-                        </div>}
+                        <button className="ra" title="Mais acoes" onClick={(event) => openCompanyMenu(company, event)}><Icon name="EllipsisVertical" size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -294,6 +317,25 @@ export function EmpresasList({ onToast }) {
           </table>
         </div>
       </div>
+      {menuCompany && openMenuId === menuCompany.id && menuPosition && (
+        <div className="company-action-menu" style={{ top: menuPosition.top, right: menuPosition.right }}>
+          <button onClick={() => { closeMenu(); navigate(`/empresas/${menuCompany.id}`); }}><Icon name="Eye" size={15} />Visualizar</button>
+          <button onClick={() => { closeMenu(); navigate(`/empresas/${menuCompany.id}/editar`); }}><Icon name="Pencil" size={15} />Editar</button>
+          <button disabled={statusLoadingId === menuCompany.id} onClick={() => { closeMenu(); changeStatus(menuCompany); }}><Icon name={menuCompany.status === "active" ? "PauseCircle" : "CircleCheck"} size={15} />{menuCompany.status === "active" ? "Suspender" : "Reativar"}</button>
+          <button onClick={() => { closeMenu(); navigate("/assinaturas"); }}><Icon name="CreditCard" size={15} />Assinatura</button>
+          <button onClick={() => { closeMenu(); navigate("/dominios"); }}><Icon name="Globe" size={15} />Dominio</button>
+          <button onClick={() => { closeMenu(); navigate("/whatsapp"); }}><Icon name="MessageCircle" size={15} />WhatsApp</button>
+          <button onClick={() => { closeMenu(); navigate(`/tickets?company_id=${menuCompany.id}`); }}><Icon name="LifeBuoy" size={15} />Tickets</button>
+          <button onClick={() => { closeMenu(); navigate("/financeiro"); }}><Icon name="ChartNoAxesCombined" size={15} />Relatorios</button>
+          <button onClick={() => { closeMenu(); navigate(`/empresas/${menuCompany.id}/importar-backup-2r`); }}><Icon name="Archive" size={15} />Importar backup</button>
+          {canImpersonate && (
+            <button disabled={impersonatingId === menuCompany.id} onClick={() => enterCompany(menuCompany)}>
+              <Icon name={impersonatingId === menuCompany.id ? "LoaderCircle" : "LogIn"} size={15} className={impersonatingId === menuCompany.id ? "spin" : ""} />
+              {impersonatingId === menuCompany.id ? "Entrando..." : "Entrar como empresa"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

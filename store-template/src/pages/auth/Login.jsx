@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { signIn, signOut } from '../../services/auth'
 import { Button } from '../../components/ui/Button'
@@ -16,6 +16,7 @@ const SAVED_LOGIN_KEY = 'replymesh:saved-login'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const companySlug = useCompanySlug()
   const basePath = useCompanyBasePath()
   const { profile } = useAuth()
@@ -26,23 +27,40 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const redirectAfterLogin = (role) => {
+    const from = location.state?.from
+    const fallback = role === 'kitchen'
+      ? '/kitchen'
+      : role === 'waiter'
+        ? `${basePath}/admin/tables`
+        : role === 'attendant'
+          ? `${basePath}/admin/orders`
+          : `${basePath}/admin/dashboard`
+
+    if (from && from !== `${basePath}/login` && from.startsWith(`${basePath}/admin`)) {
+      return from
+    }
+
+    return fallback
+  }
+
   useEffect(() => {
     if (profile) {
       if (profile.role === 'kitchen') {
         navigate('/kitchen')
       } else if (profile.role === 'waiter') {
-        navigate(`${basePath}/admin/tables`)
+        navigate(redirectAfterLogin('waiter'), { replace: true })
       } else if (profile.role === 'attendant') {
-        navigate(`${basePath}/admin/orders`)
+        navigate(redirectAfterLogin('attendant'), { replace: true })
       } else if (profile.role === 'motoboy') {
         signOut().finally(() => {
           toast.error('Use o portal do motoboy para acessar entregas.')
         })
       } else {
-        navigate(`${basePath}/admin/dashboard`)
+        navigate(redirectAfterLogin('admin'), { replace: true })
       }
     }
-  }, [basePath, profile, navigate])
+  }, [basePath, location.state, profile, navigate])
 
   useEffect(() => {
     if (!companySlug) return

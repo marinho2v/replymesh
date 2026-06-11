@@ -4,7 +4,7 @@ module Api
       class CompaniesController < ApplicationController
         before_action :authenticate_user!
         before_action :require_super_admin!
-        before_action :set_company, only: %i[show update activate deactivate impersonate features update_features update_plan]
+        before_action :set_company, only: %i[show update activate deactivate impersonate features update_features update_plan admin_password]
 
         def index
           companies = Company.includes(:domains, :company_members, subscriptions: :plan).order(created_at: :desc)
@@ -195,6 +195,47 @@ module Api
           render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
         end
 
+        def admin_password
+          password = params[:password].to_s
+          email = params[:email].to_s.strip.downcase
+
+          return render json: { success: false, error: "A senha deve ter pelo menos 8 caracteres" }, status: :unprocessable_entity if password.length < 8
+
+          members = @company.company_members.includes(:user)
+          member = if email.present?
+            members.find { |item| item.user&.email.to_s.downcase == email }
+          else
+            members.find { |item| item.role == "store_admin" && item.status == "active" } ||
+              members.find { |item| item.role == "store_admin" }
+          end
+
+          return render json: { success: false, error: "Admin da empresa nao encontrado" }, status: :not_found unless member&.user
+
+          member.user.update!(password: password)
+          audit!(
+            "company_admin_password_reset",
+            company: @company,
+            resource: member.user,
+            metadata: {
+              target_user_id: member.user_id,
+              target_email: member.user.email,
+              company_member_role: member.role
+            }
+          )
+
+          render json: {
+            success: true,
+            user: {
+              id: member.user.id,
+              name: member.user.name,
+              email: member.user.email,
+              role: member.role
+            }
+          }
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
         private
 
         def set_company
@@ -279,10 +320,25 @@ module Api
             subscription_status:     subscription&.status,
             subscription_price_cents: subscription&.price_cents,
             feature_summary:         FeatureGate.access_map(company).slice(:allowed, :blocked)
-          }
+          }.merge(admin_users: serialize_admin_users(company))
         rescue StandardError => e
           Rails.logger.error("[CompaniesController] serialize_company error for #{company.id}: #{e.message}")
           { id: company.id, name: company.name, slug: company.slug, status: company.status, error: true }
+        end
+
+        def serialize_admin_users(company)
+          company.company_members.includes(:user).select { |member| member.role == "store_admin" }.map do |member|
+            {
+              id: member.user_id,
+              name: member.user&.name,
+              email: member.user&.email,
+              status: member.status,
+              role: member.role
+            }
+          end
+        rescue StandardError => e
+          Rails.logger.warn("[CompaniesController] serialize_admin_users error for #{company.id}: #{e.message}")
+          []
         end
 
         def update_status!(status)

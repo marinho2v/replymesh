@@ -110,6 +110,12 @@ const SluggedLogin = () => {
   )
 }
 
+const RootLogin = () => (
+  <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+    {page(Login)}
+  </CompanySlugProvider>
+)
+
 const SluggedAdminLayout = () => {
   const { companySlug } = useParams()
   return (
@@ -243,7 +249,7 @@ export const router = createBrowserRouter([
 
   {
     path: '/login',
-    element: page(Login),
+    element: <RootLogin />,
   },
   {
     path: '/admin',

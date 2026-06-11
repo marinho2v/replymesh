@@ -22,6 +22,8 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [saving, setSaving] = useState(false);
   const [featureAccess, setFeatureAccess] = useState(null);
   const [savingFeature, setSavingFeature] = useState("");
+  const [adminPasswordForm, setAdminPasswordForm] = useState({ email: "", password: "" });
+  const [savingAdminPassword, setSavingAdminPassword] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -30,6 +32,10 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         if (!alive) return;
         setCompany(data.company);
         setForm(data.company);
+        setAdminPasswordForm({
+          email: data.company?.admin_users?.[0]?.email || data.company?.responsible_email || "",
+          password: "",
+        });
       })
       .catch((error) => onToast?.(error.message, "err"))
       .finally(() => alive && setLoading(false));
@@ -91,6 +97,28 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
     }
   };
 
+  const saveAdminPassword = async () => {
+    const password = adminPasswordForm.password.trim();
+    if (password.length < 8) {
+      onToast?.("A senha deve ter pelo menos 8 caracteres", "err");
+      return;
+    }
+
+    setSavingAdminPassword(true);
+    try {
+      await api.updateCompanyAdminPassword(id, {
+        email: adminPasswordForm.email,
+        password,
+      });
+      setAdminPasswordForm((current) => ({ ...current, password: "" }));
+      onToast?.("Senha do admin da empresa atualizada com sucesso", "ok");
+    } catch (error) {
+      onToast?.(error.message, "err");
+    } finally {
+      setSavingAdminPassword(false);
+    }
+  };
+
   if (loading) return <div className="page"><div className="empty"><Icon name="LoaderCircle" className="spin" /> Carregando empresa...</div></div>;
   if (!company || !form) return <div className="page"><div className="empty"><div className="et">Empresa nao encontrada</div></div></div>;
 
@@ -117,21 +145,45 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         <Badge tone={status[0]}>{status[1]}</Badge>
       </div>}
 
-      {edit ? <div className="card card-pad">
-        <div className="form-grid">
-          <Field label="Nome da empresa" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-          <Field label="Slug" value={form.slug} onChange={(value) => setForm({ ...form, slug: value })} />
-          <Field label="Razao social" value={form.legal_name} onChange={(value) => setForm({ ...form, legal_name: value })} />
-          <Field label="Documento" value={form.document_number} onChange={(value) => setForm({ ...form, document_number: value })} />
-          <Field label="Responsavel" value={form.responsible_name} onChange={(value) => setForm({ ...form, responsible_name: value })} />
-          <Field label="Email do responsavel" value={form.responsible_email} onChange={(value) => setForm({ ...form, responsible_email: value })} type="email" />
-          <Field label="Telefone" value={form.responsible_phone} onChange={(value) => setForm({ ...form, responsible_phone: value })} />
-          <div className="field"><label>Status da empresa</label><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">Ativa</option><option value="inactive">Inativa</option><option value="trial">Em teste</option><option value="suspended">Suspensa</option><option value="canceled">Cancelada</option></select></div>
-          <div className="field"><label>Status do plano</label><select value={form.plan_status} onChange={(event) => setForm({ ...form, plan_status: event.target.value })}><option value="trial">Trial</option><option value="active">Ativo</option><option value="overdue">Em atraso</option><option value="canceled">Cancelado</option><option value="suspended">Suspenso</option></select></div>
-          <Field label="Fuso horario" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
-          <Field label="Idioma padrao" value={form.default_locale} onChange={(value) => setForm({ ...form, default_locale: value })} />
+      {edit ? <>
+        <div className="card card-pad">
+          <div className="form-grid">
+            <Field label="Nome da empresa" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+            <Field label="Slug" value={form.slug} onChange={(value) => setForm({ ...form, slug: value })} />
+            <Field label="Razao social" value={form.legal_name} onChange={(value) => setForm({ ...form, legal_name: value })} />
+            <Field label="Documento" value={form.document_number} onChange={(value) => setForm({ ...form, document_number: value })} />
+            <Field label="Responsavel" value={form.responsible_name} onChange={(value) => setForm({ ...form, responsible_name: value })} />
+            <Field label="Email do responsavel" value={form.responsible_email} onChange={(value) => setForm({ ...form, responsible_email: value })} type="email" />
+            <Field label="Telefone" value={form.responsible_phone} onChange={(value) => setForm({ ...form, responsible_phone: value })} />
+            <div className="field"><label>Status da empresa</label><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">Ativa</option><option value="inactive">Inativa</option><option value="trial">Em teste</option><option value="suspended">Suspensa</option><option value="canceled">Cancelada</option></select></div>
+            <div className="field"><label>Status do plano</label><select value={form.plan_status} onChange={(event) => setForm({ ...form, plan_status: event.target.value })}><option value="trial">Trial</option><option value="active">Ativo</option><option value="overdue">Em atraso</option><option value="canceled">Cancelado</option><option value="suspended">Suspenso</option></select></div>
+            <Field label="Fuso horario" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
+            <Field label="Idioma padrao" value={form.default_locale} onChange={(value) => setForm({ ...form, default_locale: value })} />
+          </div>
         </div>
-      </div> : <div className="company-detail-grid">
+        <div className="card card-pad">
+          <div className="company-info-title"><Icon name="KeyRound" size={18} />Redefinir senha do admin da loja</div>
+          <div className="form-grid" style={{ marginTop: 14 }}>
+            <div className="field">
+              <label>Admin da empresa</label>
+              {company.admin_users?.length ? (
+                <select value={adminPasswordForm.email} onChange={(event) => setAdminPasswordForm({ ...adminPasswordForm, email: event.target.value })}>
+                  {company.admin_users.map((user) => <option key={user.id || user.email} value={user.email}>{user.name || user.email} - {user.email}</option>)}
+                </select>
+              ) : (
+                <input type="email" value={adminPasswordForm.email} onChange={(event) => setAdminPasswordForm({ ...adminPasswordForm, email: event.target.value })} placeholder="admin@empresa.com" />
+              )}
+            </div>
+            <Field label="Nova senha" type="password" value={adminPasswordForm.password} onChange={(value) => setAdminPasswordForm({ ...adminPasswordForm, password: value })} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <button className="btn btn-ghost" onClick={saveAdminPassword} disabled={savingAdminPassword || !adminPasswordForm.password}>
+              <Icon name={savingAdminPassword ? "LoaderCircle" : "KeyRound"} size={16} className={savingAdminPassword ? "spin" : ""} />
+              {savingAdminPassword ? "Atualizando..." : "Atualizar senha"}
+            </button>
+          </div>
+        </div>
+      </> : <div className="company-detail-grid">
         <InfoCard icon="Building2" title="Empresa" items={[["Razao social", company.legal_name], ["Documento", company.document_number], ["Slug", company.slug], ["Cadastro", formatDate(company.created_at)]]} />
         <InfoCard icon="UserRound" title="Responsavel" items={[["Nome", company.responsible_name], ["Email", company.responsible_email], ["Telefone", company.responsible_phone], ["Usuarios", company.users_count]]} />
         <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Trial ate", formatDate(company.trial_ends_at)]]} />

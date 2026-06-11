@@ -82,6 +82,7 @@ export const api = {
   getCompany: (id) => request(`/master/companies/${id}`),
   createCompany: (payload) => request("/master/companies", { method: "POST", body: JSON.stringify(payload) }),
   updateCompany: (id, payload) => request(`/master/companies/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  updateCompanyAdminPassword: (id, payload) => request(`/master/companies/${id}/admin_password`, { method: "PATCH", body: JSON.stringify(payload) }),
   activateCompany: (id) => request(`/master/companies/${id}/activate`, { method: "PATCH" }),
   deactivateCompany: (id) => request(`/master/companies/${id}/deactivate`, { method: "PATCH" }),
   impersonateCompany: (id) => request(`/master/companies/${id}/impersonate`, { method: "POST" }),
