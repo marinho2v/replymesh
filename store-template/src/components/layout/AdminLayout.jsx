@@ -163,6 +163,7 @@ export const AdminLayout = () => {
     {
       title: null,
       items: [
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'] },
         { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin'] },
       ],
     },
@@ -171,7 +172,6 @@ export const AdminLayout = () => {
       items: [
         { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant'] },
         { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter'] },
-        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'], feature: 'pos_counter' },
       ],
     },
     {

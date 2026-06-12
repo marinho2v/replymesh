@@ -1,4 +1,4 @@
-const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:3000/api/v1")
+const API_URL = (import.meta.env.VITE_API_URL || "https://api.replymesh.cloud/api/v1")
   .replace("://localhost", "://127.0.0.1");
 const TOKEN_KEY = "replymesh_token";
 const USER_KEY = "replymesh_user";
