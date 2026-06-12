@@ -78,9 +78,12 @@ const protectedPage = (Component, allowedRoles) => (
 const AdminIndexRedirect = () => {
   const { profile } = useAuth()
   const basePath = useCompanyBasePath()
-  const target = profile?.role === 'waiter'
+  const role = profile?.role
+  const target = role === 'waiter'
     ? `${basePath}/admin/tables`
-    : profile?.role === 'attendant'
+    : role === 'cashier'
+      ? `${basePath}/admin/pos`
+    : role === 'attendant'
       ? `${basePath}/admin/orders`
       : `${basePath}/admin/dashboard`
   return <Navigate to={target} replace />
@@ -120,7 +123,7 @@ const SluggedAdminLayout = () => {
   const { companySlug } = useParams()
   return (
     <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      <ProtectedRoute allowedRoles={['admin', 'attendant', 'waiter']}>
+      <ProtectedRoute allowedRoles={['admin', 'cashier', 'attendant', 'waiter']}>
         <AdminLayout />
       </ProtectedRoute>
     </CompanySlugProvider>
@@ -161,21 +164,21 @@ const publicChildren = [
 
 const adminChildren = [
   { index: true, element: <AdminIndexRedirect /> },
-  { path: 'dashboard', element: protectedPage(Dashboard, ['admin']) },
+  { path: 'dashboard', element: protectedPage(Dashboard, ['admin', 'cashier']) },
   { path: 'orders', element: page(Orders) },
   { path: 'orders/:orderId', element: page(OrderDetails) },
   { path: 'products', element: protectedPage(Products, ['admin']) },
   { path: 'categories', element: protectedPage(Categories, ['admin']) },
   { path: 'delivery-zones', element: protectedPage(DeliveryZones, ['admin']) },
-  { path: 'customers', element: protectedPage(Customers, ['admin']) },
-  { path: 'customers/:customerId', element: protectedPage(CustomerDetails, ['admin']) },
+  { path: 'customers', element: protectedPage(Customers, ['admin', 'attendant']) },
+  { path: 'customers/:customerId', element: protectedPage(CustomerDetails, ['admin', 'attendant']) },
   { path: 'coupons', element: protectedPage(Coupons, ['admin']) },
   { path: 'wheel', element: protectedPage(WheelSettings, ['admin']) },
   { path: 'users', element: protectedPage(Users, ['admin']) },
-  { path: 'reports', element: protectedPage(Reports, ['admin']) },
-  { path: 'cash', element: protectedPage(CashRegister, ['admin']) },
-  { path: 'cash-register', element: protectedPage(CashRegister, ['admin']) },
-  { path: 'tables', element: protectedPage(Tables, ['admin', 'attendant', 'waiter']) },
+  { path: 'reports', element: protectedPage(Reports, ['admin', 'cashier']) },
+  { path: 'cash', element: protectedPage(CashRegister, ['admin', 'cashier']) },
+  { path: 'cash-register', element: protectedPage(CashRegister, ['admin', 'cashier']) },
+  { path: 'tables', element: protectedPage(Tables, ['admin', 'attendant', 'waiter', 'cashier']) },
   { path: 'settings', element: protectedPage(Settings, ['admin']) },
   { path: 'whatsapp', element: protectedPage(Whatsapp, ['admin']) },
   { path: 'whatsapp/qrcode', element: protectedPage(WhatsappQrCode, ['admin']) },
@@ -192,7 +195,7 @@ const adminChildren = [
   { path: 'app-banners', element: protectedPage(AppBanners, ['admin']) },
   { path: 'support',  element: protectedPage(Support, ['admin']) },
   { path: 'updates',  element: protectedPage(SystemUpdates, ['admin']) },
-  { path: 'pos', element: protectedPage(PosSale, ['admin', 'attendant']) },
+  { path: 'pos', element: protectedPage(PosSale, ['admin', 'cashier']) },
 ]
 
 export const router = createBrowserRouter([
@@ -255,7 +258,7 @@ export const router = createBrowserRouter([
     path: '/admin',
     element: (
       <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
-        <ProtectedRoute allowedRoles={['admin', 'attendant', 'waiter']}>
+        <ProtectedRoute allowedRoles={['admin', 'cashier', 'attendant', 'waiter']}>
           <AdminLayout />
         </ProtectedRoute>
       </CompanySlugProvider>

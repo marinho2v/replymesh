@@ -71,6 +71,7 @@ module Api
         def authorize_store_role!
           return true if performed? || current_user.super_admin?
           return true if store_admin?
+          return true if cashier? && cashier_allowed?
 
           role = current_company_member&.role
           return forbidden_role unless role
@@ -90,6 +91,27 @@ module Api
           current_company_member&.role == "store_admin"
         end
 
+        def cashier?
+          current_company_member&.role == "cashier"
+        end
+
+        def cashier_allowed?
+          controller_path.in?(%w[
+            api/v1/store/dashboard
+            api/v1/store/orders
+            api/v1/store/pos
+            api/v1/store/cash_sessions
+            api/v1/store/cash_movements
+            api/v1/store/categories
+            api/v1/store/products
+            api/v1/store/dining_tables
+            api/v1/store/table_sessions
+            api/v1/store/features
+            api/v1/store/notifications
+            api/v1/store/reports
+          ])
+        end
+
         def employee_allowed?
           controller_path.in?(
             %w[
@@ -103,7 +125,6 @@ module Api
               api/v1/store/deliveries
               api/v1/store/features
               api/v1/store/notifications
-              api/v1/store/pos
             ]
           )
         end

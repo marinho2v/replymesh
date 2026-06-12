@@ -5,6 +5,7 @@ const REPLYMESH_AUTH_EVENT = 'replymesh-auth-changed'
 
 const membershipRoleToProfileRole = (role) => {
   if (['store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
+  if (role === 'cashier') return 'cashier'
   if (role === 'waiter') return 'waiter'
   if (role === 'kitchen') return 'kitchen'
   if (role === 'motoboy') return 'motoboy'

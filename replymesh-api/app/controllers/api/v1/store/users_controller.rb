@@ -7,6 +7,8 @@ module Api
         ROLE_MAP = {
           "owner" => "store_admin",
           "admin" => "store_admin",
+          "cashier" => "cashier",
+          "caixa" => "cashier",
           "attendant" => "employee",
           "employee" => "employee",
           "waiter" => "waiter",
@@ -84,6 +86,7 @@ module Api
         def public_role(member)
           case member.role
           when "store_admin" then "admin"
+          when "cashier" then "cashier"
           when "waiter" then "waiter"
           when "kitchen" then "kitchen"
           when "motoboy" then "motoboy"

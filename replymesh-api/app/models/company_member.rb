@@ -1,5 +1,5 @@
 class CompanyMember < ApplicationRecord
-  ROLES = %w[store_admin employee waiter kitchen motoboy support_viewer].freeze
+  ROLES = %w[store_admin cashier employee waiter kitchen motoboy support_viewer].freeze
   STATUSES = %w[active inactive].freeze
 
   belongs_to :company

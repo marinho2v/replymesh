@@ -48,6 +48,7 @@ import { railsGetFeatureAccess } from '../../services/storeApi'
 
 const normalizeStoreRole = (role) => {
   if (['admin', 'store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
+  if (role === 'cashier') return 'cashier'
   if (['attendant', 'employee', 'support_viewer'].includes(role)) return 'attendant'
   if (role === 'waiter') return 'waiter'
   if (role === 'kitchen') return 'kitchen'
@@ -166,15 +167,15 @@ export const AdminLayout = () => {
     {
       title: null,
       items: [
-        { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin'] },
+        { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'cashier'] },
       ],
     },
     {
       title: 'Operacao',
       items: [
-        { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant'] },
-        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'] },
-        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter'] },
+        { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant', 'cashier'] },
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'cashier'] },
+        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter', 'cashier'] },
       ],
     },
     {
@@ -194,7 +195,7 @@ export const AdminLayout = () => {
     {
       title: 'Clientes & Promocoes',
       items: [
-        { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin'] },
+        { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin', 'attendant'] },
         { path: '/admin/coupons', icon: Ticket, label: 'Cupons', roles: ['admin'], feature: 'coupons' },
         { path: '/admin/wheel', icon: Trophy, label: 'Roleta', roles: ['admin'], feature: 'roulette' },
       ],
@@ -209,8 +210,8 @@ export const AdminLayout = () => {
     {
       title: 'Financeiro',
       items: [
-        { path: '/admin/cash-register', icon: Wallet, label: 'Caixa', roles: ['admin'] },
-        { path: '/admin/reports', icon: BarChart3, label: 'Relatorios', roles: ['admin'], feature: 'advanced_reports' },
+        { path: '/admin/cash-register', icon: Wallet, label: 'Caixa', roles: ['admin', 'cashier'] },
+        { path: '/admin/reports', icon: BarChart3, label: 'Relatorios', roles: ['admin', 'cashier'], feature: 'advanced_reports' },
       ],
     },
     {
@@ -221,7 +222,6 @@ export const AdminLayout = () => {
         { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Recuperador de Vendas', roles: ['admin'], feature: 'sales_recovery' },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
-        // IA removida do menu (Fase 15.12) — aparece como botão flutuante
       ],
     },
     {
@@ -258,7 +258,7 @@ export const AdminLayout = () => {
           <div className="flex flex-col h-full">
             <div className={`flex items-center h-16 border-b border-dark-700 ${sidebarCollapsed ? 'lg:justify-center lg:px-3' : 'justify-between px-3'}`}>
               <Link
-                to={profileRole === 'waiter' ? adminPath('/admin/tables') : profileRole === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
+                to={profileRole === 'waiter' ? adminPath('/admin/tables') : profileRole === 'cashier' ? adminPath('/admin/pos') : profileRole === 'attendant' ? adminPath('/admin/orders') : adminPath('/admin/dashboard')}
                 className={`flex flex-1 items-center min-w-0 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}
                 title={storeName}
               >

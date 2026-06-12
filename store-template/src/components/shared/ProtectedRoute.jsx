@@ -5,6 +5,7 @@ import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 
 const normalizeStoreRole = (role) => {
   if (['admin', 'store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
+  if (role === 'cashier') return 'cashier'
   if (['attendant', 'employee', 'support_viewer'].includes(role)) return 'attendant'
   if (role === 'waiter') return 'waiter'
   if (role === 'kitchen') return 'kitchen'
@@ -27,8 +28,10 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(profileRole)) {
-    const fallbackPath = profileRole === 'attendant'
-      ? `${basePath}/admin/orders`
+    const fallbackPath = profileRole === 'cashier'
+      ? `${basePath}/admin/pos`
+      : profileRole === 'attendant'
+        ? `${basePath}/admin/orders`
       : profileRole === 'waiter'
         ? `${basePath}/admin/tables`
       : profileRole === 'kitchen'

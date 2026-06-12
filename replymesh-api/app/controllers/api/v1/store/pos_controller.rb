@@ -37,7 +37,7 @@ module Api
 
         def authorize_pos_role!
           member = current_company_member
-          return if member&.role.in?(%w[store_admin employee])
+          return if member&.role.in?(%w[store_admin cashier])
 
           render json: { success: false, error: "Sem permissao para acessar o PDV" }, status: :forbidden
           false
