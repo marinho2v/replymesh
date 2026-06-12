@@ -75,12 +75,15 @@ module Api
         def build_summary(s)
           mvs = s.cash_movements
           {
-            total_cash_sales:  cents_brl(mvs.where(movement_type: "sale_cash").sum(:amount_cents)),
-            total_pix_sales:   cents_brl(mvs.where(movement_type: "sale_pix").sum(:amount_cents)),
-            total_card_sales:  cents_brl(mvs.where(movement_type: "sale_card").sum(:amount_cents)),
-            total_sangria:     cents_brl(mvs.where(movement_type: "sangria").sum(:amount_cents)),
-            total_reinforcement: cents_brl(mvs.where(movement_type: "reinforcement").sum(:amount_cents)),
-            movements_count:   mvs.count
+            total_cash_sales:      cents_brl(mvs.where(movement_type: "sale_cash").sum(:amount_cents)),
+            total_pix_sales:       cents_brl(mvs.where(movement_type: "sale_pix").sum(:amount_cents)),
+            total_card_sales:      cents_brl(mvs.where(movement_type: "sale_card").sum(:amount_cents)),
+            total_change_given:    cents_brl(mvs.where(movement_type: "change_given").sum(:amount_cents)),
+            total_sangria:         cents_brl(mvs.where(movement_type: "sangria").sum(:amount_cents)),
+            total_withdrawal:      cents_brl(mvs.where(movement_type: "withdrawal").sum(:amount_cents)),
+            total_reinforcement:   cents_brl(mvs.where(movement_type: "reinforcement").sum(:amount_cents)),
+            expected_cash_balance: cents_brl(CashService.calculate_expected_balance(s)),
+            movements_count:       mvs.count
           }
         end
 

@@ -107,6 +107,16 @@ class CashService
     Result.new(success: false, error: e.record.errors.full_messages.join(", "))
   end
 
+  def self.calculate_expected_balance(session)
+    movements = session.cash_movements
+    opening   = session.opening_amount_cents
+    cash_in   = movements.where(movement_type: %w[sale_cash reinforcement],
+                                affects_physical_cash: true).sum(:amount_cents)
+    cash_out  = movements.where(movement_type: %w[change_given sangria withdrawal refund],
+                                affects_physical_cash: true).sum(:amount_cents)
+    opening + cash_in - cash_out
+  end
+
   private_class_method def self.build_origin_info(order)
     origin = case order.order_type
              when "delivery" then "delivery"
@@ -144,14 +154,4 @@ class CashService
     movements
   end
 
-  private_class_method def self.calculate_expected_balance(session)
-    movements = session.cash_movements
-    opening   = session.opening_amount_cents
-
-    cash_in  = movements.where(movement_type: %w[sale_cash reinforcement],
-                               affects_physical_cash: true).sum(:amount_cents)
-    cash_out = movements.where(movement_type: %w[change_given sangria withdrawal refund],
-                               affects_physical_cash: true).sum(:amount_cents)
-    opening + cash_in - cash_out
-  end
 end

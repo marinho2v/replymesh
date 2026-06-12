@@ -17,12 +17,18 @@ const emptySummary = {
 
 const normalizeSession = (session) => {
   if (!session) return null
+  const closing_expected_amount = session.closing_expected_brl ?? toBrl(session.closing_expected_cents)
+  const closing_counted_amount  = session.closing_counted_brl ?? toBrl(session.closing_counted_cents)
+  const difference_amount       = session.difference_brl ?? toBrl(session.difference_cents)
   return {
     ...session,
-    opening_amount: session.opening_amount_brl ?? toBrl(session.opening_amount_cents),
-    closing_expected: session.closing_expected_brl ?? toBrl(session.closing_expected_cents),
-    closing_counted: session.closing_counted_brl ?? toBrl(session.closing_counted_cents),
-    difference: session.difference_brl ?? toBrl(session.difference_cents),
+    opening_amount:          session.opening_amount_brl ?? toBrl(session.opening_amount_cents),
+    closing_expected:        closing_expected_amount,
+    closing_counted:         closing_counted_amount,
+    difference:              difference_amount,
+    closing_expected_amount,
+    closing_counted_amount,
+    difference_amount,
     opened_at: session.opened_at || session.created_at,
   }
 }
