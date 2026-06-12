@@ -1,21 +1,14 @@
-import { Link } from "react-router-dom";
+import { LandingLayout } from "../components/layout/LandingLayout.jsx";
 
 export function TermosDeUso() {
   return (
-    <div className="min-h-screen bg-white text-gray-800">
-      <header style={{ background: "#0f1117", padding: "16px 24px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link to="/" style={{ fontSize: 20, fontWeight: 700, color: "#facc15", textDecoration: "none" }}>Replymesh</Link>
-          <span style={{ fontSize: 13, color: "#9ca3af" }}>Documentos Legais</span>
-        </div>
-      </header>
+    <LandingLayout>
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "56px 24px 80px" }}>
+        <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#f5b50a", textTransform: "uppercase", marginBottom: 12 }}>Documento Legal</p>
+        <h1 style={{ fontSize: 36, fontWeight: 800, color: "#111827", marginBottom: 8, lineHeight: 1.2 }}>Termos de Uso</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 48, paddingBottom: 32, borderBottom: "1px solid #e5e7eb" }}>Última atualização: 11 de junho de 2026</p>
 
-      <main style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Termos de Uso</h1>
-        <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 32 }}>Última atualização: 11 de junho de 2026</p>
-
-        <div style={{ fontSize: 14, lineHeight: 1.7, color: "#374151" }}>
-
+        <div style={{ fontSize: 15, lineHeight: 1.8, color: "#374151" }}>
           <Section title="1. Aceitação dos Termos">
             Ao acessar e utilizar a plataforma Replymesh ("Plataforma", "Sistema"), você ("Cliente", "Usuário", "Contratante")
             concorda integralmente com estes Termos de Uso. Caso não concorde, interrompa imediatamente o uso do sistema.
@@ -24,12 +17,12 @@ export function TermosDeUso() {
 
           <Section title="2. Descrição do Serviço">
             A Replymesh é uma plataforma SaaS destinada a negócios de alimentação que oferece:
-            <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+            <ul style={{ paddingLeft: 20, marginTop: 10 }}>
               {["Cardápio digital online","Gestão de pedidos de delivery e retirada","Sistema de Ponto de Venda (PDV/Balcão)",
                 "Gestão de mesas e comandas","Controle de estoque","Gestão de motoboys e entregas",
                 "Notificações automáticas via WhatsApp","Marketing WhatsApp e recuperação de vendas",
                 "Relatórios financeiros e de desempenho","Integrações com Mercado Pago e outros meios de pagamento"]
-                .map((item, i) => <li key={i}>{item}</li>)}
+                .map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
             </ul>
           </Section>
 
@@ -94,27 +87,18 @@ export function TermosDeUso() {
           </Section>
 
           <Section title="14. Contato">
-            E-mail: contato@replymesh.com.br — Rio de Janeiro, RJ, Brasil.
+            E-mail: <strong>contato@replymesh.com.br</strong> — Rio de Janeiro, RJ, Brasil.
           </Section>
-
         </div>
-      </main>
-
-      <footer style={{ borderTop: "1px solid #e5e7eb", padding: "24px", textAlign: "center", fontSize: 12, color: "#9ca3af" }}>
-        <p>© 2026 Replymesh. Todos os direitos reservados.</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8 }}>
-          <Link to="/politica-de-privacidade" style={{ color: "#6b7280", textDecoration: "none" }}>Política de Privacidade</Link>
-          <Link to="/" style={{ color: "#6b7280", textDecoration: "none" }}>Voltar ao início</Link>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </LandingLayout>
   );
 }
 
 function Section({ title, children }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{title}</h2>
+    <div style={{ marginBottom: 36 }}>
+      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid #f3f4f6" }}>{title}</h2>
       <div>{children}</div>
     </div>
   );

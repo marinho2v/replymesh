@@ -1,20 +1,14 @@
-import { Link } from "react-router-dom";
+import { LandingLayout } from "../components/layout/LandingLayout.jsx";
 
 export function PoliticaDePrivacidade() {
   return (
-    <div className="min-h-screen bg-white text-gray-800">
-      <header style={{ background: "#0f1117", padding: "16px 24px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link to="/" style={{ fontSize: 20, fontWeight: 700, color: "#facc15", textDecoration: "none" }}>Replymesh</Link>
-          <span style={{ fontSize: 13, color: "#9ca3af" }}>Documentos Legais</span>
-        </div>
-      </header>
+    <LandingLayout>
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "56px 24px 80px" }}>
+        <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#f5b50a", textTransform: "uppercase", marginBottom: 12 }}>Documento Legal</p>
+        <h1 style={{ fontSize: 36, fontWeight: 800, color: "#111827", marginBottom: 8, lineHeight: 1.2 }}>Política de Privacidade</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 48, paddingBottom: 32, borderBottom: "1px solid #e5e7eb" }}>Última atualização: 11 de junho de 2026</p>
 
-      <main style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Política de Privacidade</h1>
-        <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 32 }}>Última atualização: 11 de junho de 2026</p>
-
-        <div style={{ fontSize: 14, lineHeight: 1.7, color: "#374151" }}>
+        <div style={{ fontSize: 15, lineHeight: 1.8, color: "#374151" }}>
 
           <Section title="1. Introdução">
             A Replymesh está comprometida com a proteção da privacidade e dos dados pessoais de seus clientes, usuários
@@ -28,17 +22,14 @@ export function PoliticaDePrivacidade() {
           </Section>
 
           <Section title="3. Dados Coletados">
-            <strong>3.1 Dados dos Clientes (lojistas):</strong> nome, CPF/CNPJ, endereço, e-mail, telefone, dados de
-            pagamento (processados por gateways — não armazenamos cartões), logs de acesso.
-            <br /><br />
-            <strong>3.2 Dados dos clientes finais:</strong> nome, telefone (WhatsApp), endereço de entrega, histórico
-            de pedidos. Tratados em nome do lojista, que é o Controlador desses dados.
-            <br /><br />
-            <strong>3.3 Dados de Pedidos:</strong> itens, valores, formas de pagamento, data/hora, status, origem do
-            pedido (delivery, retirada, mesa, PDV).
-            <br /><br />
-            <strong>3.4 Dados de WhatsApp:</strong> números de telefone para notificações e histórico de mensagens
-            enviadas pelo sistema. Não acessamos conversas privadas.
+            <p><strong>3.1 Dados dos Clientes (lojistas):</strong> nome, CPF/CNPJ, endereço, e-mail, telefone, dados de
+            pagamento (processados por gateways — não armazenamos cartões), logs de acesso.</p>
+            <p style={{ marginTop: 10 }}><strong>3.2 Dados dos clientes finais:</strong> nome, telefone (WhatsApp), endereço de entrega, histórico
+            de pedidos. Tratados em nome do lojista, que é o Controlador desses dados.</p>
+            <p style={{ marginTop: 10 }}><strong>3.3 Dados de Pedidos:</strong> itens, valores, formas de pagamento, data/hora, status, origem do
+            pedido (delivery, retirada, mesa, PDV).</p>
+            <p style={{ marginTop: 10 }}><strong>3.4 Dados de WhatsApp:</strong> números de telefone para notificações e histórico de mensagens
+            enviadas pelo sistema. Não acessamos conversas privadas.</p>
           </Section>
 
           <Section title="4. Finalidade do Tratamento">
@@ -46,16 +37,16 @@ export function PoliticaDePrivacidade() {
               {["Prestação dos serviços contratados","Identificação e autenticação de usuários",
                 "Processamento de pedidos e comunicação com clientes finais","Envio de notificações via WhatsApp",
                 "Cobrança e gestão financeira","Suporte técnico","Melhoria contínua da plataforma",
-                "Cumprimento de obrigações legais"].map((item, i) => <li key={i}>{item}</li>)}
+                "Cumprimento de obrigações legais"].map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
             </ul>
           </Section>
 
           <Section title="5. Base Legal (LGPD)">
             <ul style={{ paddingLeft: 20 }}>
-              <li><strong>Execução de contrato</strong> — dados necessários à prestação do serviço (art. 7º, V)</li>
-              <li><strong>Legítimo interesse</strong> — segurança e prevenção a fraudes (art. 7º, IX)</li>
-              <li><strong>Cumprimento de obrigação legal</strong> — quando exigido por lei (art. 7º, II)</li>
-              <li><strong>Consentimento</strong> — comunicações de marketing (art. 7º, I)</li>
+              <li style={{ marginBottom: 6 }}><strong>Execução de contrato</strong> — dados necessários à prestação do serviço (art. 7º, V)</li>
+              <li style={{ marginBottom: 6 }}><strong>Legítimo interesse</strong> — segurança e prevenção a fraudes (art. 7º, IX)</li>
+              <li style={{ marginBottom: 6 }}><strong>Cumprimento de obrigação legal</strong> — quando exigido por lei (art. 7º, II)</li>
+              <li style={{ marginBottom: 6 }}><strong>Consentimento</strong> — comunicações de marketing (art. 7º, I)</li>
             </ul>
           </Section>
 
@@ -77,10 +68,10 @@ export function PoliticaDePrivacidade() {
 
           <Section title="9. Retenção de Dados">
             <ul style={{ paddingLeft: 20 }}>
-              <li>Conta ativa: durante toda a vigência do contrato</li>
-              <li>Após cancelamento: 30 dias para exportação, depois removidos</li>
-              <li>Dados fiscais: conforme exigência legal (5 anos)</li>
-              <li>Logs de acesso: 6 meses</li>
+              <li style={{ marginBottom: 4 }}>Conta ativa: durante toda a vigência do contrato</li>
+              <li style={{ marginBottom: 4 }}>Após cancelamento: 30 dias para exportação, depois removidos</li>
+              <li style={{ marginBottom: 4 }}>Dados fiscais: conforme exigência legal (5 anos)</li>
+              <li style={{ marginBottom: 4 }}>Logs de acesso: 6 meses</li>
             </ul>
           </Section>
 
@@ -105,29 +96,21 @@ export function PoliticaDePrivacidade() {
           </Section>
 
           <Section title="14. Contato">
-            E-mail geral: contato@replymesh.com.br<br />
-            Privacidade/DPO: privacidade@replymesh.com.br<br />
+            E-mail geral: <strong>contato@replymesh.com.br</strong><br />
+            Privacidade/DPO: <strong>privacidade@replymesh.com.br</strong><br />
             Endereço: Rio de Janeiro - RJ, Brasil.
           </Section>
 
         </div>
-      </main>
-
-      <footer style={{ borderTop: "1px solid #e5e7eb", padding: "24px", textAlign: "center", fontSize: 12, color: "#9ca3af" }}>
-        <p>© 2026 Replymesh. Todos os direitos reservados.</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8 }}>
-          <Link to="/termos-de-uso" style={{ color: "#6b7280", textDecoration: "none" }}>Termos de Uso</Link>
-          <Link to="/" style={{ color: "#6b7280", textDecoration: "none" }}>Voltar ao início</Link>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </LandingLayout>
   );
 }
 
 function Section({ title, children }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{title}</h2>
+    <div style={{ marginBottom: 36 }}>
+      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid #f3f4f6" }}>{title}</h2>
       <div>{children}</div>
     </div>
   );
