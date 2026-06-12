@@ -47,9 +47,12 @@ import { revokeMasterImpersonation } from '../../services/replymeshApi'
 import { railsGetFeatureAccess } from '../../services/storeApi'
 
 const normalizeStoreRole = (role) => {
-  if (role === 'store_admin' || role === 'super_admin') return 'admin'
-  if (role === 'employee') return 'attendant'
-  return role
+  if (['admin', 'store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
+  if (['attendant', 'employee', 'support_viewer'].includes(role)) return 'attendant'
+  if (role === 'waiter') return 'waiter'
+  if (role === 'kitchen') return 'kitchen'
+  if (role === 'motoboy') return 'motoboy'
+  return 'attendant'
 }
 
 export const AdminLayout = () => {
@@ -163,7 +166,6 @@ export const AdminLayout = () => {
     {
       title: null,
       items: [
-        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'] },
         { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin'] },
       ],
     },
@@ -171,6 +173,7 @@ export const AdminLayout = () => {
       title: 'Operacao',
       items: [
         { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant'] },
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'attendant'] },
         { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter'] },
       ],
     },

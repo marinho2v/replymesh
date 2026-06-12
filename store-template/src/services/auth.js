@@ -4,7 +4,7 @@ import { STORE_COMPANY_ID, setCurrentStoreCompany } from './storeApi'
 const REPLYMESH_AUTH_EVENT = 'replymesh-auth-changed'
 
 const membershipRoleToProfileRole = (role) => {
-  if (role === 'store_admin') return 'admin'
+  if (['store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
   if (role === 'waiter') return 'waiter'
   if (role === 'kitchen') return 'kitchen'
   if (role === 'motoboy') return 'motoboy'

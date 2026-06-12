@@ -4,9 +4,12 @@ import { PageLoader } from '../ui/Loader'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 
 const normalizeStoreRole = (role) => {
-  if (role === 'store_admin' || role === 'super_admin') return 'admin'
-  if (role === 'employee') return 'attendant'
-  return role
+  if (['admin', 'store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
+  if (['attendant', 'employee', 'support_viewer'].includes(role)) return 'attendant'
+  if (role === 'waiter') return 'waiter'
+  if (role === 'kitchen') return 'kitchen'
+  if (role === 'motoboy') return 'motoboy'
+  return 'attendant'
 }
 
 export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
