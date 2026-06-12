@@ -360,7 +360,7 @@ export const KB = {
 
   recuperador: {
     title: 'Recuperador de Vendas',
-    keywords: ['recuperador', 'recuperar', 'carrinho abandonado', 'abandono', 'sales recovery', 'reengajamento'],
+    keywords: ['recuperador', 'recuperar', 'recuperação', 'recuperacao', 'carrinho abandonado', 'abandono', 'sales recovery', 'reengajamento', 'recuperação de vendas', 'recuperacao de vendas'],
     description: 'Sistema de recuperação de carrinhos abandonados via WhatsApp. Aumenta a conversão de pedidos não finalizados.',
     sections: [
       {
