@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bot, Loader2, MessageCircle, Send, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { railsChatWithAi, railsGetAiSettings } from '../../services/storeApi'
+import { buildKarinaContext } from '../../knowledge_base/index.js'
 
 const FALLBACK_NAME = 'Carina'
 
@@ -107,7 +108,13 @@ export default function AiFloatingChat() {
     setLoading(true)
 
     try {
-      const response = await railsChatWithAi({ message: text, page: location.pathname })
+      // RAG: busca contexto relevante da base de conhecimento ReplyMesh
+      const knowledgeContext = buildKarinaContext(text)
+      const enrichedMessage = knowledgeContext
+        ? `${knowledgeContext}\n\n---\nPergunta do usuário: ${text}`
+        : text
+
+      const response = await railsChatWithAi({ message: enrichedMessage, page: location.pathname })
       setMessages((current) => [...current, { role: 'assistant', text: response.answer || response.error || 'Nao consegui responder agora.' }])
     } catch (error) {
       setMessages((current) => [...current, { role: 'assistant', text: error.message || 'Nao consegui conectar a IA agora.' }])

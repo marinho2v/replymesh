@@ -54,6 +54,9 @@ const AppBanners = lazy(() => import('../pages/admin/AppBanners'))
 const Support = lazy(() => import('../pages/admin/Support'))
 const SystemUpdates = lazy(() => import('../pages/admin/SystemUpdates'))
 const PosSale = lazy(() => import('../pages/admin/PosSale'))
+const Help = lazy(() => import('../pages/admin/Help'))
+const TermosDeUso = lazy(() => import('../pages/public/TermosDeUso'))
+const PoliticaDePrivacidade = lazy(() => import('../pages/public/PoliticaDePrivacidade'))
 
 // Kitchen Pages
 const KitchenBoard = lazy(() => import('../pages/kitchen/KitchenBoard'))
@@ -148,6 +151,15 @@ const SluggedMotoboyPage = ({ component: Component }) => {
   )
 }
 
+const SluggedStaticPage = ({ component: Component }) => {
+  const { companySlug } = useParams()
+  return (
+    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
+      {page(Component)}
+    </CompanySlugProvider>
+  )
+}
+
 // Filhos públicos reutilizados em ambas as rotas
 const publicChildren = [
   { index: true, element: page(Home) },
@@ -196,6 +208,7 @@ const adminChildren = [
   { path: 'support',  element: protectedPage(Support, ['admin']) },
   { path: 'updates',  element: protectedPage(SystemUpdates, ['admin']) },
   { path: 'pos', element: protectedPage(PosSale, ['admin', 'cashier']) },
+  { path: 'help', element: protectedPage(Help, ['admin', 'cashier', 'attendant']) },
 ]
 
 export const router = createBrowserRouter([
@@ -225,6 +238,14 @@ export const router = createBrowserRouter([
     element: page(MasterImpersonation),
   },
   {
+    path: '/loja/:companySlug/termos-de-uso',
+    element: <SluggedStaticPage component={TermosDeUso} />,
+  },
+  {
+    path: '/loja/:companySlug/politica-de-privacidade',
+    element: <SluggedStaticPage component={PoliticaDePrivacidade} />,
+  },
+  {
     path: '/loja/:companySlug/admin',
     element: <SluggedAdminLayout />,
     children: adminChildren,
@@ -250,6 +271,22 @@ export const router = createBrowserRouter([
     element: <SluggedMotoboyPage component={MotoboyProfile} />,
   },
 
+  {
+    path: '/termos-de-uso',
+    element: (
+      <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+        {page(TermosDeUso)}
+      </CompanySlugProvider>
+    ),
+  },
+  {
+    path: '/politica-de-privacidade',
+    element: (
+      <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+        {page(PoliticaDePrivacidade)}
+      </CompanySlugProvider>
+    ),
+  },
   {
     path: '/login',
     element: <RootLogin />,

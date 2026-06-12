@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Lock,
   MonitorPlay,
+  BookOpen,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { signOut } from '../../services/auth'
@@ -234,8 +235,9 @@ export const AdminLayout = () => {
     {
       title: null,
       items: [
-        { path: '/admin/support',  icon: LifeBuoy,  label: 'Suporte',       roles: ['admin'], highlight: true },
-        { path: '/admin/updates',  icon: Sparkles,  label: 'Atualizações',  roles: ['admin'] },
+        { path: '/admin/help',    icon: BookOpen,  label: 'Ajuda',         roles: ['admin', 'cashier', 'attendant'] },
+        { path: '/admin/support', icon: LifeBuoy,  label: 'Suporte',       roles: ['admin'], highlight: true },
+        { path: '/admin/updates', icon: Sparkles,  label: 'Atualizações',  roles: ['admin'] },
       ],
     },
   ]

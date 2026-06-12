@@ -28,6 +28,8 @@ const SystemUpdates = lazy(() => import("../pages/configuracoes/SystemUpdates.js
 const MasterBranding = lazy(() => import("../pages/configuracoes/MasterBranding.jsx").then((module) => ({ default: module.MasterBranding })));
 const AndroidApps = lazy(() => import("../pages/AndroidApps.jsx").then((module) => ({ default: module.AndroidApps })));
 const LandingPage = lazy(() => import("../pages/LandingPage.jsx").then((module) => ({ default: module.LandingPage })));
+const TermosDeUso = lazy(() => import("../pages/TermosDeUso.jsx").then((module) => ({ default: module.TermosDeUso })));
+const PoliticaDePrivacidade = lazy(() => import("../pages/PoliticaDePrivacidade.jsx").then((module) => ({ default: module.PoliticaDePrivacidade })));
 
 const page = (element) => (
   <Suspense fallback={<div className="route-loader" role="status">Carregando pagina...</div>}>
@@ -41,6 +43,8 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/login", element: page(<Login onToast={onToast} onLogin={authHandlers.onLogin} />) },
   { path: "/", element: page(<LandingPage />) },
   { path: "/home", element: page(<LandingPage />) },
+  { path: "/termos-de-uso", element: page(<TermosDeUso />) },
+  { path: "/politica-de-privacidade", element: page(<PoliticaDePrivacidade />) },
   { path: "/dashboard", element: protectedPage(<Dashboard />) },
   { path: "/empresas", element: protectedPage(<EmpresasList onToast={onToast} />) },
   { path: "/empresas/nova", element: protectedPage(<NovaEmpresa onToast={onToast} />) },

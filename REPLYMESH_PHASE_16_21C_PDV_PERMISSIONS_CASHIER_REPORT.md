@@ -2,7 +2,7 @@
 
 **Data:** 2026-06-11  
 **Versão:** v0.15.38 RC1  
-**Status:** FRONTEND DEPLOYED ✅ | BACKEND PENDING DEPLOY ⏳
+**Status:** FRONTEND DEPLOYED ✅ | BACKEND DEPLOYED ✅ | CONSOLIDADO ✅
 
 ---
 
@@ -231,46 +231,13 @@ Estado atual:
 - **URL pública:** `https://demohamburgueria.replymesh.cloud/` servindo `D-WLv_r6` ✅
 
 ### Backend (replymesh-api)
-- **Arquivos modificados localmente:** ✅ (4 arquivos)
-- **Source no VPS `/opt/replymesh/source/replymesh-api/`:** atualizado ✅
-- **Container `replymesh-rails-api`:** ⏳ PENDENTE (requer autorização do usuário)
+- **Commit:** `4699daa` — `v0.15.38-pdv-cashier-permissions-rc1` ✅
+- **Source VPS:** `/opt/replymesh/source/replymesh-api/` — checkout `4699daa` ✅
+- **Imagem Docker:** `replymesh-api:v0.15.38-pdv-cashier-permissions-rc1` — buildada ✅
+- **Container `replymesh-rails-api`:** recriado com imagem oficial, `./bin/rails server -b 0.0.0.0 -p 3010` ✅
+- **`/up`:** HTTP 200 ✅
 
-**Motivo do bloqueio:** O container não tem bind mounts. Para aplicar as mudanças é necessário reconstruir a imagem ou `docker cp` nos arquivos — ambos requerem autorização explícita devido à regra "Não tocar no container ativo replymesh-rails-api."
-
-### Comandos para deploy do backend (executar na VPS):
-
-```bash
-# Opção A — Rebuild da imagem a partir do source atualizado
-cd /opt/replymesh/source/replymesh-api
-docker build -t replymesh-api:v0.15.38-cashier-permissions .
-
-# Opção B — docker cp direto (mais rápido, sem rebuild)
-docker cp /opt/replymesh/source/replymesh-api/app/models/company_member.rb \
-  replymesh-rails-api:/rails/app/models/company_member.rb
-docker cp /opt/replymesh/source/replymesh-api/app/controllers/api/v1/store/base_controller.rb \
-  replymesh-rails-api:/rails/app/controllers/api/v1/store/base_controller.rb
-docker cp /opt/replymesh/source/replymesh-api/app/controllers/api/v1/store/pos_controller.rb \
-  replymesh-rails-api:/rails/app/controllers/api/v1/store/pos_controller.rb
-docker cp /opt/replymesh/source/replymesh-api/app/controllers/api/v1/store/users_controller.rb \
-  replymesh-rails-api:/rails/app/controllers/api/v1/store/users_controller.rb
-docker restart replymesh-rails-api
-
-# Após deploy, criar usuário caixa.demo
-docker exec replymesh-rails-api bin/rails runner "
-  company = Company.find_by(slug: 'demohamburgueria')
-  user = User.find_or_initialize_by(email: 'caixa.demo@replymesh.cloud')
-  user.name = 'Caixa Demo'
-  user.global_role = 'user'
-  user.status = 'active'
-  user.password = '123456'
-  user.save!
-  member = company.company_members.find_or_initialize_by(user: user)
-  member.role = 'cashier'
-  member.status = 'active'
-  member.save!
-  puts 'Criado: ' + user.email + ' role=' + member.role
-"
-```
+**Consolidação:** Patch solto via `docker cp` removido. Container agora roda imagem oficial buildada do commit/tag `v0.15.38-pdv-cashier-permissions-rc1`.
 
 ---
 
@@ -279,7 +246,7 @@ docker exec replymesh-rails-api bin/rails runner "
 - **Email:** caixa.demo@replymesh.cloud
 - **Senha:** 123456
 - **Role:** cashier
-- **Status:** ⏳ PENDENTE criação (aguarda deploy do backend)
+- **Status:** ✅ CRIADO e VALIDADO
 
 ---
 
@@ -331,6 +298,16 @@ docker exec replymesh-rails-api bin/rails runner "
 
 ## 11. Commit/Tag
 
-- **Commit:** `Replymesh PDV Cashier Permissions v0.15.38 RC1`
-- **Tag:** `v0.15.38-pdv-cashier-permissions-rc1`
-- **Status:** ⏳ PENDENTE (aguarda validação pós-deploy do backend)
+- **Commit:** `4699daa` — `Replymesh PDV Cashier Permissions v0.15.38 RC1` ✅
+- **Tag:** `v0.15.38-pdv-cashier-permissions-rc1` — pushed GitHub ✅
+- **Imagem Docker:** `replymesh-api:v0.15.38-pdv-cashier-permissions-rc1` — buildada e em produção ✅
+
+## 12. Consolidação Final
+
+- **Data:** 2026-06-11
+- **Imagem anterior (patch solto):** `replymesh-api:v0.15.35-pdv-route-fix-rc1` com 4 arquivos patchados via `docker cp`
+- **Imagem atual (oficial):** `replymesh-api:v0.15.38-pdv-cashier-permissions-rc1` buildada do commit `4699daa`
+- **Validação pós-consolidação:**
+  - `/up` HTTP 200 ✅
+  - PDV CAIXA: HTTP 201 ✅
+  - PDV GARÇOM: HTTP 403 ✅
