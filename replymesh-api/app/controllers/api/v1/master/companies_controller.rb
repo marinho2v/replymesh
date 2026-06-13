@@ -4,7 +4,10 @@ module Api
       class CompaniesController < ApplicationController
         before_action :authenticate_user!
         before_action :require_super_admin!
-        before_action :set_company, only: %i[show update activate deactivate impersonate features update_features update_plan admin_password]
+        before_action :set_company, only: %i[
+          show update activate deactivate impersonate features update_features update_plan
+          admin_password store_settings update_store_settings
+        ]
 
         def index
           companies = Company.includes(:domains, :company_members, subscriptions: :plan).order(created_at: :desc)
@@ -236,10 +239,46 @@ module Api
           render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
         end
 
+        def store_settings
+          setting = find_or_create_store_settings!
+          render json: { success: true, settings: setting.as_company_settings_json }
+        end
+
+        def update_store_settings
+          setting = find_or_create_store_settings!
+          previous = setting.as_company_settings_json
+          setting.apply_company_settings!(master_store_settings_params)
+
+          audit!(
+            "master_store_settings_updated",
+            company: @company,
+            resource: setting,
+            metadata: {
+              previous: previous.slice(:store_name, :primary_color, :secondary_color, :store_status),
+              current: setting.as_company_settings_json.slice(:store_name, :primary_color, :secondary_color, :store_status)
+            }
+          )
+
+          render json: { success: true, settings: setting.as_company_settings_json }
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
         private
 
         def set_company
           @company = Company.find(params[:id])
+        end
+
+        def find_or_create_store_settings!
+          @company.store_setting || @company.create_store_setting!(
+            company_name: @company.name,
+            trade_name: @company.name,
+            store_name: @company.name,
+            email: @company.responsible_email,
+            whatsapp: @company.responsible_phone,
+            whatsapp_number: @company.responsible_phone
+          )
         end
 
         def store_impersonation_url(company)
@@ -267,6 +306,42 @@ module Api
             :name, :slug, :legal_name, :document_number, :responsible_name,
             :responsible_phone, :responsible_email, :status, :plan_status,
             :timezone, :default_locale, :custom_domain, :custom_domain_status, :ssl_status
+          )
+        end
+
+        def master_store_settings_params
+          params.fetch(:settings, params).permit(
+            :store_name,
+            :company_name,
+            :trade_name,
+            :description,
+            :phone,
+            :whatsapp,
+            :whatsapp_number,
+            :logo_url,
+            :banner_url,
+            :cover_url,
+            :primary_color,
+            :secondary_color,
+            :pix_key,
+            :pix_key_type,
+            :pix_receiver_name,
+            :minimum_order_amount,
+            :estimated_delivery_minutes,
+            :store_status,
+            :closed_message,
+            :allow_pickup,
+            :block_orders_when_closed,
+            :block_outside_delivery_area,
+            :pix_enabled,
+            :theme_primary_color,
+            :hero_title,
+            :hero_highlight,
+            :hero_subtitle,
+            :hero_image_url,
+            :visual_template_id,
+            accepted_payment_methods: [],
+            opening_hours: {}
           )
         end
 

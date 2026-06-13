@@ -20,6 +20,6 @@ class Motoboy < ApplicationRecord
   private
 
   def normalize_phone
-    self.phone = phone.to_s.gsub(/\D/, "") if phone.present?
+    self.phone = PhoneNormalizer.local_br(phone) if phone.present?
   end
 end

@@ -38,6 +38,8 @@ Rails.application.routes.draw do
             patch :features, action: :update_features
             patch :plan, action: :update_plan
             patch :admin_password
+            get :store_settings
+            patch :store_settings, action: :update_store_settings
           end
           post "backup_import/dry_run", to: "companies/backup_imports#dry_run"
           post "backup_import", to: "companies/backup_imports#create"

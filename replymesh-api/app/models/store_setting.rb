@@ -32,6 +32,8 @@ class StoreSetting < ApplicationRecord
     self.store_name = attrs["store_name"] if attrs.key?("store_name")
     self.logo_url = attrs["logo_url"] if attrs.key?("logo_url")
     self.banner_url = attrs["banner_url"] if attrs.key?("banner_url")
+    self.cover_url = attrs["cover_url"] if attrs.key?("cover_url")
+    self.hero_subtitle = attrs["description"] if attrs.key?("description") && respond_to?(:hero_subtitle=)
     self.primary_color = attrs["primary_color"] if attrs.key?("primary_color")
     self.secondary_color = attrs["secondary_color"] if attrs.key?("secondary_color")
     self.whatsapp = attrs["whatsapp"] if attrs.key?("whatsapp")
@@ -99,6 +101,9 @@ class StoreSetting < ApplicationRecord
       store_name: store_name.presence || trade_name.presence || company_name.presence || company.name,
       logo_url: logo_url,
       banner_url: banner_url.presence || cover_url,
+      cover_url: cover_url.presence || banner_url,
+      description: respond_to?(:hero_subtitle) ? hero_subtitle : nil,
+      favicon_url: respond_to?(:favicon_url) ? favicon_url : nil,
       primary_color: primary_color,
       secondary_color: secondary_color,
       whatsapp: whatsapp.presence || whatsapp_number.presence || phone,

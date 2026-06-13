@@ -8,7 +8,7 @@ module Api
             return render json: { success: false, error: "Empresa nao encontrada" }, status: :not_found unless company
 
                 motoboy = company.motoboys.active.find do |record|
-                  record.phone.to_s.gsub(/\D/, "") == normalized_phone
+                  PhoneNormalizer.equivalent?(record.phone, login_params[:phone])
                 end
                 return unauthorized unless motoboy&.user&.status == "active"
 
@@ -41,7 +41,7 @@ module Api
           end
 
           def normalized_phone
-            login_params[:phone].to_s.gsub(/\D/, "")
+            PhoneNormalizer.local_br(login_params[:phone])
           end
 
           def unauthorized

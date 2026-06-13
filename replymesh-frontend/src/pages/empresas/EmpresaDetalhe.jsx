@@ -18,6 +18,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const navigate = useNavigate();
   const [company, setCompany] = useState(null);
   const [form, setForm] = useState(null);
+  const [storeForm, setStoreForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [featureAccess, setFeatureAccess] = useState(null);
@@ -41,6 +42,18 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [id, onToast]);
+
+  useEffect(() => {
+    if (!edit) return undefined;
+    let alive = true;
+    api.getMasterCompanyStoreSettings(id)
+      .then((data) => {
+        if (!alive) return;
+        setStoreForm(data.settings);
+      })
+      .catch((error) => onToast?.(error.message, "err"));
+    return () => { alive = false; };
+  }, [id, edit, onToast]);
 
   useEffect(() => {
     if (edit) return undefined;
@@ -73,6 +86,27 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         default_locale: form.default_locale,
       };
       const data = await api.updateCompany(id, { company: payload });
+      if (storeForm) {
+        await api.updateMasterCompanyStoreSettings(id, {
+          settings: {
+            store_name: storeForm.store_name,
+            description: storeForm.description,
+            phone: storeForm.phone,
+            whatsapp: storeForm.whatsapp,
+            logo_url: storeForm.logo_url,
+            banner_url: storeForm.banner_url,
+            cover_url: storeForm.cover_url,
+            primary_color: storeForm.primary_color,
+            secondary_color: storeForm.secondary_color,
+            pix_key: storeForm.pix_key,
+            pix_receiver_name: storeForm.pix_receiver_name,
+            minimum_order_amount: storeForm.minimum_order_amount,
+            estimated_delivery_minutes: storeForm.estimated_delivery_minutes,
+            store_status: storeForm.store_status,
+            pix_enabled: storeForm.pix_enabled,
+          },
+        });
+      }
       setCompany(data.company);
       setForm(data.company);
       onToast?.("Empresa atualizada com sucesso", "ok");
@@ -160,6 +194,43 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
             <Field label="Fuso horario" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
             <Field label="Idioma padrao" value={form.default_locale} onChange={(value) => setForm({ ...form, default_locale: value })} />
           </div>
+        </div>
+        <div className="card card-pad">
+          <div className="company-info-title"><Icon name="Palette" size={18} />Visual e loja publica</div>
+          {!storeForm ? (
+            <p className="muted" style={{ marginTop: 12 }}>Carregando configuracoes da loja...</p>
+          ) : (
+            <div className="form-grid" style={{ marginTop: 14 }}>
+              <Field label="Nome publico da loja" value={storeForm.store_name} onChange={(value) => setStoreForm({ ...storeForm, store_name: value })} />
+              <Field label="Descricao / chamada" value={storeForm.description} onChange={(value) => setStoreForm({ ...storeForm, description: value })} />
+              <Field label="Telefone publico" value={storeForm.phone} onChange={(value) => setStoreForm({ ...storeForm, phone: value })} />
+              <Field label="WhatsApp publico" value={storeForm.whatsapp} onChange={(value) => setStoreForm({ ...storeForm, whatsapp: value })} />
+              <Field label="Logo URL" value={storeForm.logo_url} onChange={(value) => setStoreForm({ ...storeForm, logo_url: value })} />
+              <Field label="Banner URL" value={storeForm.banner_url} onChange={(value) => setStoreForm({ ...storeForm, banner_url: value })} />
+              <Field label="Capa URL" value={storeForm.cover_url} onChange={(value) => setStoreForm({ ...storeForm, cover_url: value })} />
+              <Field label="Cor principal" value={storeForm.primary_color} onChange={(value) => setStoreForm({ ...storeForm, primary_color: value })} />
+              <Field label="Cor secundaria" value={storeForm.secondary_color} onChange={(value) => setStoreForm({ ...storeForm, secondary_color: value })} />
+              <Field label="Chave PIX" value={storeForm.pix_key} onChange={(value) => setStoreForm({ ...storeForm, pix_key: value })} />
+              <Field label="Nome recebedor PIX" value={storeForm.pix_receiver_name} onChange={(value) => setStoreForm({ ...storeForm, pix_receiver_name: value })} />
+              <Field label="Pedido minimo" value={storeForm.minimum_order_amount} onChange={(value) => setStoreForm({ ...storeForm, minimum_order_amount: value })} />
+              <Field label="Tempo de entrega em minutos" value={storeForm.estimated_delivery_minutes} onChange={(value) => setStoreForm({ ...storeForm, estimated_delivery_minutes: value })} />
+              <div className="field">
+                <label>Status da loja</label>
+                <select value={storeForm.store_status || "open"} onChange={(event) => setStoreForm({ ...storeForm, store_status: event.target.value })}>
+                  <option value="open">Aberta</option>
+                  <option value="closed">Fechada</option>
+                  <option value="paused">Pausada</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>PIX ativo</label>
+                <select value={storeForm.pix_enabled ? "true" : "false"} onChange={(event) => setStoreForm({ ...storeForm, pix_enabled: event.target.value === "true" })}>
+                  <option value="true">Sim</option>
+                  <option value="false">Nao</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
         <div className="card card-pad">
           <div className="company-info-title"><Icon name="KeyRound" size={18} />Redefinir senha do admin da loja</div>
