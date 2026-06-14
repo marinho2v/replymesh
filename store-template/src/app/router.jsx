@@ -292,6 +292,10 @@ export const router = createBrowserRouter([
     element: <RootLogin />,
   },
   {
+    path: '/admin/login',
+    element: <RootLogin />,
+  },
+  {
     path: '/admin',
     element: (
       <CompanySlugProvider slug={COMPANY_SLUG} basePath="">

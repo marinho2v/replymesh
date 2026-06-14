@@ -9,9 +9,9 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        entryFileNames: 'assets/[name]-build-20260530-[hash].js',
-        chunkFileNames: 'assets/[name]-build-20260530-[hash].js',
-        assetFileNames: 'assets/[name]-build-20260530-[hash][extname]',
+        entryFileNames: 'assets/[name]-build-20260614-hotfix-[hash].js',
+        chunkFileNames: 'assets/[name]-build-20260614-hotfix-[hash].js',
+        assetFileNames: 'assets/[name]-build-20260614-hotfix-[hash][extname]',
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
           ui: ['lucide-react', 'framer-motion', 'sonner'],
