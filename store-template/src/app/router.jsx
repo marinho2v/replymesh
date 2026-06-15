@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Navigate, useParams } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useLocation, useParams } from 'react-router-dom'
 import { PublicLayout } from '../components/layout/PublicLayout'
 import { AdminLayout } from '../components/layout/AdminLayout'
 import { ProtectedRoute } from '../components/shared/ProtectedRoute'
@@ -7,6 +7,11 @@ import { PageLoader } from '../components/ui/Loader'
 import { useAuth } from '../hooks/useAuth'
 import { CompanySlugProvider, useCompanyBasePath } from '../contexts/CompanySlugContext'
 import { COMPANY_SLUG } from '../services/replymeshApi'
+import {
+  cleanLegacyCompanyPath,
+  companyBasePath,
+  companySlugFromHostname,
+} from '../utils/companyDomain'
 
 // Public Pages
 const Home = lazy(() => import('../pages/public/Home'))
@@ -97,22 +102,40 @@ const RemovedStoreAiRedirect = () => {
   return <Navigate to={`${basePath}/admin/dashboard`} replace />
 }
 
+const LegacySubdomainRedirect = ({ companySlug, children }) => {
+  const location = useLocation()
+  const hostSlug = companySlugFromHostname()
+
+  if (hostSlug && hostSlug === companySlug) {
+    const cleanPath = cleanLegacyCompanyPath(location.pathname, companySlug)
+    return <Navigate to={`${cleanPath}${location.search}${location.hash}`} replace />
+  }
+
+  return children
+}
+
 // Layout wrapper que lê o slug da URL e injeta no contexto
 const SluggedPublicLayout = () => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      <PublicLayout />
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        <PublicLayout />
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
 const SluggedLogin = () => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      {page(Login)}
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        {page(Login)}
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
@@ -124,39 +147,51 @@ const RootLogin = () => (
 
 const SluggedAdminLayout = () => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      <ProtectedRoute allowedRoles={['admin', 'cashier', 'attendant', 'waiter']}>
-        <AdminLayout />
-      </ProtectedRoute>
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        <ProtectedRoute allowedRoles={['admin', 'cashier', 'attendant', 'waiter']}>
+          <AdminLayout />
+        </ProtectedRoute>
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
 const SluggedMotoboyLogin = () => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      {page(MotoboyLogin)}
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        {page(MotoboyLogin)}
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
 const SluggedMotoboyPage = ({ component: Component }) => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      {page(Component)}
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        {page(Component)}
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
 const SluggedStaticPage = ({ component: Component }) => {
   const { companySlug } = useParams()
+  const basePath = companyBasePath(companySlug)
   return (
-    <CompanySlugProvider slug={companySlug} basePath={`/loja/${companySlug}`}>
-      {page(Component)}
-    </CompanySlugProvider>
+    <LegacySubdomainRedirect companySlug={companySlug}>
+      <CompanySlugProvider slug={companySlug} basePath={basePath}>
+        {page(Component)}
+      </CompanySlugProvider>
+    </LegacySubdomainRedirect>
   )
 }
 
@@ -207,12 +242,12 @@ const adminChildren = [
   { path: 'app-banners', element: protectedPage(AppBanners, ['admin']) },
   { path: 'support',  element: protectedPage(Support, ['admin']) },
   { path: 'updates',  element: protectedPage(SystemUpdates, ['admin']) },
-  { path: 'pos', element: protectedPage(PosSale, ['admin', 'cashier']) },
+  { path: 'pos', element: protectedPage(PosSale, ['admin', 'attendant', 'cashier']) },
   { path: 'help', element: protectedPage(Help, ['admin', 'cashier', 'attendant']) },
 ]
 
 export const router = createBrowserRouter([
-  // ── Rota raiz — usa slug do .env (empresa-teste) ───────────────────────────
+  // Rota raiz: usa o subdominio ou o slug explicitamente configurado.
   {
     path: '/',
     element: (
@@ -235,7 +270,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/loja/:companySlug/admin/impersonate',
-    element: page(MasterImpersonation),
+    element: <SluggedStaticPage component={MasterImpersonation} />,
   },
   {
     path: '/loja/:companySlug/termos-de-uso',
@@ -294,6 +329,14 @@ export const router = createBrowserRouter([
   {
     path: '/admin/login',
     element: <RootLogin />,
+  },
+  {
+    path: '/admin/impersonate',
+    element: (
+      <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+        {page(MasterImpersonation)}
+      </CompanySlugProvider>
+    ),
   },
   {
     path: '/admin',

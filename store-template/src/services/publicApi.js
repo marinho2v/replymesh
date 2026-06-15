@@ -1,13 +1,24 @@
-import { COMPANY_SLUG, centsToCurrency, request } from './replymeshApi'
+import { COMPANY_SLUG, ReplymeshApiError, centsToCurrency, request } from './replymeshApi'
 import { setCurrentStoreCompany } from './storeApi'
 
-const publicPath = (slug, path) => `/public/${encodeURIComponent(slug || COMPANY_SLUG)}${path}`
+const resolvedPublicSlug = (slug) => {
+  const resolved = String(slug || COMPANY_SLUG || '').trim()
+  if (!resolved) {
+    throw new ReplymeshApiError('Loja nao encontrada', {
+      status: 404,
+      payload: { error: 'Loja nao encontrada', code: 'store_not_found' },
+    })
+  }
+  return resolved
+}
+
+const publicPath = (slug, path) => `/public/${encodeURIComponent(resolvedPublicSlug(slug))}${path}`
 
 const mapStore = (store = {}) => ({
   ...store,
   name: store.store_name || store.name,
   logo_url: store.logo_url || '/logo.png',
-  cover_url: store.cover_url || store.banner_url || '/capa.jpeg',
+  cover_url: store.cover_url || store.banner_url || '',
   display_address: [store.address, store.city, store.state].filter(Boolean).join(' - '),
   default_delivery_fee: centsToCurrency(store.default_delivery_fee_cents),
 })

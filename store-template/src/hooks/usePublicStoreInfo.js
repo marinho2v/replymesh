@@ -30,8 +30,8 @@ export const usePublicStoreInfo = (slugOverride) => {
   const refetch = useCallback(async () => {
     try {
       setLoading(true)
-      const [storeData, bannersData, hoursData, deliveryZonesData] = await Promise.all([
-        getPublicStoreInfo(slug),
+      const storeData = await getPublicStoreInfo(slug)
+      const [bannersData, hoursData, deliveryZonesData] = await Promise.all([
         getPublicBanners(slug),
         getPublicBusinessHours(slug),
         getPublicDeliveryZones(slug),
@@ -48,7 +48,7 @@ export const usePublicStoreInfo = (slugOverride) => {
       setBusinessHours(DEFAULT_PUBLIC_STORE.businessHours)
       setBusinessHourExceptions(DEFAULT_PUBLIC_STORE.businessHourExceptions)
       setDeliveryZones(DEFAULT_PUBLIC_STORE.deliveryZones)
-      setError(err.message || 'Erro ao carregar loja')
+      setError(err)
     } finally {
       setLoading(false)
     }

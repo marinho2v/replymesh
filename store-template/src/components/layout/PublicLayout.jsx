@@ -1,5 +1,5 @@
 ﻿import { Outlet, useLocation } from 'react-router-dom'
-import { ShoppingCart, Menu, X } from 'lucide-react'
+import { ShoppingCart, Menu, X, Store, CircleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useCart } from '../../hooks/useCart'
 import { Link, useNavigate } from 'react-router-dom'
@@ -12,7 +12,7 @@ import PremiumHeader from '../../templates/hamburgueria-premium/components/Premi
 export const PublicLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { cart } = useCart()
-  const { store, loading } = usePublicStoreInfo()
+  const { store, loading, error, refetch } = usePublicStoreInfo()
   const navigate = useNavigate()
   const location = useLocation()
   const base = useCompanyBasePath()
@@ -31,6 +31,34 @@ export const PublicLayout = () => {
             <p className="text-sm text-gray-400">Carregando loja...</p>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (error && !store) {
+    const unavailable = error?.status === 423 || error?.payload?.code === 'store_unavailable'
+    const title = unavailable ? 'Loja indisponível' : 'Loja não encontrada'
+    const description = unavailable
+      ? 'Esta loja está temporariamente indisponível. Tente novamente mais tarde.'
+      : 'Não encontramos uma loja ativa neste endereço.'
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4 py-12 text-white">
+        <main className="w-full max-w-lg text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg border border-dark-700 bg-dark-900">
+            {unavailable ? <CircleAlert size={30} className="text-amber-400" /> : <Store size={30} className="text-gray-300" />}
+          </div>
+          <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Replymesh</p>
+          <h1 className="text-3xl font-bold">{title}</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-gray-400">{description}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-7 inline-flex h-10 items-center justify-center rounded-lg border border-dark-600 bg-dark-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-dark-800"
+          >
+            Tentar novamente
+          </button>
+        </main>
       </div>
     )
   }

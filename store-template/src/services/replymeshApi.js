@@ -7,7 +7,7 @@ export const REPLYMESH_API_URL = (
 ).replace(/\/$/, '')
 
 export const COMPANY_SLUG = resolveDefaultCompanySlug(
-  import.meta.env.VITE_COMPANY_SLUG || 'empresa-teste'
+  import.meta.env.VITE_COMPANY_SLUG || null
 )
 
 const buildUrl = (path, params = {}) => {

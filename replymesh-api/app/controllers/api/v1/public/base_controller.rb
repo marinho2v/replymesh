@@ -2,7 +2,7 @@ module Api
   module V1
     module Public
       class BaseController < ApplicationController
-        # Rotas públicas não requerem autenticação JWT
+        # Public routes do not require JWT authentication.
         attr_reader :current_company
 
         before_action :resolve_public_company!
@@ -12,12 +12,25 @@ module Api
         def resolve_public_company!
           slug = params[:company_slug].presence || slug_from_request_host
           normalized_slug = CompanyDomainService.normalize_slug(slug)
-          @current_company = Company.find_by(slug: normalized_slug, status: "active")
+          company = Company.find_by(slug: normalized_slug)
 
-          unless @current_company
-            render json: { success: false, error: "Loja não encontrada ou inativa" },
-                   status: :not_found
+          unless company
+            return render json: {
+              success: false,
+              error: "Loja nao encontrada",
+              code: "store_not_found"
+            }, status: :not_found
           end
+
+          unless company.status == "active"
+            return render json: {
+              success: false,
+              error: "Loja indisponivel",
+              code: "store_unavailable"
+            }, status: :locked
+          end
+
+          @current_company = company
         end
 
         def slug_from_request_host

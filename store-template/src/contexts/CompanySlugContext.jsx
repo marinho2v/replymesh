@@ -13,6 +13,13 @@ export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
   const resolvedSlug = slug || COMPANY_SLUG
 
   useEffect(() => {
+    localStorage.removeItem('replymesh_store_company_id')
+
+    if (!resolvedSlug) {
+      localStorage.removeItem('replymesh_store_company_slug')
+      return undefined
+    }
+
     localStorage.setItem('replymesh_store_company_slug', resolvedSlug)
     let active = true
 
