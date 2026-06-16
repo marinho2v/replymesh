@@ -35,6 +35,25 @@ O fluxo da Store validava a sessao temporaria do Master usando igualdade rigida 
 - `git diff --check`: OK
 - Auditoria simples de segredos nos arquivos alterados: OK
 
+## Deploy
+
+- Commit publicado: `de014258c54f2159f343756dc714062ff63fb80e`
+- Store publicada em producao: OK
+- Master publicado em producao: OK
+- Backup Store/Master VPS: `/opt/replymesh/backups/superadmin-impersonation-retry-20260616-145751`
+- Backup Master local-dist VPS: `/opt/replymesh/backups/superadmin-master-localdist-20260616-145955`
+
+## Validacoes em producao
+
+- `https://api.replymesh.cloud/up`: 200
+- `https://app.replymesh.cloud/login`: 200
+- `https://app.replymesh.cloud/dashboard`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/impersonate`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/dashboard`: 200
+- `grep` por `127.0.0.1`/`localhost` em `/opt/replymesh/master` e `/opt/replymesh/store`: sem resultados
+- Bundle Master gera `/admin/impersonate`
+- Bundle Store contem leitura de token por `window.location.search` e `window.location.hash`
+
 ## Resultado esperado
 
 - Superadmin consegue acessar qualquer loja via acesso auditado do Master.
