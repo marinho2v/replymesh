@@ -13,3 +13,15 @@ export const companySlugFromHostname = (hostname = window.location.hostname) => 
 
 export const resolveDefaultCompanySlug = (fallback) =>
   companySlugFromHostname() || fallback
+
+export const companyBasePath = (slug, hostname = window.location.hostname) => {
+  const hostSlug = companySlugFromHostname(hostname)
+  return hostSlug && hostSlug === slug ? '' : `/loja/${slug}`
+}
+
+export const cleanLegacyCompanyPath = (pathname, slug) => {
+  const prefix = `/loja/${slug}`
+  if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) return pathname
+
+  return pathname.slice(prefix.length) || '/'
+}
