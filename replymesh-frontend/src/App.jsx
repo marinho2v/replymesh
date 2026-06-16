@@ -11,8 +11,8 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
-  const [token, setToken] = useState(() => getAuthToken());
   const [user, setUser] = useState(() => getStoredUser());
+  const [token, setToken] = useState(() => (getStoredUser() ? getAuthToken() : null));
 
   const showToast = useCallback((msg, kind = "info") => {
     setToast({ msg, kind });
@@ -34,7 +34,11 @@ export default function App() {
   }, [navigate, showToast]);
 
   useEffect(() => {
-    const updateUser = (event) => setUser(event.detail || getStoredUser());
+    const updateUser = (event) => {
+      const nextUser = event.detail || getStoredUser();
+      setUser(nextUser);
+      setToken(nextUser ? getAuthToken() : null);
+    };
     window.addEventListener("replymesh:user-updated", updateUser);
     return () => window.removeEventListener("replymesh:user-updated", updateUser);
   }, []);

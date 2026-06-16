@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon.jsx";
-import { api, getAuthToken, saveSession } from "../services/api.js";
+import { api, clearSession, getAuthToken, getStoredUser, saveSession } from "../services/api.js";
 
 export function Login({ onLogin, onToast }) {
   const navigate = useNavigate();
@@ -11,7 +11,11 @@ export function Login({ onLogin, onToast }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  if (getAuthToken()) {
+  useEffect(() => {
+    if (getAuthToken() && !getStoredUser()) clearSession();
+  }, []);
+
+  if (getAuthToken() && getStoredUser()) {
     return <Navigate to={location.state?.from || "/dashboard"} replace />;
   }
 

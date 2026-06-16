@@ -4,6 +4,7 @@ import {
   readStoreAuthSession,
   resolveStoreAuthSlug,
 } from '../services/storeAuthStorage'
+import { validateStoreSessionAccess } from '../services/auth'
 
 const AuthContext = createContext(null)
 
@@ -48,9 +49,10 @@ export const AuthProvider = ({ children }) => {
     setLoading(false)
   }, [])
 
-  const loadReplymeshSession = useCallback(() => {
+  const loadReplymeshSession = useCallback(async () => {
     const impersonating = Boolean(getValidImpersonation())
-    const tenantSession = impersonating ? null : readStoreAuthSession(resolveStoreAuthSlug())
+    const companySlug = resolveStoreAuthSlug()
+    const tenantSession = impersonating ? null : readStoreAuthSession(companySlug)
     const token = impersonating ? localStorage.getItem('replymesh_impersonation_token') : tenantSession?.token
     const rawUser = impersonating ? localStorage.getItem('replymesh_impersonation_user') : tenantSession?.user
     const rawProfile = impersonating ? localStorage.getItem('replymesh_impersonation_profile') : tenantSession?.profile
@@ -58,15 +60,45 @@ export const AuthProvider = ({ children }) => {
     if (!token || !rawUser || !rawProfile) return false
 
     try {
-      setUser(impersonating ? JSON.parse(rawUser) : rawUser)
-      setProfile(impersonating ? JSON.parse(rawProfile) : rawProfile)
+      const parsedUser = impersonating ? JSON.parse(rawUser) : rawUser
+      const parsedProfile = impersonating ? JSON.parse(rawProfile) : rawProfile
+      if (!companySlug || parsedProfile?.company_slug !== companySlug) {
+        if (impersonating) {
+          clearImpersonationSession()
+        } else {
+          clearStoreAuthSession(companySlug)
+        }
+        sessionStorage.setItem(
+          'replymesh:store:auth-message',
+          'Sua sessao pertence a outra empresa. Faca login novamente.',
+        )
+        return false
+      }
+
+      const allowed = await validateStoreSessionAccess({
+        token,
+        companySlug,
+        companyId: localStorage.getItem('replymesh_store_company_id'),
+      })
+
+      if (!allowed) {
+        if (impersonating) {
+          clearImpersonationSession()
+        } else {
+          clearStoreAuthSession(companySlug)
+        }
+        return false
+      }
+
+      setUser(parsedUser)
+      setProfile(parsedProfile)
       setLoading(false)
       return true
     } catch {
       if (impersonating) {
         clearImpersonationSession()
       } else {
-        clearStoreAuthSession()
+        clearStoreAuthSession(companySlug)
       }
       return false
     }
@@ -75,11 +107,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true
 
-    loadReplymeshSession()
+    const boot = async () => {
+      if (!await loadReplymeshSession()) clearAuth()
+    }
+    boot()
 
-    const handleReplymeshAuth = () => {
+    const handleReplymeshAuth = async () => {
       if (!mounted) return
-      if (!loadReplymeshSession()) clearAuth()
+      setLoading(true)
+      if (!await loadReplymeshSession()) clearAuth()
     }
 
     window.addEventListener('replymesh-auth-changed', handleReplymeshAuth)

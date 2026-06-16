@@ -26,14 +26,16 @@ RSpec.describe "Authentication", type: :request do
     get "/api/v1/master/companies", headers: auth_headers(store_user)
 
     expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("master_forbidden")
   end
 
-  it "blocks a master user without the required permission" do
+  it "blocks a master role user from master endpoints" do
     role = MasterRole.create!(name: "Leitor", key: "reader-#{SecureRandom.hex(2)}", permissions: {}, status: "active")
     restricted = create_user(email: "restricted@example.com", master_role: role)
 
     get "/api/v1/master/companies", headers: auth_headers(restricted)
 
     expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("master_forbidden")
   end
 end

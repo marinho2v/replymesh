@@ -17,18 +17,35 @@ export function getAuthToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+export function isSuperAdmin(user) {
+  return user?.global_role === "super_admin";
+}
+
 export function getStoredUser() {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
 
   try {
-    return JSON.parse(raw);
+    const user = JSON.parse(raw);
+    if (!isSuperAdmin(user)) {
+      clearSession();
+      return null;
+    }
+    return user;
   } catch {
     return null;
   }
 }
 
 export function saveSession({ token, user }) {
+  if (!isSuperAdmin(user)) {
+    clearSession();
+    throw new ApiError("Acesso restrito ao super admin.", {
+      status: 403,
+      data: { error: "master_forbidden" },
+    });
+  }
+
   localStorage.setItem(TOKEN_KEY, token);
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
@@ -57,10 +74,13 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
 
-  if (response.status === 401) {
+  if (response.status === 401 || (response.status === 403 && data?.error === "master_forbidden")) {
     clearSession();
     window.dispatchEvent(new CustomEvent("replymesh:unauthorized"));
-    throw new ApiError(data.error || "Sessao expirada. Faca login novamente.", { status: 401, data });
+    throw new ApiError(
+      data.message || data.error || "Sessao expirada. Faca login novamente.",
+      { status: response.status, data },
+    );
   }
 
   if (!response.ok) {

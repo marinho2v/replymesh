@@ -76,6 +76,34 @@ export const signOut = async () => {
   return true
 }
 
+export const validateStoreSessionAccess = async ({ token, companySlug, companyId } = {}) => {
+  const slug = companySlug || resolveStoreAuthSlug()
+  if (!token || !slug) return false
+
+  const response = await fetch(`${REPLYMESH_API_URL}/store/features`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Company-Slug': slug,
+      ...(companyId ? { 'X-Company-Id': companyId } : {}),
+    },
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (response.ok && payload?.success !== false) return true
+
+  if (response.status === 401 || payload?.error === 'tenant_forbidden') {
+    clearStoreAuthSession(slug)
+    sessionStorage.setItem(
+      'replymesh:store:auth-message',
+      'Sua sessao pertence a outra empresa. Faca login novamente.',
+    )
+  }
+
+  return false
+}
+
 export const signUp = async () => {
   throw new Error('Cadastre usuarios pelo painel administrativo da loja.')
 }

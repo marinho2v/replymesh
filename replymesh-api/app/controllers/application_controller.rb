@@ -21,24 +21,35 @@ class ApplicationController < ActionController::API
 
   def require_super_admin!
     return if current_user&.super_admin?
-    permission = master_permission_for_request
-    return if permission.present? && current_user&.master_permission?(permission)
 
-    record_denied_master_access(permission)
-    render json: { success: false, error: "Acesso negado" }, status: :forbidden
+    record_denied_master_access(master_permission_for_request)
+    render json: {
+      success: false,
+      error: "master_forbidden",
+      message: "Acesso restrito ao super admin"
+    }, status: :forbidden
   end
 
   def require_master_permission!(permission)
-    return if current_user&.master_permission?(permission)
+    return if current_user&.super_admin?
 
     record_denied_master_access(permission)
-    render json: { success: false, error: "Acesso negado para esta funcao" }, status: :forbidden
+    render json: {
+      success: false,
+      error: "master_forbidden",
+      message: "Acesso restrito ao super admin"
+    }, status: :forbidden
   end
 
   def require_master_user!
-    return if current_user&.master_user?
+    return if current_user&.super_admin?
 
-    render json: { success: false, error: "Acesso restrito ao Painel Master" }, status: :forbidden
+    record_denied_master_access(master_permission_for_request)
+    render json: {
+      success: false,
+      error: "master_forbidden",
+      message: "Acesso restrito ao super admin"
+    }, status: :forbidden
   end
 
   def encode_jwt(payload = {}, expires_in: nil, **claims)
