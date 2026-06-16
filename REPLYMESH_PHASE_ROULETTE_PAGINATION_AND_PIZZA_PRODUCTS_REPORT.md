@@ -113,27 +113,37 @@ Nesta fase foi mantido o caminho sem migration, conforme restricao do prompt.
 
 ## Deploy
 
-Deploy nao executado nesta etapa.
+Deploy executado em producao a partir de worktree limpo.
 
-Motivo:
+- Branch/worktree limpo: `roleta-pizza-basic-clean`
+- Commit publicado: `8c5ebff`
+- Backup VPS: `/opt/replymesh/backups/roleta-pizza-basic-20260616-221224`
+- API: arquivos Ruby copiados para o container `replymesh-rails-api`
+- Store: build limpo publicado em `/opt/replymesh/store`
+- Container reiniciado: somente `replymesh-rails-api`
+- Nao houve migration, seed, reset ou drop.
+- Nao houve alteracao em Evolution ou Mercado Pago.
 
-O worktree local possui muitas alteracoes antigas e arquivos pendentes fora do escopo desta fase. Publicar o `dist` atual da Store levaria tambem essas alteracoes antigas para producao, nao apenas Roleta/Pizzaria.
+Validacoes de producao executadas:
 
-Antes de publicar, e recomendado:
+- `https://api.replymesh.cloud/up`: 200
+- `https://lanchedo2r.replymesh.cloud`: 200
+- `https://lanchesdo2r.com.br`: 200
+- `https://api.replymesh.cloud/api/v1/public/lanchedo2r/store`: 200
+- `https://api.replymesh.cloud/api/v1/public/lanchedo2r/menu`: 200
+- `https://pizzashow.replymesh.cloud`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/wheel`: 200
+- Bundle publicado contem `Modelo Pizzaria`.
+- Bundle publicado contem tela da Roleta com filtros, paginacao e resumo filtrado.
+- Logs da API apos restart sem crash-loop.
 
-1. Criar branch ou limpar worktree.
-2. Staging seletivo somente dos arquivos desta fase.
-3. Buildar a Store a partir de uma base limpa.
-4. Fazer backup da VPS.
-5. Publicar Store/API controladamente.
+Observacao:
+
+O `grep` do bundle ainda encontra a string `localhost` dentro da logica normal de deteccao de ambiente local. Nao foi encontrada URL de API local sendo usada no build publicado; a base da API permanece `https://api.replymesh.cloud/api/v1`.
 
 ## Status
 
-ROLETA E PIZZARIA COM PENDENCIAS.
-
-Pendencia principal:
-
-- Publicacao em producao bloqueada por seguranca ate isolar o worktree.
+ROLETA/PIZZARIA BASICA PUBLICADA.
 
 Pendencia funcional futura:
 
