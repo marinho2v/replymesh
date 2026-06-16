@@ -10,13 +10,14 @@ module Api
 
         def spins
           service = WheelService.new(company: current_company)
-          render_ok(spins: service.admin_spin_history(
+          render_ok(service.admin_spin_history(
             start_date: params[:startDate] || params[:start_date],
             end_date: params[:endDate] || params[:end_date],
             search: params[:search],
             prize_id: params[:prizeId] || params[:prize_id],
             status: params[:status],
-            limit: params[:limit]
+            page: params[:page],
+            per_page: params[:perPage] || params[:per_page]
           ))
         end
       end

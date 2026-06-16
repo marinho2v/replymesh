@@ -44,6 +44,29 @@ const todayRange = () => {
   }
 }
 
+const rangeForPreset = (preset) => {
+  const now = new Date()
+  const start = new Date(now)
+  const end = new Date(now)
+
+  if (preset === 'yesterday') {
+    start.setDate(now.getDate() - 1)
+    end.setDate(now.getDate() - 1)
+  } else if (preset === 'week') {
+    const day = now.getDay() || 7
+    start.setDate(now.getDate() - day + 1)
+  } else if (preset === 'month') {
+    start.setDate(1)
+  } else if (preset !== 'today') {
+    return todayRange()
+  }
+
+  return {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  }
+}
+
 const toIsoStart = (date) => date ? new Date(`${date}T00:00:00`).toISOString() : null
 const toIsoEnd = (date) => date ? new Date(`${date}T23:59:59.999`).toISOString() : null
 
@@ -69,7 +92,15 @@ const WheelSettings = () => {
   const [editing, setEditing] = useState({})
   const [newPrize, setNewPrize] = useState(emptyPrize)
   const [history, setHistory] = useState([])
+  const [historyMeta, setHistoryMeta] = useState({
+    page: 1,
+    per_page: 20,
+    total_count: 0,
+    total_pages: 0,
+  })
+  const [historySummary, setHistorySummary] = useState({})
   const [historyFilters, setHistoryFilters] = useState({
+    period: 'custom',
     startDate: initialHistoryRange.startDate,
     endDate: initialHistoryRange.endDate,
     search: '',
@@ -101,7 +132,7 @@ const WheelSettings = () => {
     }
   }
 
-  const loadHistory = async () => {
+  const loadHistory = async (page = historyMeta.page || 1) => {
     setHistoryLoading(true)
     try {
       const data = await getAdminWheelSpinHistory({
@@ -110,9 +141,12 @@ const WheelSettings = () => {
         search: historyFilters.search,
         prizeId: historyFilters.prizeId || null,
         status: historyFilters.status || null,
-        limit: 250,
+        page,
+        perPage: historyMeta.per_page || 20,
       })
-      setHistory(data)
+      setHistory(data.spins || [])
+      setHistoryMeta(data.pagination || historyMeta)
+      setHistorySummary(data.summary || {})
     } catch (error) {
       toast.error(error.message || 'Erro ao carregar historico da roleta')
     } finally {
@@ -175,6 +209,23 @@ const WheelSettings = () => {
 
   const refreshAll = async () => {
     await Promise.all([loadSummary(), loadHistory()])
+  }
+
+  const applyPeriodPreset = (period) => {
+    const range = rangeForPreset(period)
+    setHistoryFilters(prev => ({
+      ...prev,
+      period,
+      startDate: range.startDate,
+      endDate: range.endDate,
+    }))
+  }
+
+  const applyFilters = () => loadHistory(1)
+
+  const goToHistoryPage = (page) => {
+    const totalPages = Math.max(Number(historyMeta.total_pages || 1), 1)
+    loadHistory(Math.min(Math.max(page, 1), totalPages))
   }
 
   const getSpinStatus = (spin) => {
@@ -251,18 +302,30 @@ const WheelSettings = () => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[160px_160px_1fr_220px_180px_auto]">
+          <div className="grid gap-3 lg:grid-cols-[180px_160px_160px_1fr_220px_180px_auto]">
+            <Select
+              label="Periodo"
+              value={historyFilters.period}
+              onChange={event => applyPeriodPreset(event.target.value)}
+              options={[
+                { value: 'today', label: 'Hoje' },
+                { value: 'yesterday', label: 'Ontem' },
+                { value: 'week', label: 'Esta semana' },
+                { value: 'month', label: 'Este mes' },
+                { value: 'custom', label: 'Personalizado' },
+              ]}
+            />
             <Input
               label="Inicio"
               type="date"
               value={historyFilters.startDate}
-              onChange={event => setHistoryFilters(prev => ({ ...prev, startDate: event.target.value }))}
+              onChange={event => setHistoryFilters(prev => ({ ...prev, period: 'custom', startDate: event.target.value }))}
             />
             <Input
               label="Fim"
               type="date"
               value={historyFilters.endDate}
-              onChange={event => setHistoryFilters(prev => ({ ...prev, endDate: event.target.value }))}
+              onChange={event => setHistoryFilters(prev => ({ ...prev, period: 'custom', endDate: event.target.value }))}
             />
             <Input
               label="Buscar"
@@ -289,7 +352,7 @@ const WheelSettings = () => {
                 { value: 'used', label: 'Giro usado' },
               ]}
             />
-            <Button className="self-end" variant="secondary" onClick={loadHistory} loading={historyLoading}>
+            <Button className="self-end" variant="secondary" onClick={applyFilters} loading={historyLoading}>
               <Search size={18} className="mr-2" />
               Filtrar
             </Button>
@@ -298,19 +361,53 @@ const WheelSettings = () => {
           <div className="grid gap-3 md:grid-cols-4">
             <div className="rounded-lg bg-dark-900 p-3">
               <p className="text-xs text-gray-500">Registros filtrados</p>
-              <p className="text-xl font-bold text-white">{history.length}</p>
+              <p className="text-xl font-bold text-white">{historySummary.filtered_spins ?? historyMeta.total_count ?? history.length}</p>
             </div>
             <div className="rounded-lg bg-dark-900 p-3">
               <p className="text-xs text-gray-500">Cupons ganhos</p>
-              <p className="text-xl font-bold text-white">{history.filter(spin => spin.coupon_code).length}</p>
+              <p className="text-xl font-bold text-white">{historySummary.filtered_coupons ?? history.filter(spin => spin.coupon_code).length}</p>
             </div>
             <div className="rounded-lg bg-dark-900 p-3">
               <p className="text-xs text-gray-500">Cupons usados</p>
-              <p className="text-xl font-bold text-white">{history.filter(spin => Number(spin.coupon_used_count || 0) > 0).length}</p>
+              <p className="text-xl font-bold text-white">{historySummary.filtered_used_coupons ?? history.filter(spin => Number(spin.coupon_used_count || 0) > 0).length}</p>
             </div>
             <div className="rounded-lg bg-dark-900 p-3">
               <p className="text-xs text-gray-500">Sem premio</p>
-              <p className="text-xl font-bold text-white">{history.filter(spin => spin.status === 'used' && !spin.coupon_code).length}</p>
+              <p className="text-xl font-bold text-white">{historySummary.filtered_no_prize ?? history.filter(spin => spin.status === 'used' && !spin.coupon_code).length}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border border-dark-700 bg-dark-900 p-3 text-sm text-gray-300 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Pagina {Number(historyMeta.page || 1)} de {Math.max(Number(historyMeta.total_pages || 1), 1)}
+              {' '}· {Number(historyMeta.total_count || 0)} registros
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={historyLoading || Number(historyMeta.page || 1) <= 1} onClick={() => goToHistoryPage(Number(historyMeta.page || 1) - 1)}>
+                Anterior
+              </Button>
+              {Array.from({ length: Math.min(Number(historyMeta.total_pages || 1), 5) }, (_, index) => {
+                const totalPages = Math.max(Number(historyMeta.total_pages || 1), 1)
+                const current = Number(historyMeta.page || 1)
+                const start = Math.min(Math.max(current - 2, 1), Math.max(totalPages - 4, 1))
+                const page = start + index
+                if (page > totalPages) return null
+                return (
+                  <Button
+                    key={page}
+                    type="button"
+                    size="sm"
+                    variant={page === current ? 'primary' : 'outline'}
+                    disabled={historyLoading}
+                    onClick={() => goToHistoryPage(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              })}
+              <Button type="button" size="sm" variant="outline" disabled={historyLoading || Number(historyMeta.page || 1) >= Number(historyMeta.total_pages || 1)} onClick={() => goToHistoryPage(Number(historyMeta.page || 1) + 1)}>
+                Proxima
+              </Button>
             </div>
           </div>
 

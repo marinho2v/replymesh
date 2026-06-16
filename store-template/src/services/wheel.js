@@ -89,12 +89,22 @@ export const getAdminWheelSpinHistory = async (filters = {}) => {
       search: filters.search || null,
       prizeId: filters.prizeId || null,
       status: filters.status || null,
-      limit: Number(filters.limit || 200),
+      page: Number(filters.page || 1),
+      perPage: Number(filters.perPage || 20),
     },
     headers: storeHeaders(),
   })
 
-  return Array.isArray(payload.spins) ? payload.spins.map(normalizeSpin) : []
+  return {
+    spins: Array.isArray(payload.spins) ? payload.spins.map(normalizeSpin) : [],
+    pagination: {
+      page: Number(payload.pagination?.page || filters.page || 1),
+      per_page: Number(payload.pagination?.per_page || filters.perPage || 20),
+      total_count: Number(payload.pagination?.total_count || 0),
+      total_pages: Number(payload.pagination?.total_pages || 0),
+    },
+    summary: payload.summary || {},
+  }
 }
 
 export const updateWheelPrize = async (prizeId, prizeData) => {

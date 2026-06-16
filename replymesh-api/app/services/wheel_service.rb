@@ -118,16 +118,24 @@ class WheelService
 
   def admin_summary
     spins = @company.wheel_spins
+    coupon_spins = spins.joins(:coupon)
     {
       available_spins: spins.available.count,
       used_spins: spins.used.count,
       total_spins: spins.count,
+      generated_coupons: coupon_spins.count,
+      used_coupons: coupon_spins.where("coupons.used_count > 0").count,
       prizes: @company.wheel_prizes.canonical_order.map { |prize| serialize_prize(prize) },
-      recent_spins: admin_spin_history(limit: 10)
+      recent_spins: admin_spin_history(per_page: 10)[:spins]
     }
   end
 
   def admin_spin_history(filters = {})
+    page = [filters[:page].presence.to_i, 1].max
+    per_page = filters[:per_page].presence.to_i
+    per_page = 20 unless per_page.positive?
+    per_page = per_page.clamp(1, 100)
+
     scope = @company.wheel_spins.includes(:customer, :order, :wheel_prize, :coupon).recent
     scope = scope.where(status: filters[:status]) if filters[:status].present?
     scope = scope.where(wheel_prize_id: filters[:prize_id]) if filters[:prize_id].present?
@@ -138,7 +146,25 @@ class WheelService
       scope = scope.joins(:customer).where("customers.full_name ILIKE ? OR customers.phone ILIKE ?", term, term)
     end
 
-    scope.limit(filters[:limit].presence || 200).map { |spin| serialize_admin_spin(spin) }
+    total_count = scope.count
+    total_pages = (total_count.to_f / per_page).ceil
+    records = scope.offset((page - 1) * per_page).limit(per_page)
+
+    {
+      spins: records.map { |spin| serialize_admin_spin(spin) },
+      pagination: {
+        page: page,
+        per_page: per_page,
+        total_count: total_count,
+        total_pages: total_pages
+      },
+      summary: {
+        filtered_spins: total_count,
+        filtered_coupons: scope.where.not(coupon_id: nil).count,
+        filtered_used_coupons: scope.joins(:coupon).where("coupons.used_count > 0").count,
+        filtered_no_prize: scope.where(status: "used", coupon_id: nil).count
+      }
+    }
   end
 
   private

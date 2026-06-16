@@ -5,6 +5,7 @@ import { usePublicStoreInfo } from '../../../hooks/usePublicStoreInfo'
 import { useCart } from '../../../hooks/useCart'
 import PremiumProductCard from './PremiumProductCard'
 import { IconSearch, IconClose, IconStar } from '../icons.jsx'
+import ProductCustomizationModal from '../../../components/menu/ProductCustomizationModal'
 
 const PREM = {
   gold: '#f7a325',
@@ -30,6 +31,7 @@ const PremiumMenuSection = ({ store }) => {
 
   const [activeCategory, setActiveCategory] = useState('all')
   const [query, setQuery] = useState('')
+  const [customizingProduct, setCustomizingProduct] = useState(null)
 
   const visibleCategories = useMemo(
     () => (categories || []).filter(isPublicCategory),
@@ -41,11 +43,21 @@ const PremiumMenuSection = ({ store }) => {
       .reduce((sum, item) => sum + Number(item.quantity || 0), 0)
 
   const handleAdd = (product) => {
+    if (product.is_customizable && product.option_groups?.length > 0) {
+      setCustomizingProduct(product)
+      return
+    }
+
     addToCart(product, 1)
     toast.success(`${product.name} adicionado!`, { duration: 1500 })
   }
 
   const handleInc = (product) => {
+    if (product.is_customizable && product.option_groups?.length > 0) {
+      setCustomizingProduct(product)
+      return
+    }
+
     const item = cart.find(i => (i.product_id || i.product_key) === product.id && !i.notes)
     if (item) {
       const idx = cart.indexOf(item)
@@ -60,6 +72,12 @@ const PremiumMenuSection = ({ store }) => {
     if (!item) return
     const idx = cart.indexOf(item)
     updateQuantity(idx, item.quantity - 1)
+  }
+
+  const handleConfirmCustomization = ({ product, selectedOptions }) => {
+    addToCart(product, 1, '', selectedOptions)
+    toast.success(`${product.name} adicionado!`, { duration: 1500 })
+    setCustomizingProduct(null)
   }
 
   const filteredProducts = useMemo(() => {
@@ -191,6 +209,15 @@ const PremiumMenuSection = ({ store }) => {
           </div>
         )}
       </div>
+
+      <ProductCustomizationModal
+        isOpen={Boolean(customizingProduct)}
+        onClose={() => setCustomizingProduct(null)}
+        product={customizingProduct}
+        optionGroups={customizingProduct?.option_groups || []}
+        loading={false}
+        onConfirm={handleConfirmCustomization}
+      />
     </div>
   )
 }

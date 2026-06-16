@@ -15,8 +15,74 @@ import { Textarea } from '../../components/ui/Textarea'
 import { Modal } from '../../components/ui/Modal'
 import { Badge } from '../../components/ui/Badge'
 import { formatCurrency } from '../../utils/currency'
-import { Plus, Edit, Trash2, Star, Tag, Package, Search, Settings2, RotateCcw, ArrowUp, ArrowDown, ListOrdered } from 'lucide-react'
+import { Plus, Edit, Trash2, Star, Tag, Package, Search, Settings2, RotateCcw, ArrowUp, ArrowDown, ListOrdered, Pizza } from 'lucide-react'
 import { toast } from 'sonner'
+
+const pizzaGroupNames = ['Tamanho', 'Sabores', 'Borda', 'Massa']
+
+const createPizzaOptionGroups = () => ([
+  {
+    name: 'Tamanho',
+    type: 'single',
+    required: true,
+    min_select: 1,
+    max_select: 1,
+    sort_order: 0,
+    items: [
+      { name: 'Pequena - ate 1 sabor', additional_price: 0, is_active: true, sort_order: 0 },
+      { name: 'Media - ate 2 sabores', additional_price: 10, is_active: true, sort_order: 1 },
+      { name: 'Grande - ate 2 sabores', additional_price: 20, is_active: true, sort_order: 2 },
+      { name: 'Familia - ate 3 sabores', additional_price: 30, is_active: true, sort_order: 3 },
+    ],
+  },
+  {
+    name: 'Sabores',
+    type: 'multiple',
+    required: true,
+    min_select: 1,
+    max_select: 2,
+    sort_order: 1,
+    items: [
+      { name: 'Calabresa', additional_price: 0, is_active: true, sort_order: 0 },
+      { name: 'Portuguesa', additional_price: 3, is_active: true, sort_order: 1 },
+      { name: 'Mussarela', additional_price: 0, is_active: true, sort_order: 2 },
+    ],
+  },
+  {
+    name: 'Borda',
+    type: 'single',
+    required: false,
+    min_select: 0,
+    max_select: 1,
+    sort_order: 2,
+    items: [
+      { name: 'Sem borda', additional_price: 0, is_active: true, sort_order: 0 },
+      { name: 'Catupiry', additional_price: 8, is_active: true, sort_order: 1 },
+      { name: 'Cheddar', additional_price: 8, is_active: true, sort_order: 2 },
+      { name: 'Chocolate', additional_price: 10, is_active: true, sort_order: 3 },
+    ],
+  },
+  {
+    name: 'Massa',
+    type: 'single',
+    required: false,
+    min_select: 0,
+    max_select: 1,
+    sort_order: 3,
+    items: [
+      { name: 'Tradicional', additional_price: 0, is_active: true, sort_order: 0 },
+      { name: 'Fina', additional_price: 0, is_active: true, sort_order: 1 },
+      { name: 'Grossa', additional_price: 0, is_active: true, sort_order: 2 },
+      { name: 'Integral', additional_price: 5, is_active: true, sort_order: 3 },
+    ],
+  },
+])
+
+const inferProductType = (product, groups = []) => {
+  const names = groups.map(group => group.name)
+  if (names.some(name => pizzaGroupNames.includes(name))) return 'pizza'
+  return product?.is_customizable ? 'customizable' : 'simple'
+}
 
 const Products = () => {
   const { products, loading, refetch } = useProducts({ activeOnly: false })
@@ -42,6 +108,7 @@ const Products = () => {
     is_promotional: false,
     is_combo: false,
     is_customizable: false,
+    product_type: 'simple',
     combo_description: '',
     sort_order: 0,
     track_inventory: false,
@@ -106,8 +173,10 @@ const Products = () => {
         return
       }
 
+      const productType = formData.product_type || 'simple'
       const data = {
         ...formData,
+        is_customizable: productType !== 'simple',
         category_id: formData.category_id || null,
         price: Number(formData.price),
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
@@ -147,6 +216,14 @@ const Products = () => {
 
   const handleEdit = async (product) => {
     setEditingProduct(product)
+    let groups = []
+    try {
+      groups = await railsGetOptionGroups(product.id)
+    } catch (error) {
+      console.error('Error loading product option groups:', error)
+      groups = []
+    }
+
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -160,18 +237,13 @@ const Products = () => {
       is_promotional: product.is_promotional,
       is_combo: product.is_combo,
       is_customizable: product.is_customizable || false,
+      product_type: inferProductType(product, groups),
       combo_description: product.combo_description || '',
       sort_order: product.sort_order,
       track_inventory: product.track_inventory || false,
       stock_item_id: product.stock_item_id || '',
     })
-    try {
-      const groups = await railsGetOptionGroups(product.id)
-      setOptionGroups(groups)
-    } catch (error) {
-      console.error('Error loading product option groups:', error)
-      setOptionGroups([])
-    }
+    setOptionGroups(groups)
     setModalOpen(true)
   }
 
@@ -217,6 +289,7 @@ const Products = () => {
       is_promotional: false,
       is_combo: false,
       is_customizable: false,
+      product_type: 'simple',
       combo_description: '',
       sort_order: 0,
       track_inventory: false,
@@ -288,6 +361,23 @@ const Products = () => {
         ? { ...group, items: (group.items || []).filter((_, currentItemIndex) => currentItemIndex !== itemIndex) }
         : group
     )))
+  }
+
+  const updateProductType = (productType) => {
+    setFormData(prev => ({
+      ...prev,
+      product_type: productType,
+      is_customizable: productType !== 'simple',
+    }))
+
+    if (productType === 'simple') {
+      setOptionGroups([])
+      return
+    }
+
+    if (productType === 'pizza' && optionGroups.length === 0) {
+      setOptionGroups(createPizzaOptionGroups())
+    }
   }
 
   const categoryOptions = categories?.map(cat => ({
@@ -819,7 +909,7 @@ const Products = () => {
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
-            checked={formData.is_combo}
+                checked={formData.is_combo}
                 onChange={(e) => setFormData(prev => ({ ...prev, is_combo: e.target.checked }))}
                 className="rounded"
               />
@@ -828,27 +918,50 @@ const Products = () => {
           </div>
 
           <div className="rounded-lg border border-dark-600 bg-dark-900/60 p-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.is_customizable}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_customizable: e.target.checked }))}
-                className="rounded"
+            <div className="grid gap-3 sm:grid-cols-[240px_1fr]">
+              <Select
+                label="Tipo de produto"
+                value={formData.product_type || 'simple'}
+                onChange={(e) => updateProductType(e.target.value)}
+                options={[
+                  { value: 'simple', label: 'Simples' },
+                  { value: 'customizable', label: 'Customizavel' },
+                  { value: 'pizza', label: 'Pizza' },
+                ]}
               />
-              <span className="text-white text-sm font-medium">Produto customizavel?</span>
-            </label>
+              <div className="rounded-lg border border-dark-700 bg-dark-900 p-3 text-sm text-gray-300">
+                {formData.product_type === 'pizza' ? (
+                  <div className="flex items-start gap-3">
+                    <Pizza className="mt-0.5 text-yellow-400" size={20} />
+                    <div>
+                      <p className="font-semibold text-white">Produto de pizzaria</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Use tamanhos, sabores, bordas e massas. O preco final soma o preco base com os adicionais escolhidos.
+                      </p>
+                    </div>
+                  </div>
+                ) : formData.product_type === 'customizable' ? (
+                  <p>Produtos customizaveis abrem um modal para o cliente escolher opcoes antes de adicionar ao carrinho.</p>
+                ) : (
+                  <p>Produto simples entra direto no carrinho, sem tela de opcoes.</p>
+                )}
+              </div>
+            </div>
             <p className="mt-2 text-xs text-gray-400">
-              Produtos customizaveis abrem um modal para o cliente escolher opcoes antes de adicionar ao carrinho.
+              Para precificacao avancada de pizza por matriz tamanho/sabor, sera necessaria uma evolucao de banco em fase propria.
             </p>
 
-            {formData.is_customizable && (
+            {(formData.product_type !== 'simple') && (
               <div className="mt-4 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
                     <Settings2 size={18} />
-                    Grupos de opcoes
+                    {formData.product_type === 'pizza' ? 'Tamanhos, sabores e complementos' : 'Grupos de opcoes'}
                   </h3>
                   <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button type="button" size="sm" variant="outline" onClick={() => setOptionGroups(createPizzaOptionGroups())}>
+                      Modelo Pizzaria
+                    </Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => setOptionGroups(pastelOptionGroups)}>
                       Modelo Pastel
                     </Button>
@@ -861,7 +974,7 @@ const Products = () => {
 
                 {optionGroups.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-dark-600 p-4 text-sm text-gray-400">
-                    Nenhum grupo configurado. Use o modelo de pastel ou crie um grupo manualmente.
+                    Nenhum grupo configurado. Use o modelo de pizzaria, modelo de pastel ou crie um grupo manualmente.
                   </div>
                 ) : (
                   optionGroups.map((group, groupIndex) => (
