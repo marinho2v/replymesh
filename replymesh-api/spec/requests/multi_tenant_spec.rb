@@ -4,9 +4,11 @@ RSpec.describe "Store multi-tenant isolation", type: :request do
   let!(:company_a) { create_company(name: "Empresa A") }
   let!(:company_b) { create_company(name: "Empresa B") }
   let!(:user_a) { create_user(email: "admin-a@example.com") }
+  let!(:user_b) { create_user(email: "admin-b@example.com") }
 
   before do
     add_member(user_a, company_a)
+    add_member(user_b, company_b)
     assign_plan(company_a, slug: "pro")
     assign_plan(company_b, slug: "pro")
     create_store(company_a)
@@ -22,35 +24,35 @@ RSpec.describe "Store multi-tenant isolation", type: :request do
   end
 
   it "isolates products by company" do
-    get "/api/v1/store/products", headers: auth_headers(user_a)
+    get "/api/v1/store/products", headers: auth_headers(user_a, company: company_a)
     ids = json["products"].map { |item| item["id"] }
     expect(ids).to include(@product_a.id)
     expect(ids).not_to include(@product_b.id)
   end
 
   it "isolates orders by company" do
-    get "/api/v1/store/orders", headers: auth_headers(user_a)
+    get "/api/v1/store/orders", headers: auth_headers(user_a, company: company_a)
     ids = json["orders"].map { |item| item["id"] }
     expect(ids).to include(@order_a.id)
     expect(ids).not_to include(@order_b.id)
   end
 
   it "isolates customers by company" do
-    get "/api/v1/store/customers", headers: auth_headers(user_a)
+    get "/api/v1/store/customers", headers: auth_headers(user_a, company: company_a)
     ids = json["customers"].map { |item| item["id"] }
     expect(ids).to include(@customer_a.id)
     expect(ids).not_to include(@customer_b.id)
   end
 
   it "isolates coupons by company" do
-    get "/api/v1/store/coupons", headers: auth_headers(user_a)
+    get "/api/v1/store/coupons", headers: auth_headers(user_a, company: company_a)
     ids = json["coupons"].map { |item| item["id"] }
     expect(ids).to include(@coupon_a.id)
     expect(ids).not_to include(@coupon_b.id)
   end
 
   it "isolates marketing customers by company" do
-    get "/api/v1/store/marketing/customers", headers: auth_headers(user_a)
+    get "/api/v1/store/marketing/customers", headers: auth_headers(user_a, company: company_a)
     ids = json["customers"].map { |item| item["id"] }
     expect(ids).to include(@customer_a.id)
     expect(ids).not_to include(@customer_b.id)
@@ -60,9 +62,63 @@ RSpec.describe "Store multi-tenant isolation", type: :request do
     @customer_a.update!(last_order_at: 45.days.ago, total_orders: 2, total_spent_cents: 10_000)
     @customer_b.update!(last_order_at: 45.days.ago, total_orders: 2, total_spent_cents: 10_000)
 
-    get "/api/v1/store/sales_recovery/customers", params: { days: 30 }, headers: auth_headers(user_a)
+    get "/api/v1/store/sales_recovery/customers",
+        params: { days: 30 },
+        headers: auth_headers(user_a, company: company_a)
     ids = json["customers"].map { |item| item["id"] }
     expect(ids).to include(@customer_a.id)
     expect(ids).not_to include(@customer_b.id)
+  end
+
+  %w[
+    /api/v1/store/dashboard
+    /api/v1/store/orders
+    /api/v1/store/products
+    /api/v1/store/categories
+    /api/v1/store/reports
+    /api/v1/store/users
+    /api/v1/store/cash_sessions
+  ].each do |path|
+    it "blocks company A credentials from #{path} in company B" do
+      get path, headers: auth_headers(user_a).merge("X-Company-Slug" => company_b.slug)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(json["error"]).to eq("tenant_forbidden")
+    end
+  end
+
+  it "allows each admin only in their active company" do
+    get "/api/v1/store/dashboard", headers: auth_headers(user_a).merge("X-Company-Slug" => company_a.slug)
+    expect(response).to have_http_status(:ok)
+
+    get "/api/v1/store/dashboard", headers: auth_headers(user_b).merge("X-Company-Slug" => company_b.slug)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "blocks inactive memberships" do
+    user_a.company_members.find_by!(company: company_a).update!(status: "inactive")
+
+    get "/api/v1/store/dashboard", headers: auth_headers(user_a).merge("X-Company-Slug" => company_a.slug)
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("tenant_forbidden")
+  end
+
+  it "blocks a raw super admin token from store endpoints" do
+    master = create_user(email: "master-store@example.com", role: "super_admin")
+
+    get "/api/v1/store/dashboard", headers: auth_headers(master).merge("X-Company-Slug" => company_a.slug)
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("tenant_forbidden")
+  end
+
+  it "blocks company A credentials from company B settings" do
+    get "/api/v1/company/settings",
+        params: { company_id: company_b.id },
+        headers: auth_headers(user_a).merge("X-Company-Id" => company_b.id.to_s)
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("tenant_forbidden")
   end
 end

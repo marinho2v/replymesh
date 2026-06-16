@@ -133,8 +133,8 @@ const MyAccount = () => {
                       <p className="text-2xl font-bold text-white">{wheelSpins.available || 0}</p>
                     </div>
                   </div>
-                  <Link to={`${basePath}/roleta`} className="mt-4 inline-flex text-sm font-semibold text-white underline underline-offset-4">
-                    Abrir roleta
+                  <Link to={`${basePath}/promocoes`} className="mt-4 inline-flex text-sm font-semibold text-white underline underline-offset-4">
+                    Ver promoções
                   </Link>
                 </CardContent>
               </Card>

@@ -25,6 +25,9 @@ module Api
           company = Company.find_by(id: company_id, status: "active")
           return unauthorized! unless company
 
+          membership = CompanyMember.active.find_by(user_id: user.id, company_id: company.id, role: "motoboy")
+          return unauthorized! unless membership
+
           motoboy = ::Motoboy.find_by(user_id: user.id, company_id: company.id, active: true)
           return unauthorized! unless motoboy
 

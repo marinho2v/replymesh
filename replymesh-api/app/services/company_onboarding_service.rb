@@ -19,8 +19,8 @@ class CompanyOnboardingService
     { name: "Cartao Credito", method_type: "credit_card" }
   ].freeze
 
-  DEFAULT_LOGO_URL = "/logo.png".freeze
-  DEFAULT_BANNER_URL = "/capa.jpeg".freeze
+  DEFAULT_LOGO_URL = nil
+  DEFAULT_BANNER_URL = nil
   DEFAULT_VISUAL_TEMPLATE_ID = "hamburgueria-premium".freeze
 
   def self.call(company_params, options = {}, actor: nil)
@@ -174,6 +174,8 @@ class CompanyOnboardingService
   end
 
   def create_default_app_banner!
+    return unless DEFAULT_BANNER_URL.present?
+
     AppBanner.create!(
       company: @company,
       title: "Banner principal",
@@ -245,7 +247,7 @@ class CompanyOnboardingService
       connected_number: response[:connected_number],
       last_remote_sync_at: Time.current
     )
-    client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
+    client.ensure_webhooks(instance, remote: response)
     created_resources[:whatsapp_instance] = true
   rescue StandardError => e
     WhatsappLog.create!(company: @company, level: "warn", message: "Falha ao criar instancia WhatsApp: #{e.message}")

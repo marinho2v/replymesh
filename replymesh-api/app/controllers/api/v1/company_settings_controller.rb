@@ -1,8 +1,6 @@
 module Api
   module V1
-    class CompanySettingsController < ApplicationController
-      before_action :authenticate_user!
-
+    class CompanySettingsController < Store::BaseController
       def show
         setting = find_or_create_settings!
         return if performed?
@@ -40,32 +38,18 @@ module Api
       private
 
       def find_or_create_settings!
-        company = current_company_for_settings!
-        return if company.blank?
-
-        company.store_setting || company.create_store_setting!(
-          company_name: company.name,
-          trade_name: company.name,
-          store_name: company.name,
-          email: company.responsible_email,
-          whatsapp: company.responsible_phone,
-          whatsapp_number: company.responsible_phone
+        current_company.store_setting || current_company.create_store_setting!(
+          company_name: current_company.name,
+          trade_name: current_company.name,
+          store_name: current_company.name,
+          email: current_company.responsible_email,
+          whatsapp: current_company.responsible_phone,
+          whatsapp_number: current_company.responsible_phone
         )
       end
 
-      def current_company_for_settings!
-        if current_user.super_admin?
-          company_id = params[:company_id].presence || params.dig(:settings, :company_id).presence || request.headers["X-Company-Id"].presence
-          return ::Company.find(company_id) if company_id.present?
-
-          return ::Company.order(:id).first if ::Company.exists?
-        end
-
-        membership = current_user.company_members.includes(:company).find_by(status: "active")
-        return membership.company if membership
-
-        render json: { success: false, error: "Empresa nao encontrada para o usuario atual" }, status: :not_found
-        nil
+      def store_admin?
+        current_company_member&.role == "store_admin"
       end
 
       def settings_params

@@ -10,7 +10,7 @@ module Api
         ]
 
         def index
-          companies = Company.includes(:domains, :company_members, subscriptions: :plan).order(created_at: :desc)
+          companies = Company.includes(:domains, :company_members, :store_setting, subscriptions: :plan).order(created_at: :desc)
           render json: { success: true, companies: companies.map { |company| serialize_company(company) } }
         end
 
@@ -289,7 +289,7 @@ module Api
                                .sub(%r{/.*\z}, "")
           host = company.subdomain.presence || "#{company.slug}.#{platform_domain}"
 
-          "https://#{host}/loja/#{company.slug}/admin/impersonate"
+          "https://#{host}/admin/impersonate"
         end
 
         def company_params
@@ -366,6 +366,10 @@ module Api
             nil
           end
 
+          logo_url = company_asset_url(company, company.store_setting&.logo_url, primary_domain:)
+          banner_url = company_asset_url(company, company.store_setting&.banner_url, primary_domain:)
+          cover_url = company_asset_url(company, company.store_setting&.cover_url, primary_domain:)
+
           {
             id:                      company.id,
             name:                    company.name,
@@ -394,11 +398,33 @@ module Api
             plan_slug:               plan&.slug,
             subscription_status:     subscription&.status,
             subscription_price_cents: subscription&.price_cents,
+            logo_url:                 logo_url,
+            store_settings:           {
+              logo_url: logo_url,
+              banner_url: banner_url,
+              cover_url: cover_url
+            },
             feature_summary:         FeatureGate.access_map(company).slice(:allowed, :blocked)
           }.merge(admin_users: serialize_admin_users(company))
         rescue StandardError => e
           Rails.logger.error("[CompaniesController] serialize_company error for #{company.id}: #{e.message}")
           { id: company.id, name: company.name, slug: company.slug, status: company.status, error: true }
+        end
+
+        def company_asset_url(company, value, primary_domain: nil)
+          return if value.blank?
+          return value if value.match?(/\A(?:https?:|data:|blob:)/i)
+
+          platform_domain = ENV.fetch("REPLYMESH_PLATFORM_DOMAIN", "replymesh.cloud")
+                               .to_s
+                               .strip
+                               .sub(%r{\Ahttps?://}, "")
+                               .sub(%r{/.*\z}, "")
+          host = primary_domain.presence || company.primary_domain.presence ||
+                 company.subdomain.presence || "#{company.slug}.#{platform_domain}"
+          path = value.start_with?("/") ? value : "/#{value}"
+
+          "https://#{host}#{path}"
         end
 
         def serialize_admin_users(company)

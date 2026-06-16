@@ -22,7 +22,7 @@ const Checkout = lazy(() => import('../pages/public/Checkout'))
 const Success = lazy(() => import('../pages/public/Success'))
 const TableQrMenu = lazy(() => import('../pages/public/TableQrMenu'))
 const MyAccount = lazy(() => import('../pages/public/MyAccount'))
-const Wheel = lazy(() => import('../pages/public/Wheel'))
+const Promotions = lazy(() => import('../pages/public/Promotions'))
 
 // Auth Pages
 const Login = lazy(() => import('../pages/auth/Login'))
@@ -203,7 +203,8 @@ const publicChildren = [
   { path: 'cart', element: page(Cart) },
   { path: 'checkout', element: page(Checkout) },
   { path: 'minha-conta', element: page(MyAccount) },
-  { path: 'roleta', element: page(Wheel) },
+  { path: 'promocoes', element: page(Promotions) },
+  { path: 'roleta', element: page(Promotions) },
   { path: 'success/:orderId', element: page(Success) },
   { path: 'pedido/:orderId', element: page(Success) },
   { path: 'mesa/:qrToken', element: page(TableQrMenu) },

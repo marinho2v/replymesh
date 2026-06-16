@@ -8,6 +8,7 @@ import { getCustomerProfileByPhone, getSavedCustomerSession, normalizePhone, sav
 import { getWheelPrizes, spinCustomerWheel } from '../../services/wheel'
 import { usePublicStoreInfo } from '../../hooks/usePublicStoreInfo'
 import { useCompanySlug } from '../../contexts/CompanySlugContext'
+import { NEUTRAL_FAVICON_URL } from '../../utils/tenantBranding'
 
 const fallbackColors = ['#f7c600', '#ef4444', '#2f80ed', '#22c55e', '#8b3ff2', '#ff7a1a', '#14b8a6', '#ec4899']
 
@@ -232,7 +233,7 @@ const WheelGraphic = ({ prizes, rotation, logoUrl }) => {
 const Wheel = () => {
   const companySlug = useCompanySlug()
   const { store } = usePublicStoreInfo()
-  const logoUrl = store?.logo_url || '/logo.png'
+  const logoUrl = store?.logo_url || NEUTRAL_FAVICON_URL
   const [phone, setPhone] = useState('')
   const [profile, setProfile] = useState(null)
   const [prizes, setPrizes] = useState([])

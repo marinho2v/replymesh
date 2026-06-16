@@ -120,7 +120,7 @@ export const useNotificationSound = (scope = 'global') => {
 
       const notification = new Notification(title, {
         body,
-        icon: '/logo.png',
+        icon: '/replymesh-favicon.svg',
         tag: `order-${order.id}`,
         renotify: true,
         requireInteraction: false,

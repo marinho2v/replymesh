@@ -12,8 +12,8 @@ module Api
 
           def ensure
             if (instance = primary_instance)
-              sync_remote_for!(instance)
-              ensure_location_webhook!(instance)
+              remote = sync_remote_for!(instance)
+              ensure_evolution_webhooks!(instance, remote: remote)
               return render_ok(instance: instance.reload.safe_json)
             end
 
@@ -28,6 +28,7 @@ module Api
           def status
             response = client.status(@instance.instance_uuid.presence || @instance.instance_name)
             apply_remote_status!(@instance, response)
+            ensure_evolution_webhooks!(@instance, remote: response)
             render_ok(instance: @instance.reload.safe_json)
           rescue EvolutionGoClient::Error => e
             render_error(e.message, status: :bad_gateway)
@@ -38,6 +39,7 @@ module Api
               return render_error("Instancia nao possui token local para QR Code", status: :unprocessable_entity)
             end
 
+            ensure_evolution_webhooks!(@instance)
             response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
             @instance.update!(
               qr_code: response.dig(:qrcode, :value),
@@ -75,7 +77,7 @@ module Api
               instance.provider = "evolution_go"
               instance.status = remote[:status].presence || instance.status.presence || "created"
               instance.save!
-              ensure_location_webhook!(instance)
+              ensure_evolution_webhooks!(instance, remote: remote)
               return instance
             end
 
@@ -89,7 +91,7 @@ module Api
             instance.status = remote_after_create[:status].presence || response[:status].presence || "created"
             assign_remote_attrs(instance, remote_after_create, now)
             instance.save!
-            ensure_location_webhook!(instance)
+            ensure_evolution_webhooks!(instance, remote: remote_after_create)
             instance
           end
 
@@ -112,15 +114,11 @@ module Api
             assign_remote_attrs(instance, remote, Time.current)
             instance.status = remote[:status].presence || instance.status
             instance.save!
+            remote
           end
 
-          def ensure_location_webhook!(instance)
-            return if instance.instance_token.blank?
-
-            client.configure_location_webhook(
-              instance.instance_token,
-              webhook_token: EvolutionWebhookToken.generate(instance)
-            )
+          def ensure_evolution_webhooks!(instance, remote: nil)
+            client.ensure_webhooks(instance, remote: remote)
           end
 
           def apply_remote_status!(instance, response)

@@ -30,4 +30,26 @@ RSpec.describe "Motoboy flow", type: :request do
     get "/api/v1/motoboy/history", headers: headers
     expect(json["history"].map { |item| item.dig("order", "id") }).to include(order.id)
   end
+
+  it "lists the most recent assigned delivery first" do
+    newer_order = create_order(company: company, status: "ready")
+    newer_order.update!(motoboy: motoboy, delivery_status: "assigned")
+    DeliveryHistory.create!(
+      company: company,
+      order: newer_order,
+      motoboy: motoboy,
+      status: "assigned",
+      assigned_at: Time.current
+    )
+
+    post "/api/v1/motoboy/auth/login", params: {
+      phone: motoboy.phone, password: "senha123456", company_slug: company.slug
+    }
+    headers = { "Authorization" => "Bearer #{json['token']}" }
+
+    get "/api/v1/motoboy/orders", headers: headers
+
+    expect(response).to have_http_status(:ok)
+    expect(json["orders"].first["id"]).to eq(newer_order.id)
+  end
 end

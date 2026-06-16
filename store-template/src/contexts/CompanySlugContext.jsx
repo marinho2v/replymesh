@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect } from 'react'
 import { COMPANY_SLUG, REPLYMESH_API_URL } from '../services/replymeshApi'
+import { ensureStoreAuthTenant } from '../services/storeAuthStorage'
 
 const CompanySlugContext = createContext({
   slug: COMPANY_SLUG,
@@ -13,6 +14,9 @@ export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
   const resolvedSlug = slug || COMPANY_SLUG
 
   useEffect(() => {
+    if (resolvedSlug && !ensureStoreAuthTenant(resolvedSlug)) {
+      window.dispatchEvent(new Event('replymesh-auth-changed'))
+    }
     localStorage.removeItem('replymesh_store_company_id')
 
     if (!resolvedSlug) {

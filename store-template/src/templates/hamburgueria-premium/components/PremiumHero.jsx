@@ -19,16 +19,16 @@ const dayLabels = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 
 
 const PremiumHero = ({ store, businessHours }) => {
   const [showHours, setShowHours] = useState(false)
-  const storeName = store?.store_name || store?.name || 'Nosso Cardápio'
+  const storeName = store?.store_name || store?.name || 'Loja'
   const themeColor = store?.theme_primary_color || store?.primary_color || '#f7a325'
   const heroImage = store?.hero_image_url || store?.banner_url || store?.cover_url || ''
   const heroPosition = store?.hero_image_position || 'center'
   const heroZoom = Math.max(80, Math.min(Number(store?.hero_image_zoom || 100), 160))
   const heroOverlay = Math.max(0, Math.min(Number(store?.hero_overlay_opacity ?? 65), 90)) / 100
   const heroHeight = Math.max(360, Math.min(Number(store?.hero_height || 480), 760))
-  const heroTitle = store?.hero_title || 'O MELHOR LANCHE'
-  const heroHighlight = store?.hero_highlight || 'DA REGIÃO!'
-  const heroSubtitle = store?.hero_subtitle || 'Peça agora e receba no conforto da sua casa!'
+  const heroTitle = store?.hero_title || 'CARDAPIO ONLINE'
+  const heroHighlight = store?.hero_highlight || storeName
+  const heroSubtitle = store?.hero_subtitle || 'Confira nossos produtos e faca seu pedido.'
   const status = getEffectiveStoreStatus(store, businessHours)
   const isOpen = status.isOpen
   const closeTime = normalizeTime(status.closesAt)

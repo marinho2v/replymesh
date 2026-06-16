@@ -44,18 +44,30 @@ module Api
             name = instance_params[:instance_name].presence || "replymesh_#{company.slug}"
             instance = WhatsappInstance.find_or_initialize_by(company: company, instance_name: name)
             token = instance.instance_token.presence || SecureRandom.hex(32)
+            remote = remote_instance_by_name(name)
 
-            response = client.create_instance(name, token: token)
+            if remote && instance.persisted? && instance.instance_token.present?
+              response = remote
+              assign_remote_attrs(instance, remote, Time.current)
+            elsif remote
+              return render json: {
+                success: false,
+                errors: ["Instancia ja existe na Evolution, mas nao possui token local para vinculacao segura"]
+              }, status: :unprocessable_entity
+            else
+              response = client.create_instance(name, token: token)
+            end
+
             instance.assign_attributes(
               provider: "evolution_go",
               status: response[:status] || "created",
-              base_url: response[:base_url],
-              connected_number: response[:connected_number],
+              base_url: response[:base_url].presence || instance.base_url,
+              connected_number: response[:connected_number].presence || instance.connected_number,
               instance_token: token
             )
             instance.save!
-            client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
-            log!(instance, "ok", "Instancia WhatsApp criada", response)
+            webhook_result = client.ensure_webhooks(instance, remote: response)
+            log!(instance, "ok", remote ? "Instancia WhatsApp sincronizada" : "Instancia WhatsApp criada", response.merge(webhook: webhook_result))
 
             render json: { success: true, instance: serialize_instance(instance) }, status: :created
           rescue ActiveRecord::RecordInvalid => e
@@ -70,6 +82,7 @@ module Api
           def status
             response = client.status(@instance.instance_uuid.presence || @instance.instance_name)
             apply_status!(@instance, response)
+            client.ensure_webhooks(@instance, remote: response)
             log!(@instance, "info", "Status da instancia consultado", response)
 
             render json: { success: true, instance: serialize_instance(@instance.reload), result: safe_result(response) }
@@ -87,6 +100,7 @@ module Api
               return render json: { success: false, errors: ["Instancia teste nao possui token local"] }, status: :unprocessable_entity
             end
 
+            client.ensure_webhooks(@instance)
             response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
             @instance.update!(qr_code: response.dig(:qrcode, :value), status: response[:status].presence || "connecting")
             log!(@instance, "info", "QR Code solicitado para instancia teste", response.except(:qrcode))
@@ -161,6 +175,7 @@ module Api
               instance = local || WhatsappInstance.find_or_initialize_by(company: company, instance_name: TEST_INSTANCE_NAME)
               assign_remote_attrs(instance, remote, now)
               instance.save!
+              client.ensure_webhooks(instance, remote: remote) if instance.instance_token.present?
               WhatsappRemoteInstance.where(instance_name: TEST_INSTANCE_NAME).delete_all
               log!(instance, "info", "Instancia teste ja existia na Evolution; dados sincronizados", remote)
 
@@ -184,7 +199,7 @@ module Api
             instance.provider = "evolution_go"
             instance.base_url = response[:base_url].presence || remote_after_create[:base_url].presence || ENV["EVOLUTION_GO_BASE_URL"].presence
             instance.save!
-            client.configure_location_webhook(token, webhook_token: EvolutionWebhookToken.generate(instance))
+            client.ensure_webhooks(instance, remote: remote_after_create)
             WhatsappRemoteInstance.where(instance_name: TEST_INSTANCE_NAME).delete_all
             log!(instance, "ok", "Instancia teste criada na Evolution", remote_after_create)
 
@@ -257,6 +272,7 @@ module Api
 
               if local
                 local.update!(attrs.compact)
+                client.ensure_webhooks(local, remote: remote) if local.instance_token.present?
                 linked << { instance_name: name, status: local.remote_status || local.status }
               else
                 record = WhatsappRemoteInstance.find_or_initialize_by(instance_name: name)

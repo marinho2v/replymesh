@@ -11,6 +11,11 @@ module Api
                   PhoneNormalizer.equivalent?(record.phone, login_params[:phone])
                 end
                 return unauthorized unless motoboy&.user&.status == "active"
+                return unauthorized unless CompanyMember.active.exists?(
+                  user_id: motoboy.user_id,
+                  company_id: company.id,
+                  role: "motoboy"
+                )
 
             unless motoboy.user.authenticate(login_params[:password].to_s)
               return unauthorized

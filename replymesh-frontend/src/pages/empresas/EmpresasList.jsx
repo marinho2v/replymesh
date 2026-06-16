@@ -59,6 +59,7 @@ function normalizeCompany(company = {}) {
     responsible_email: company.responsible_email || "",
     primary_domain: company.primary_domain || "",
     users_count: Number(company.users_count || 0),
+    logo_url: company.logo_url || company.store_settings?.logo_url || "",
   };
 }
 
@@ -280,7 +281,7 @@ export function EmpresasList({ onToast }) {
                   <tr key={company.id}>
                     <td>
                       <div className="cell-co">
-                        <CoAvatar name={company.name} size={34} />
+                        <CoAvatar name={company.name} imageUrl={company.logo_url} size={34} />
                         <div>
                           <div className="t">{company.name}</div>
                           <div className="s mono">{company.primary_domain || `${company.slug}.replymesh.cloud`}</div>

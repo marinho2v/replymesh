@@ -1,4 +1,9 @@
-import { resolveDefaultCompanySlug } from '../utils/companyDomain'
+import { companyBasePath, resolveDefaultCompanySlug } from '../utils/companyDomain'
+import {
+  clearStoreAuthSession,
+  getStoreAuthToken,
+  resolveStoreAuthSlug,
+} from './storeAuthStorage'
 
 const DEFAULT_API_URL = 'https://api.replymesh.cloud/api/v1'
 
@@ -42,9 +47,7 @@ const clearStoreSession = () => {
     localStorage.removeItem('replymesh_impersonation_profile')
     localStorage.removeItem('replymesh_master_impersonation')
   } else {
-    localStorage.removeItem('replymesh_store_token')
-    localStorage.removeItem('replymesh_store_user')
-    localStorage.removeItem('replymesh_store_profile')
+    clearStoreAuthSession()
   }
   window.dispatchEvent(new Event('replymesh-auth-changed'))
 }
@@ -79,7 +82,7 @@ export const getReplymeshAuthToken = () => {
     clearImpersonationSession()
   }
 
-  return localStorage.getItem('replymesh_store_token')
+  return getStoreAuthToken()
 }
 
 export const request = async (path, options = {}) => {
@@ -120,6 +123,14 @@ export const request = async (path, options = {}) => {
   if (!response.ok || payload?.success === false) {
     if (response.status === 401 && token) {
       clearStoreSession()
+    } else if (response.status === 403 && payload?.error === 'tenant_forbidden') {
+      clearStoreAuthSession()
+      sessionStorage.setItem(
+        'replymesh:store:auth-message',
+        'Sua sessao pertence a outra empresa. Faca login novamente.',
+      )
+      const slug = resolveStoreAuthSlug()
+      window.location.replace(`${companyBasePath(slug)}/login`)
     } else if (response.status === 403 && payload?.error === 'Sessao master vinculada a outra empresa') {
       clearImpersonationSession()
       window.dispatchEvent(new Event('replymesh-auth-changed'))

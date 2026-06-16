@@ -11,65 +11,59 @@ module Api
         private
 
         def resolve_current_company!
-          @current_company = if current_user.super_admin?
-                               find_company_for_super_admin
-                             else
-                               find_company_for_member
-                             end
+          requested_company = find_requested_company
+          return if performed?
+
+          @current_company = current_user.super_admin? ?
+            find_company_for_impersonation(requested_company) :
+            find_company_for_member(requested_company)
         end
 
-        def find_company_for_super_admin
+        def find_requested_company
+          requested_company_id = params[:company_id].presence || request.headers["X-Company-Id"].presence
+          requested_company_slug = params[:company_slug].presence || request.headers["X-Company-Slug"].presence
+
+          if requested_company_id.present? && requested_company_slug.present?
+            company = Company.find_by(id: requested_company_id)
+            return tenant_forbidden!("Empresa solicitada nao corresponde ao slug acessado") if
+              company && company.slug.to_s != requested_company_slug.to_s
+          end
+
+          company = if requested_company_id.present?
+                      Company.find_by(id: requested_company_id)
+                    elsif requested_company_slug.present?
+                      Company.find_by(slug: requested_company_slug.to_s)
+                    end
+
+          return company if company
+          return render json: { success: false, error: "tenant_required" }, status: :bad_request if
+            requested_company_id.blank? && requested_company_slug.blank?
+
+          render json: { success: false, error: "Empresa nao encontrada" }, status: :not_found
+          nil
+        end
+
+        def find_company_for_impersonation(requested_company)
           impersonated_company_id = current_jwt_payload&.dig("impersonated_company_id")
-          requested_company_id = params[:company_id] || request.headers["X-Company-Id"]
-          requested_company_slug = params[:company_slug] || request.headers["X-Company-Slug"]
-          cid = impersonated_company_id || requested_company_id
+          return tenant_forbidden!("Super admin precisa usar acesso de suporte auditado") unless
+            current_jwt_payload&.dig("impersonation") && current_impersonation_session && impersonated_company_id.present?
+          return tenant_forbidden!("Sessao master vinculada a outra empresa") unless
+            requested_company&.id.to_s == impersonated_company_id.to_s
 
-          if impersonated_company_id.present? && requested_company_id.present? &&
-             requested_company_id.to_s != impersonated_company_id.to_s
-            render json: { success: false, error: "Sessao master vinculada a outra empresa" }, status: :forbidden
-            return nil
-          end
-
-          unless cid || requested_company_slug.present?
-            render json: { success: false, error: "Parametro company_id ou company_slug obrigatorio para super_admin" },
-                   status: :bad_request
-            return nil
-          end
-
-          company = cid ? Company.find_by(id: cid) : Company.find_by(slug: requested_company_slug.to_s)
-          unless company
-            render json: { success: false, error: "Empresa nao encontrada" }, status: :not_found
-            return nil
-          end
-
-          if requested_company_slug.present? && company.slug.to_s != requested_company_slug.to_s
-            render json: { success: false, error: "Empresa da sessao nao corresponde ao slug acessado" },
-                   status: :forbidden
-            return nil
-          end
-
-          company
+          requested_company
         end
 
-        def find_company_for_member
-          membership = current_user.company_members.includes(:company).find_by(status: "active")
-          unless membership
-            render json: { success: false, error: "Sem acesso a nenhuma empresa" }, status: :forbidden
-            return nil
-          end
-
-          requested_company_slug = params[:company_slug] || request.headers["X-Company-Slug"]
-          if requested_company_slug.present? && membership.company.slug.to_s != requested_company_slug.to_s
-            render json: { success: false, error: "Usuario nao pertence a empresa acessada" }, status: :forbidden
-            return nil
-          end
+        def find_company_for_member(requested_company)
+          membership = current_user.company_members.active.find_by(company_id: requested_company&.id)
+          return tenant_forbidden!("Usuario nao pertence a empresa acessada") unless membership
 
           @current_company_member = membership
-          membership.company
+          requested_company
         end
 
         def authorize_store_role!
-          return true if performed? || current_user.super_admin?
+          return true if performed?
+          return true if current_user.super_admin? && current_impersonation_session
           return true if store_admin?
           return true if cashier? && cashier_allowed?
 
@@ -146,6 +140,15 @@ module Api
         def forbidden_role
           render json: { success: false, error: "Perfil sem permissao para este recurso" }, status: :forbidden
           false
+        end
+
+        def tenant_forbidden!(message)
+          render json: {
+            success: false,
+            error: "tenant_forbidden",
+            message: message
+          }, status: :forbidden
+          nil
         end
 
         def render_ok(data = {}, status: :ok, **kwargs)

@@ -30,7 +30,7 @@ const MotoboyLayout = ({ children, company }) => {
             <BrandLogo
               size="md"
               name={company?.name || ''}
-              logoUrl={company?.logo_url || '/logo.png'}
+              logoUrl={company?.logo_url}
               textClassName="text-xl"
             />
           </Link>

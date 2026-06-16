@@ -2,21 +2,9 @@ import { COMPANY_SLUG, request } from './replymeshApi'
 import { getEffectiveStoreStatus } from '../utils/storeSchedule'
 import { DEFAULT_TEMPLATE_ID } from '../templates'
 
-const OFFICIAL_STORE_PHONE = '+55 21 97714-9837'
-const DEFAULT_LOGO_URL = '/logo.png'
 const currentCompanyId = () => localStorage.getItem('replymesh_store_company_id') || import.meta.env.VITE_REPLYMESH_COMPANY_ID || '4'
 const currentCompanySlug = () => localStorage.getItem('replymesh_store_company_slug') || COMPANY_SLUG
 const companyHeaders = () => ({ 'X-Company-Id': String(currentCompanyId()) })
-
-const withOfficialStorePhone = (settings) => {
-  if (!settings) return settings
-
-  return {
-    ...settings,
-    phone: OFFICIAL_STORE_PHONE,
-    whatsapp_number: OFFICIAL_STORE_PHONE,
-  }
-}
 
 export const getStoreSettings = async () => {
   try {
@@ -30,7 +18,7 @@ export const getStoreSettings = async () => {
       store_name: settings.trade_name || settings.company_name || settings.store_name || '',
       phone: settings.phone || settings.whatsapp || settings.whatsapp_number || '',
       whatsapp_number: settings.whatsapp || settings.whatsapp_number || '',
-      logo_url: settings.logo_url || DEFAULT_LOGO_URL,
+      logo_url: settings.logo_url || '',
       banner_url: settings.banner_url || settings.cover_url || '',
       cover_url: settings.cover_url || settings.banner_url || '',
       visual_template_id: settings.visual_template_id || DEFAULT_TEMPLATE_ID,
@@ -47,7 +35,7 @@ export const getPublicStoreSettings = async () => {
     return {
       ...(payload.store || {}),
       ...(payload.store_settings || {}),
-      logo_url: payload.store?.logo_url || payload.store_settings?.logo_url || DEFAULT_LOGO_URL,
+      logo_url: payload.store?.logo_url || payload.store_settings?.logo_url || '',
       visual_template_id: payload.store?.visual_template_id || payload.store_settings?.visual_template_id || DEFAULT_TEMPLATE_ID,
     }
   } catch (error) {
@@ -209,7 +197,7 @@ export const updateStoreSettings = async (settingsData) => {
       store_name: settings.trade_name || settings.company_name || settingsData.store_name,
       phone: settings.phone || settings.whatsapp || settingsData.phone,
       whatsapp_number: settings.whatsapp || settingsData.whatsapp_number,
-      logo_url: settings.logo_url || DEFAULT_LOGO_URL,
+      logo_url: settings.logo_url || '',
       banner_url: settings.banner_url || settings.cover_url || settingsData.banner_url || settingsData.cover_url || '',
       cover_url: settings.cover_url || settings.banner_url || settingsData.cover_url || settingsData.banner_url || '',
     }

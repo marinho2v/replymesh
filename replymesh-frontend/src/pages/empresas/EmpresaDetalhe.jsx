@@ -174,7 +174,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       </div>
 
       {!edit && <div className="company-detail-hero card">
-        <CoAvatar name={company.name} size={58} radius={13} />
+        <CoAvatar name={company.name} imageUrl={company.logo_url || company.store_settings?.logo_url} size={58} radius={13} />
         <div className="company-detail-main"><h2>{company.name}</h2><p>{company.primary_domain || `${company.slug}.replymesh.cloud`}</p></div>
         <Badge tone={status[0]}>{status[1]}</Badge>
       </div>}

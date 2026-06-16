@@ -64,6 +64,14 @@ export const getWheelPrizes = async (slug) => {
   return (payload.prizes || []).map(normalizePrize)
 }
 
+export const getPublicPromotions = async (slug) => {
+  const payload = await request(publicPath('/promotions', slug), { token: null })
+  return {
+    promotions: payload.promotions || [],
+    roulette_active: Boolean(payload.roulette_active),
+  }
+}
+
 export const getAdminWheelSummary = async () => {
   const payload = await request('/store/wheel/summary', { headers: storeHeaders() })
   return {

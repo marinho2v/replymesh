@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { Store } from 'lucide-react'
 
 const BrandLogo = ({
   showText = true,
@@ -6,7 +7,7 @@ const BrandLogo = ({
   className = '',
   textClassName = '',
   name = '',
-  logoUrl = '/logo.png',
+  logoUrl = '',
 }) => {
   const sizes = {
     sm: 'h-9 w-14',
@@ -23,11 +24,17 @@ const BrandLogo = ({
   return (
     <div className={clsx('flex items-center gap-3 min-w-0', className)}>
       <span className={clsx('shrink-0 flex items-center justify-center', sizes[size] || sizes.md)}>
-        <img
-          src={logoUrl || '/logo.png'}
-          alt={name}
-          className="h-full w-full object-contain"
-        />
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={name}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center rounded-lg border border-gray-700 bg-gray-900 text-gray-300">
+            <Store size={size === 'lg' ? 32 : size === 'sm' ? 18 : 24} aria-hidden="true" />
+          </span>
+        )}
       </span>
       {showText && (
         <span className={clsx('truncate font-bold text-white', textSizes[size] || textSizes.md, textClassName)}>

@@ -301,6 +301,7 @@ Rails.application.routes.draw do
           get  "delivery_zones",  to: "stores#delivery_zones"
           get    "customers/lookup",            to: "customers#lookup"
           post   "coupons/validate",            to: "coupons#validate"
+          get    "promotions",                  to: "wheel#promotions"
           get    "wheel/profile",               to: "wheel#profile"
           get    "wheel/prizes",                to: "wheel#prizes"
           post   "wheel/spin",                  to: "wheel#spin"

@@ -81,6 +81,7 @@ module Api
             store_name:              s.store_name.presence || s.company_name.presence || current_company.name,
             slug:                    current_company.slug,
             logo_url:                s.logo_url,
+            favicon_url:             s.respond_to?(:favicon_url) ? s.favicon_url : nil,
             cover_url:               s.cover_url,
             banner_url:              s.banner_url,
             primary_color:           s.primary_color,
@@ -124,7 +125,8 @@ module Api
             theme_primary_color:     s.respond_to?(:theme_primary_color) ? (s.theme_primary_color.presence || s.primary_color) : s.primary_color,
             pix_provider:            s.respond_to?(:pix_provider) ? (s.pix_provider.presence || 'manual') : 'manual',
             mercadopago_enabled:     s.respond_to?(:mercadopago_enabled) ? s.mercadopago_enabled : false,
-            mercadopago_public_key:  s.respond_to?(:mercadopago_public_key) ? s.mercadopago_public_key : nil
+            mercadopago_public_key:  s.respond_to?(:mercadopago_public_key) ? s.mercadopago_public_key : nil,
+            updated_at:              s.updated_at
           }
         end
 

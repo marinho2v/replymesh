@@ -88,7 +88,7 @@ const PremiumHeader = ({ store, cartCount = 0, basePath = '' }) => {
     { label: 'Início', to: basePath || '/' },
     { label: 'Cardápio', to: `${basePath}/menu` },
     { label: 'Minha conta', to: `${basePath}/minha-conta` },
-    { label: 'Roleta', to: `${basePath}/roleta` },
+    { label: 'Promoções', to: `${basePath}/promocoes` },
   ]
 
   const isActive = (to) => {

@@ -111,6 +111,11 @@ class WheelService
     @company.wheel_prizes.active.canonical_order.map { |prize| serialize_prize(prize) }
   end
 
+  def promotion_active?
+    FeatureGate.enabled?(@company, "roulette") &&
+      @company.wheel_prizes.available.where("probability_weight > 0").exists?
+  end
+
   def admin_summary
     spins = @company.wheel_spins
     {

@@ -29,13 +29,14 @@ import {
   railsGetStoreAiSettings,
   railsUpdateStoreAiSettings,
 } from '../../services/storeApi'
+import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 
 const TEMPLATE_CATEGORY_LABELS = {
   hamburgueria: 'Hamburgueria',
   pizzaria: 'Pizzaria',
   doceria: 'Doceria',
   bebidas: 'Bebidas',
-  acai: 'AÃ§aÃ­',
+  acai: 'Acai',
   restaurante: 'Restaurante',
 }
 
@@ -228,7 +229,7 @@ const TemplateSelectorSection = ({ currentTemplateId, onSelect, openSection, set
       </div>
 
       <p className="text-xs text-gray-500">
-        ApÃ³s selecionar um template, clique em <strong className="text-gray-300">"Salvar configuraÃ§Ãµes"</strong> para aplicar.
+        Apos selecionar um template, clique em <strong className="text-gray-300">"Salvar configuracoes"</strong> para aplicar.
       </p>
     </SettingsSection>
   )
@@ -468,6 +469,7 @@ const Settings = () => {
   const [openSection, setOpenSection] = useState('general')
   const [lastError, setLastError] = useState('')
   const [lastSaved, setLastSaved] = useState('')
+  const basePath = useCompanyBasePath()
 
   useEffect(() => {
     if (settings) {
@@ -491,17 +493,16 @@ const Settings = () => {
     ...Object.entries(PIX_KEY_TYPE_LABELS).map(([value, label]) => ({ value, label })),
   ], [])
 
-  const companySlug = localStorage.getItem('replymesh_store_company_slug') || ''
-  const publicUrl = companySlug ? `${window.location.origin}/loja/${companySlug}` : window.location.origin
-  const whatsappAdminUrl = companySlug ? `/loja/${companySlug}/admin/whatsapp` : '/admin/whatsapp'
+  const publicUrl = `${window.location.origin}${basePath || ''}`
+  const whatsappAdminUrl = `${basePath}/admin/whatsapp`
   const whatsappApiConnected = localSettings.whatsapp_auto_send_enabled !== false
   const effectiveStatus = getEffectiveStoreStatus(localSettings, localHours)
   const effectiveStatusText = effectiveStatus.isOpen ? 'Loja aberta agora' : 'Loja fechada agora'
   const effectiveStatusHelper = effectiveStatus.isOpen && effectiveStatus.closesAt
-    ? `Fecha automaticamente Ã s ${normalizeTime(effectiveStatus.closesAt)}`
+    ? `Fecha automaticamente as ${normalizeTime(effectiveStatus.closesAt)}`
     : !effectiveStatus.isOpen && effectiveStatus.opensAt
-      ? `Abre automaticamente Ã s ${normalizeTime(effectiveStatus.opensAt)}`
-      : 'Status calculado pelos horÃ¡rios cadastrados.'
+      ? `Abre automaticamente as ${normalizeTime(effectiveStatus.opensAt)}`
+      : 'Status calculado pelos horarios cadastrados.'
 
   const updateSetting = (field, value) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }))
@@ -653,7 +654,7 @@ const Settings = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Input label="URL publica da loja" value={publicUrl} readOnly />
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-200">Status automÃ¡tico da loja</label>
+              <label className="mb-2 block text-sm font-medium text-gray-200">Status automatico da loja</label>
               <div className={`rounded-lg border px-4 py-3 ${
                 effectiveStatus.isOpen
                   ? 'border-green-700 bg-green-950/30'
@@ -691,7 +692,11 @@ const Settings = () => {
               <div className="mb-3 text-sm font-semibold text-white">Logo da loja</div>
               <div className="flex gap-4">
                 <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-yellow-500/30 bg-black">
-                  <img src={localSettings.logo_url || '/logo.png'} alt="Logo da loja" className="h-full w-full object-contain" />
+                  {localSettings.logo_url ? (
+                    <img src={localSettings.logo_url} alt="Logo da loja" className="h-full w-full object-contain" />
+                  ) : (
+                    <span className="px-2 text-center text-xs text-gray-500">Sem logo</span>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">
                   <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
@@ -717,8 +722,12 @@ const Settings = () => {
             <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
               <div className="mb-3 text-sm font-semibold text-white">Imagem de capa/banner</div>
               <div className="flex gap-4">
-                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-dark-600 bg-black">
-                  <img src={localSettings.banner_url || localSettings.cover_url || '/capa.jpeg'} alt="Banner da loja" className="h-full w-full object-cover" />
+                <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dark-600 bg-black">
+                  {localSettings.banner_url || localSettings.cover_url ? (
+                    <img src={localSettings.banner_url || localSettings.cover_url} alt="Banner da loja" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="px-2 text-center text-xs text-gray-500">Sem banner</span>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">
                   <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
@@ -839,7 +848,7 @@ const Settings = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Formatos aceitos: PNG, JPG, WEBP ou SVG. Tamanho maximo: 1 MB. Sem logo, o sistema usa /logo.png.
+            Formatos aceitos: PNG, JPG, WEBP ou SVG. Tamanho maximo: 1 MB. Sem logo, o sistema usa a identidade neutra Replymesh.
           </p>
         </SettingsSection>
 
@@ -959,8 +968,8 @@ const Settings = () => {
           <div className="mt-2 rounded-xl border border-dark-600 bg-dark-900/60 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-white">Mercado Pago â€” Pix automÃ¡tico</p>
-                <p className="text-xs text-gray-400 mt-0.5">Quando ativo, o Pix Ã© processado automaticamente via API.</p>
+                <p className="text-sm font-semibold text-white">Mercado Pago - Pix automatico</p>
+                <p className="text-xs text-gray-400 mt-0.5">Quando ativo, o Pix e processado automaticamente via API.</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${localSettings.mercadopago_enabled ? 'bg-green-400' : 'bg-gray-600'}`} />
@@ -973,8 +982,8 @@ const Settings = () => {
                 <Select
                   label="Modo Pix"
                   options={[
-                    { value: 'manual', label: 'Manual â€” chave Pix acima' },
-                    { value: 'mercadopago', label: 'Mercado Pago â€” automÃ¡tico' },
+                    { value: 'manual', label: 'Manual - chave Pix acima' },
+                    { value: 'mercadopago', label: 'Mercado Pago - automatico' },
                   ]}
                   value={localSettings.pix_provider || 'manual'}
                   onChange={(e) => updateSetting('pix_provider', e.target.value)}
@@ -995,13 +1004,13 @@ const Settings = () => {
               {localSettings.pix_provider === 'mercadopago' && (
                 <>
                   <Input
-                    label="Public Key (comeÃ§a com APP_USR- ou TEST-)"
+                    label="Public Key (comeca com APP_USR- ou TEST-)"
                     value={localSettings.mercadopago_public_key || ''}
                     onChange={(e) => updateSetting('mercadopago_public_key', e.target.value)}
                     placeholder="APP_USR-xxxxxxxx-xxxx-xxxx..."
                   />
                   <Input
-                    label="Access Token (nÃ£o serÃ¡ exibido apÃ³s salvar)"
+                    label="Access Token (nao sera exibido apos salvar)"
                     type="password"
                     value={localSettings.mercadopago_access_token || ''}
                     onChange={(e) => updateSetting('mercadopago_access_token', e.target.value)}

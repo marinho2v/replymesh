@@ -8,7 +8,7 @@ module Api
           orders = current_company.orders
                                   .includes(:delivery_history, :order_items, :delivery_zone)
                                   .where(motoboy_id: current_motoboy.id, delivery_status: %w[assigned on_the_way])
-                                  .order(created_at: :asc)
+                                  .order(created_at: :desc)
 
           render_ok(orders: orders.map { |order| serialize_order(order) })
         end

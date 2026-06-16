@@ -45,6 +45,14 @@ const Login = () => {
   }
 
   useEffect(() => {
+    const authMessage = sessionStorage.getItem('replymesh:store:auth-message')
+    if (authMessage) {
+      sessionStorage.removeItem('replymesh:store:auth-message')
+      toast.error(authMessage)
+    }
+  }, [])
+
+  useEffect(() => {
     if (profile) {
       if (profile.role === 'kitchen') {
         navigate('/kitchen')
@@ -113,7 +121,7 @@ const Login = () => {
 
       toast.success('Login realizado com sucesso!')
     } catch (error) {
-      toast.error('Erro ao fazer login. Verifique suas credenciais.')
+      toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.')
     } finally {
       setLoading(false)
     }

@@ -15,7 +15,7 @@ RSpec.describe CompanyOnboardingService do
         base_url: "https://marinho.replymesh.cloud",
         remote_data: {}
       },
-      configure_location_webhook: { success: true, mode: "test" }
+      ensure_webhooks: { success: true, action: "configured", changed: true }
     )
     allow(EvolutionGoClient).to receive(:new).and_return(client)
 
@@ -36,18 +36,15 @@ RSpec.describe CompanyOnboardingService do
     instance = company.whatsapp_instances.find_by!(instance_name: "replymesh_nova_loja")
     settings = company.store_setting
 
-    expect(settings.logo_url).to eq("/logo.png")
-    expect(settings.banner_url).to eq("/capa.jpeg")
-    expect(settings.cover_url).to eq("/capa.jpeg")
+    expect(settings.logo_url).to be_nil
+    expect(settings.banner_url).to be_nil
+    expect(settings.cover_url).to be_nil
     expect(settings.visual_template_id).to eq("hamburgueria-premium")
-    expect(company.app_banners.where(image_url: "/capa.jpeg", is_active: true)).to exist
+    expect(company.app_banners).to be_empty
     expect(instance.instance_token).to be_present
     expect(instance.provider).to eq("evolution_go")
     expect(instance.status).to eq("created")
     expect(client).to have_received(:create_instance).with("replymesh_nova_loja", token: instance.instance_token)
-    expect(client).to have_received(:configure_location_webhook).with(
-      instance.instance_token,
-      webhook_token: kind_of(String)
-    )
+    expect(client).to have_received(:ensure_webhooks).with(instance, remote: hash_including(status: "created"))
   end
 end

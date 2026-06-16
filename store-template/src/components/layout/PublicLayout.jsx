@@ -1,18 +1,21 @@
 ﻿import { Outlet, useLocation } from 'react-router-dom'
 import { ShoppingCart, Menu, X, Store, CircleAlert } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from '../../hooks/useCart'
 import { Link, useNavigate } from 'react-router-dom'
 import BrandLogo from '../shared/BrandLogo'
-import { usePublicStoreInfo } from '../../hooks/usePublicStoreInfo'
+import { usePublicStoreInfoLoader } from '../../hooks/usePublicStoreInfo'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
+import { PublicStoreInfoProvider } from '../../contexts/PublicStoreInfoContext'
 import { StoreTemplateProvider } from '../../contexts/StoreTemplateContext'
 import PremiumHeader from '../../templates/hamburgueria-premium/components/PremiumHeader'
+import { updateTenantFavicon } from '../../utils/tenantBranding'
 
 export const PublicLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { cart } = useCart()
-  const { store, loading, error, refetch } = usePublicStoreInfo()
+  const publicStoreInfo = usePublicStoreInfoLoader()
+  const { store, loading, error, refetch } = publicStoreInfo
   const navigate = useNavigate()
   const location = useLocation()
   const base = useCompanyBasePath()
@@ -21,6 +24,10 @@ export const PublicLayout = () => {
   const storeName = store?.name || store?.store_name || ''
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
   const isPremiumTemplate = store?.visual_template_id === 'hamburgueria-premium'
+
+  useEffect(() => {
+    updateTenantFavicon(loading ? null : store)
+  }, [loading, store])
 
   if (loading && !store) {
     return (
@@ -65,26 +72,31 @@ export const PublicLayout = () => {
 
   if (isTableQrRoute) {
     return (
-      <StoreTemplateProvider templateId={store?.visual_template_id}>
-        <div className="min-h-screen bg-dark-950">
-          <Outlet />
-        </div>
-      </StoreTemplateProvider>
+      <PublicStoreInfoProvider value={publicStoreInfo}>
+        <StoreTemplateProvider templateId={store?.visual_template_id}>
+          <div className="min-h-screen bg-dark-950">
+            <Outlet />
+          </div>
+        </StoreTemplateProvider>
+      </PublicStoreInfoProvider>
     )
   }
 
   if (isPremiumTemplate) {
     return (
-      <StoreTemplateProvider templateId={store?.visual_template_id}>
-        <div className="min-h-screen" style={{ background: '#0c0c0e', color: '#f4f3f1', fontFamily: "'Poppins', system-ui, sans-serif" }}>
-          <PremiumHeader store={store} cartCount={cartItemsCount} basePath={base} />
-          <Outlet />
-        </div>
-      </StoreTemplateProvider>
+      <PublicStoreInfoProvider value={publicStoreInfo}>
+        <StoreTemplateProvider templateId={store?.visual_template_id}>
+          <div className="min-h-screen" style={{ background: '#0c0c0e', color: '#f4f3f1', fontFamily: "'Poppins', system-ui, sans-serif" }}>
+            <PremiumHeader store={store} cartCount={cartItemsCount} basePath={base} />
+            <Outlet />
+          </div>
+        </StoreTemplateProvider>
+      </PublicStoreInfoProvider>
     )
   }
 
   return (
+    <PublicStoreInfoProvider value={publicStoreInfo}>
     <StoreTemplateProvider templateId={store?.visual_template_id}>
     <div className="min-h-screen bg-dark-950">
       <header className="fixed top-0 left-0 right-0 bg-dark-900/95 backdrop-blur-sm border-b border-dark-700 z-50">
@@ -109,8 +121,8 @@ export const PublicLayout = () => {
               <Link to={`${base}/minha-conta`} className="text-gray-300 hover:text-white transition-colors">
                 Minha conta
               </Link>
-              <Link to={`${base}/roleta`} className="text-gray-300 hover:text-white transition-colors">
-                Roleta
+              <Link to={`${base}/promocoes`} className="text-gray-300 hover:text-white transition-colors">
+                Promoções
               </Link>
             </nav>
 
@@ -162,11 +174,11 @@ export const PublicLayout = () => {
                 Minha conta
               </Link>
               <Link
-                to={`${base}/roleta`}
+                to={`${base}/promocoes`}
                 className="block px-3 py-2 text-gray-300 hover:text-white hover:bg-dark-800 rounded-lg"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Roleta
+                Promoções
               </Link>
             </nav>
           </div>
@@ -196,5 +208,6 @@ export const PublicLayout = () => {
       </footer>
     </div>
     </StoreTemplateProvider>
+    </PublicStoreInfoProvider>
   )
 }

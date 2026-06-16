@@ -1,5 +1,12 @@
 import { REPLYMESH_API_URL } from './replymeshApi'
 import { STORE_COMPANY_ID, setCurrentStoreCompany } from './storeApi'
+import {
+  clearStoreAuthSession,
+  getStoreAuthToken,
+  readStoreAuthSession,
+  resolveStoreAuthSlug,
+  writeStoreAuthSession,
+} from './storeAuthStorage'
 
 const REPLYMESH_AUTH_EVENT = 'replymesh-auth-changed'
 
@@ -13,10 +20,15 @@ const membershipRoleToProfileRole = (role) => {
 }
 
 const buildReplymeshProfile = (user, options = {}) => {
+  const companySlug = options.companySlug || resolveStoreAuthSlug()
   const membership = (user.company_members || []).find((member) => (
+    member.status === 'active' && (
     String(member.company_id) === String(options.companyId || localStorage.getItem('replymesh_store_company_id')) ||
-    String(member.company_slug) === String(options.companySlug || localStorage.getItem('replymesh_store_company_slug'))
-  )) || (user.company_members || [])[0]
+    String(member.company_slug) === String(companySlug)
+    )
+  ))
+
+  if (!membership || membership.company_slug !== companySlug) return null
 
   return {
     id: user.id,
@@ -45,9 +57,11 @@ export const signIn = async (email, password, options = {}) => {
   }
 
   const profile = buildReplymeshProfile(payload.user, options)
-  localStorage.setItem('replymesh_store_token', payload.token)
-  localStorage.setItem('replymesh_store_user', JSON.stringify(payload.user))
-  localStorage.setItem('replymesh_store_profile', JSON.stringify(profile))
+  if (!profile) {
+    clearStoreAuthSession(options.companySlug)
+    throw new Error('Sua conta nao possui acesso ativo a esta empresa.')
+  }
+  writeStoreAuthSession(options.companySlug, { token: payload.token, user: payload.user, profile })
   setCurrentStoreCompany({
     companyId: options.companyId || localStorage.getItem('replymesh_store_company_id') || STORE_COMPANY_ID,
     slug: options.companySlug || localStorage.getItem('replymesh_store_company_slug'),
@@ -57,9 +71,7 @@ export const signIn = async (email, password, options = {}) => {
 }
 
 export const signOut = async () => {
-  localStorage.removeItem('replymesh_store_token')
-  localStorage.removeItem('replymesh_store_user')
-  localStorage.removeItem('replymesh_store_profile')
+  clearStoreAuthSession()
   window.dispatchEvent(new CustomEvent(REPLYMESH_AUTH_EVENT))
   return true
 }
@@ -69,19 +81,17 @@ export const signUp = async () => {
 }
 
 export const getCurrentUser = async () => {
-  const raw = localStorage.getItem('replymesh_store_user')
-  return raw ? JSON.parse(raw) : null
+  return readStoreAuthSession()?.user || null
 }
 
 export const getUserProfile = async () => {
-  const raw = localStorage.getItem('replymesh_store_profile')
-  return raw ? JSON.parse(raw) : null
+  return readStoreAuthSession()?.profile || null
 }
 
 const railsStoreHeaders = () => ({
   Accept: 'application/json',
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('replymesh_store_token')}`,
+  Authorization: `Bearer ${getStoreAuthToken()}`,
   'X-Company-Id': localStorage.getItem('replymesh_store_company_id') || STORE_COMPANY_ID,
 })
 

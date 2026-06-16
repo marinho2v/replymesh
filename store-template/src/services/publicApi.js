@@ -17,7 +17,7 @@ const publicPath = (slug, path) => `/public/${encodeURIComponent(resolvedPublicS
 const mapStore = (store = {}) => ({
   ...store,
   name: store.store_name || store.name,
-  logo_url: store.logo_url || '/logo.png',
+  logo_url: store.logo_url || '',
   cover_url: store.cover_url || store.banner_url || '',
   display_address: [store.address, store.city, store.state].filter(Boolean).join(' - '),
   default_delivery_fee: centsToCurrency(store.default_delivery_fee_cents),

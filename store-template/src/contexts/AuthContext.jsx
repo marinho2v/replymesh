@@ -1,4 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  clearStoreAuthSession,
+  readStoreAuthSession,
+  resolveStoreAuthSlug,
+} from '../services/storeAuthStorage'
 
 const AuthContext = createContext(null)
 
@@ -45,30 +50,23 @@ export const AuthProvider = ({ children }) => {
 
   const loadReplymeshSession = useCallback(() => {
     const impersonating = Boolean(getValidImpersonation())
-    const token = impersonating
-      ? localStorage.getItem('replymesh_impersonation_token')
-      : localStorage.getItem('replymesh_store_token')
-    const rawUser = impersonating
-      ? localStorage.getItem('replymesh_impersonation_user')
-      : localStorage.getItem('replymesh_store_user')
-    const rawProfile = impersonating
-      ? localStorage.getItem('replymesh_impersonation_profile')
-      : localStorage.getItem('replymesh_store_profile')
+    const tenantSession = impersonating ? null : readStoreAuthSession(resolveStoreAuthSlug())
+    const token = impersonating ? localStorage.getItem('replymesh_impersonation_token') : tenantSession?.token
+    const rawUser = impersonating ? localStorage.getItem('replymesh_impersonation_user') : tenantSession?.user
+    const rawProfile = impersonating ? localStorage.getItem('replymesh_impersonation_profile') : tenantSession?.profile
 
     if (!token || !rawUser || !rawProfile) return false
 
     try {
-      setUser(JSON.parse(rawUser))
-      setProfile(JSON.parse(rawProfile))
+      setUser(impersonating ? JSON.parse(rawUser) : rawUser)
+      setProfile(impersonating ? JSON.parse(rawProfile) : rawProfile)
       setLoading(false)
       return true
     } catch {
       if (impersonating) {
         clearImpersonationSession()
       } else {
-        localStorage.removeItem('replymesh_store_token')
-        localStorage.removeItem('replymesh_store_user')
-        localStorage.removeItem('replymesh_store_profile')
+        clearStoreAuthSession()
       }
       return false
     }

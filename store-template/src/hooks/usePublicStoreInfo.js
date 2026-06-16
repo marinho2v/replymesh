@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useCompanySlug } from '../contexts/CompanySlugContext'
+import { useSharedPublicStoreInfo } from '../contexts/PublicStoreInfoContext'
 import {
   getPublicBanners,
   getPublicBusinessHours,
@@ -15,7 +16,7 @@ const DEFAULT_PUBLIC_STORE = {
   deliveryZones: [],
 }
 
-export const usePublicStoreInfo = (slugOverride) => {
+export const usePublicStoreInfoLoader = (slugOverride, enabled = true) => {
   const contextSlug = useCompanySlug()
   const slug = slugOverride || contextSlug
 
@@ -26,10 +27,20 @@ export const usePublicStoreInfo = (slugOverride) => {
   const [deliveryZones, setDeliveryZones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [loadedSlug, setLoadedSlug] = useState(null)
 
   const refetch = useCallback(async () => {
+    if (!enabled) return
+
     try {
       setLoading(true)
+      setLoadedSlug(null)
+      setStore(null)
+      setBanners([])
+      setBusinessHours([])
+      setBusinessHourExceptions([])
+      setDeliveryZones([])
+      setError(null)
       const storeData = await getPublicStoreInfo(slug)
       const [bannersData, hoursData, deliveryZonesData] = await Promise.all([
         getPublicBanners(slug),
@@ -42,6 +53,7 @@ export const usePublicStoreInfo = (slugOverride) => {
       setBusinessHourExceptions(hoursData?.exceptions || [])
       setDeliveryZones(deliveryZonesData || [])
       setError(null)
+      setLoadedSlug(slug)
     } catch (err) {
       setStore(DEFAULT_PUBLIC_STORE.store)
       setBanners(DEFAULT_PUBLIC_STORE.banners)
@@ -49,23 +61,34 @@ export const usePublicStoreInfo = (slugOverride) => {
       setBusinessHourExceptions(DEFAULT_PUBLIC_STORE.businessHourExceptions)
       setDeliveryZones(DEFAULT_PUBLIC_STORE.deliveryZones)
       setError(err)
+      setLoadedSlug(slug)
     } finally {
       setLoading(false)
     }
-  }, [slug])
+  }, [enabled, slug])
 
   useEffect(() => {
+    if (!enabled) return undefined
     refetch()
-  }, [refetch])
+    return undefined
+  }, [enabled, refetch])
+
+  const hasCurrentSlug = loadedSlug === slug
 
   return {
-    store,
-    banners,
-    businessHours,
-    businessHourExceptions,
-    deliveryZones,
-    loading,
-    error,
+    store: hasCurrentSlug ? store : null,
+    banners: hasCurrentSlug ? banners : [],
+    businessHours: hasCurrentSlug ? businessHours : [],
+    businessHourExceptions: hasCurrentSlug ? businessHourExceptions : [],
+    deliveryZones: hasCurrentSlug ? deliveryZones : [],
+    loading: loading || !hasCurrentSlug,
+    error: hasCurrentSlug ? error : null,
     refetch,
   }
+}
+
+export const usePublicStoreInfo = (slugOverride) => {
+  const shared = useSharedPublicStoreInfo()
+  const local = usePublicStoreInfoLoader(slugOverride, !shared)
+  return shared || local
 }
