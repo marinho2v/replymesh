@@ -83,3 +83,69 @@ PASSOU em codigo local.
 IA/ONBOARDING COM PENDENCIAS
 
 Pendencia unica: deploy controlado da Store e validacao visual em uma empresa QA/producao.
+
+---
+
+## Complemento pos-publicacao
+
+Data: 2026-06-16
+
+### Commits publicados
+
+- `8bce2e7136a43124c67e30629b3baf49a9b14c86` - `Replymesh Move AI Settings And Add Admin Onboarding`
+- `839e028fa28685e270cdfab636da1cb3248b727c` - `Replymesh Restore Store Domain Helpers For Clean Build`
+
+Observacao:
+
+- O commit `839e028` foi necessario porque o build limpo na VPS falhou com `companyBasePath is not exported by src/utils/companyDomain.js`.
+- A correcao foi limitada aos exports usados pela Store:
+  - `companyBasePath`
+  - `cleanLegacyCompanyPath`
+
+### Deploy
+
+- Deploy realizado somente da Store.
+- Build executado a partir de worktree limpo do commit `839e028fa28685e270cdfab636da1cb3248b727c`.
+- Build directory:
+  - `/opt/replymesh/builds/store-ai-onboarding-20260616-144602`
+- Backup antes da publicacao:
+  - `/opt/replymesh/backups/store-ai-onboarding-20260616-144602/store-current.tgz`
+- Container recriado:
+  - `replymesh-store`
+- Motivo do recreate:
+  - O bind mount estava preso ao diretorio antigo apos recriacao de `/opt/replymesh/store`, deixando `/usr/share/nginx/html` vazio dentro do container.
+  - Recriar somente `replymesh-store` remontou corretamente a pasta publicada.
+
+### Validacao producao
+
+- `https://api.replymesh.cloud/up`: 200
+- `https://lanchedo2r.replymesh.cloud/`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/settings`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/ai`: 200
+- `https://lanchedo2r.replymesh.cloud/admin/inteligencia-artificial`: 200
+- Bundle publicado contem:
+  - `StoreAiSettings`
+  - `Inteligencia Artificial`
+  - `Atendimento automatico indisponivel no momento.`
+  - `Comece por aqui!`
+- Grep no bundle publicado para `127.0.0.1` e `localhost`: sem ocorrencias.
+- `replymesh-store`: ativo com imagem `nginx:alpine`.
+- `replymesh-rails-api`: permaneceu ativo, sem rebuild/recreate nesta fase.
+- `dokploy-traefik`: permaneceu ativo, sem alteracao.
+
+### Validacao funcional observavel
+
+- `/admin/settings` carrega o SPA e nao depende mais do modulo de IA.
+- `/admin/ai` e `/admin/inteligencia-artificial` carregam o SPA com bundle da pagina propria.
+- O bloqueio de IA fica restrito a pagina propria e usa mensagem neutra.
+- O card de onboarding existe no bundle do Dashboard e usa `localStorage` por empresa.
+- A restricao para nao aparecer a perfis operacionais foi implementada por checagem de role no Dashboard.
+
+### Pendencias
+
+- Validacao visual autenticada em navegador com usuario admin ainda depende de login manual para confirmar estado real de feature ativa/inativa e console do browser.
+- Nao houve alteracao em Evolution, Mercado Pago, banco, migrations, seeds, reset ou drop.
+
+## Status final
+
+IA/ONBOARDING PUBLICADO
