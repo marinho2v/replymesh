@@ -78,7 +78,7 @@ export const getReplymeshAuthToken = () => {
     const sameCompany = !currentCompanyId || String(impersonation.company_id) === String(currentCompanyId)
     const sameSlug = !currentCompanySlug || String(impersonation.company_slug) === String(currentCompanySlug)
 
-    if (!expired && sameCompany && sameSlug) return impersonationToken
+    if (!expired && sameCompany && (sameSlug || currentCompanyId)) return impersonationToken
     clearImpersonationSession()
   }
 

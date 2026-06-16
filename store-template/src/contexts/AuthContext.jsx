@@ -27,7 +27,7 @@ const getValidImpersonation = () => {
     const sameCompany = !currentCompanyId || String(impersonation?.company_id) === String(currentCompanyId)
     const sameSlug = !currentCompanySlug || String(impersonation?.company_slug) === String(currentCompanySlug)
 
-    if (impersonation && !expired && sameCompany && sameSlug) return impersonation
+    if (impersonation && !expired && sameCompany && (sameSlug || currentCompanyId)) return impersonation
   } catch {
     // Sessao temporaria invalida; volta para o login normal da loja.
   }
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const parsedUser = impersonating ? JSON.parse(rawUser) : rawUser
       const parsedProfile = impersonating ? JSON.parse(rawProfile) : rawProfile
-      if (!companySlug || parsedProfile?.company_slug !== companySlug) {
+      if (!companySlug || (!impersonating && parsedProfile?.company_slug !== companySlug)) {
         if (impersonating) {
           clearImpersonationSession()
         } else {

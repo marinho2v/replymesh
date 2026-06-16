@@ -1,28 +1,38 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Loader2, ShieldCheck } from 'lucide-react'
+import { useCompanyBasePath, useCompanySlug } from '../../contexts/CompanySlugContext'
 
 const MasterImpersonation = () => {
-  const { companySlug } = useParams()
+  const { companySlug: pathCompanySlug } = useParams()
+  const contextCompanySlug = useCompanySlug()
+  const basePath = useCompanyBasePath()
+  const companySlug = pathCompanySlug || contextCompanySlug
   const navigate = useNavigate()
   const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
 
+    const readParam = (key) => {
+      const searchParams = new URLSearchParams(window.location.search)
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      return searchParams.get(key) || hashParams.get(key)
+    }
+
     const start = async () => {
       try {
-        const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-        const token = params.get('token')
-        const sessionToken = params.get('session_token')
-        const companyId = params.get('company_id')
-        const slug = params.get('company_slug') || companySlug
-        const companyName = params.get('company_name')
-        const masterName = params.get('master_name')
-        const rawUser = params.get('user')
-        const expiresAt = params.get('expires_at')
+        const token = readParam('token')
+        const sessionToken = readParam('session_token')
+        const companyId = readParam('company_id')
+        const payloadSlug = readParam('company_slug')
+        const slug = companySlug || payloadSlug
+        const companyName = readParam('company_name')
+        const masterName = readParam('master_name')
+        const rawUser = readParam('user')
+        const expiresAt = readParam('expires_at')
 
-        if (!token || !sessionToken || !companyId || !slug || slug !== companySlug || !expiresAt) {
+        if (!token || !sessionToken || !companyId || !slug || !expiresAt) {
           throw new Error('Acesso temporario invalido ou incompleto.')
         }
 
@@ -57,9 +67,9 @@ const MasterImpersonation = () => {
           previous_company_slug: previousCompanySlug,
         }))
 
-        window.history.replaceState({}, document.title, `/loja/${slug}/admin/impersonate`)
+        window.history.replaceState({}, document.title, `${basePath}/admin/impersonate`)
         window.dispatchEvent(new Event('replymesh-auth-changed'))
-        if (active) navigate(`/loja/${slug}/admin/dashboard`, { replace: true })
+        if (active) navigate(`${basePath}/admin/dashboard`, { replace: true })
       } catch (impersonationError) {
         if (active) setError(impersonationError.message || 'Nao foi possivel entrar na empresa.')
       }
@@ -67,7 +77,7 @@ const MasterImpersonation = () => {
 
     start()
     return () => { active = false }
-  }, [companySlug, navigate])
+  }, [basePath, companySlug, navigate])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">

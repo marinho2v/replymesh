@@ -15,7 +15,7 @@ export function companyImpersonationUrl(data) {
   const responseUrl = parsedLoginUrl && !localHosts.includes(parsedLoginUrl.hostname)
     ? parsedLoginUrl
     : new URL(`https://${slug}.replymesh.cloud`);
-  const loginUrl = `${responseUrl.origin}/loja/${slug}/admin/impersonate`;
+  const loginUrl = `${responseUrl.origin}/admin/impersonate`;
 
   return `${loginUrl}#${payload.toString()}`;
 }
