@@ -75,8 +75,9 @@ const Login = () => {
 
     getPublicStoreInfo(companySlug)
       .then(store => {
+        const storeSlug = store.slug || companySlug
         setStoreInfo(store)
-        setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: companySlug })
+        setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: storeSlug })
       })
       .catch(() => {
         localStorage.setItem('replymesh_store_company_slug', companySlug)
@@ -109,8 +110,9 @@ const Login = () => {
 
     try {
       const store = await getPublicStoreInfo(companySlug)
-      setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: companySlug })
-      await signIn(email, password, { companyId: store.company_id || store.id, companySlug })
+      const storeSlug = store.slug || companySlug
+      setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: storeSlug })
+      await signIn(email, password, { companyId: store.company_id || store.id, companySlug: storeSlug })
       localStorage.setItem(REMEMBER_LOGIN_KEY, rememberLogin ? 'true' : 'false')
 
       if (rememberLogin) {
