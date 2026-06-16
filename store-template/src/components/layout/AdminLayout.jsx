@@ -130,6 +130,7 @@ export const AdminLayout = () => {
   useEffect(() => {
     const handleFeatureUnavailable = (event) => {
       const featureKey = event.detail?.feature
+      if (featureKey === 'store_ai' && location.pathname.includes('/admin/ai')) return
       setUpgradeFeature({
         ...lockedFeatureInfo(featureKey),
         ...event.detail,
@@ -139,7 +140,7 @@ export const AdminLayout = () => {
 
     window.addEventListener('replymesh:feature-unavailable', handleFeatureUnavailable)
     return () => window.removeEventListener('replymesh:feature-unavailable', handleFeatureUnavailable)
-  }, [featureMap])
+  }, [featureMap, location.pathname])
 
   const isFeatureLocked = (featureKey) => {
     if (!featureKey) return false
@@ -222,6 +223,7 @@ export const AdminLayout = () => {
         { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'], feature: 'whatsapp_templates' },
         { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Recuperador de Vendas', roles: ['admin'], feature: 'sales_recovery' },
+        { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'] },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
       ],
     },

@@ -44,6 +44,7 @@ const Reports = lazy(() => import('../pages/admin/Reports'))
 const CashRegister = lazy(() => import('../pages/admin/CashRegister'))
 const Tables = lazy(() => import('../pages/admin/Tables'))
 const Settings = lazy(() => import('../pages/admin/Settings'))
+const StoreAiSettings = lazy(() => import('../pages/admin/StoreAiSettings'))
 const Whatsapp = lazy(() => import('../pages/admin/Whatsapp'))
 const WhatsappQrCode = lazy(() => import('../pages/admin/WhatsappQrCode'))
 const WhatsappTemplates = lazy(() => import('../pages/admin/WhatsappTemplates'))
@@ -95,11 +96,6 @@ const AdminIndexRedirect = () => {
       ? `${basePath}/admin/orders`
       : `${basePath}/admin/dashboard`
   return <Navigate to={target} replace />
-}
-
-const RemovedStoreAiRedirect = () => {
-  const basePath = useCompanyBasePath()
-  return <Navigate to={`${basePath}/admin/dashboard`} replace />
 }
 
 const LegacySubdomainRedirect = ({ companySlug, children }) => {
@@ -235,7 +231,8 @@ const adminChildren = [
   { path: 'whatsapp-templates', element: protectedPage(WhatsappTemplates, ['admin']) },
   { path: 'marketing-whatsapp', element: protectedPage(MarketingWhatsapp, ['admin']) },
   { path: 'sales-recovery', element: protectedPage(SalesRecovery, ['admin']) },
-  { path: 'ai', element: <RemovedStoreAiRedirect /> },
+  { path: 'ai', element: protectedPage(StoreAiSettings, ['admin']) },
+  { path: 'inteligencia-artificial', element: protectedPage(StoreAiSettings, ['admin']) },
   { path: 'motoboys', element: page(Motoboys) },
   { path: 'inventory', element: protectedPage(Inventory, ['admin']) },
   { path: 'inventory/movements', element: protectedPage(InventoryMovements, ['admin']) },
