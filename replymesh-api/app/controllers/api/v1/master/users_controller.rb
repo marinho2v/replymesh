@@ -15,10 +15,10 @@ module Api
 
         def create
           user = User.new(user_params)
-          user.global_role = "user"
+          normalize_master_role!(user)
           user.password = params.dig(:user, :password).presence || SecureRandom.base58(14)
           user.status ||= "active"
-          return render json: { success: false, error: "Funcao master obrigatoria" }, status: :unprocessable_entity if user.master_role_id.blank?
+          return render json: { success: false, error: "Funcao master obrigatoria" }, status: :unprocessable_entity unless valid_master_role_assignment?(user)
 
           if user.save
             audit!("master_user_created", resource: user, metadata: safe_user_metadata(user))
@@ -29,7 +29,13 @@ module Api
         end
 
         def update
-          if @user.update(user_params)
+          @user.assign_attributes(user_params)
+          normalize_master_role!(@user)
+          return render json: { success: false, error: "Funcao master obrigatoria" }, status: :unprocessable_entity unless valid_master_role_assignment?(@user)
+          return render json: { success: false, error: "Voce nao pode remover seu proprio acesso super admin" }, status: :unprocessable_entity if removing_own_super_admin?
+          return render json: { success: false, error: "Nao e permitido remover o ultimo super admin ativo" }, status: :unprocessable_entity if removing_last_active_super_admin?
+
+          if @user.save
             audit!("master_user_updated", resource: @user, metadata: safe_user_metadata(@user))
             render json: { success: true, user: serialize(@user) }
           else
@@ -58,11 +64,12 @@ module Api
 
         def destroy
           return render json: { success: false, error: "Voce nao pode excluir a propria conta" }, status: :unprocessable_entity if @user == current_user
-          return render json: { success: false, error: "Super admin deve ser apenas desativado com validacao manual" }, status: :unprocessable_entity if @user.super_admin?
+          return render json: { success: false, error: "Nao e permitido excluir o ultimo super admin ativo" }, status: :unprocessable_entity if last_active_super_admin?(@user)
 
-          @user.update!(status: "inactive", master_role: nil)
-          audit!("master_user_safely_removed", resource: @user, metadata: { target_user_id: @user.id })
-          render json: { success: true, user: serialize(@user), message: "Usuario removido do acesso master" }
+          original_email = @user.email
+          @user.release_email_for_reuse!
+          audit!("master_user_safely_removed", resource: @user, metadata: { target_user_id: @user.id, released_email: original_email })
+          render json: { success: true, user: serialize(@user), message: "Usuario removido e email liberado para novo cadastro" }
         end
 
         private
@@ -75,7 +82,31 @@ module Api
         end
 
         def user_params
-          params.require(:user).permit(:name, :email, :phone, :avatar_url, :master_role_id, :status)
+          params.require(:user).permit(:name, :email, :phone, :avatar_url, :global_role, :master_role_id, :status)
+        end
+
+        def normalize_master_role!(user)
+          if user.global_role == "super_admin"
+            user.master_role = nil
+          else
+            user.global_role = "user"
+          end
+        end
+
+        def valid_master_role_assignment?(user)
+          user.super_admin? || user.master_role_id.present?
+        end
+
+        def removing_own_super_admin?
+          @user == current_user && @user.global_role_changed? && @user.global_role != "super_admin"
+        end
+
+        def removing_last_active_super_admin?
+          @user.global_role_changed? && @user.global_role_was == "super_admin" && last_active_super_admin?(@user)
+        end
+
+        def last_active_super_admin?(user)
+          user.super_admin? && !User.where(global_role: "super_admin", status: "active").where.not(id: user.id).exists?
         end
 
         def serialize(user)

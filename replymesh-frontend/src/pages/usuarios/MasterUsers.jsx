@@ -3,7 +3,7 @@ import { Badge } from "../../components/ui/Badge.jsx";
 import { Icon } from "../../components/ui/Icon.jsx";
 import { api } from "../../services/api.js";
 
-const EMPTY = { name: "", email: "", phone: "", avatar_url: "", master_role_id: "", status: "active", password: "" };
+const EMPTY = { name: "", email: "", phone: "", avatar_url: "", global_role: "user", master_role_id: "", status: "active", password: "" };
 
 function fmt(value) {
   if (!value) return "Nunca";
@@ -120,10 +120,10 @@ export function MasterUsers({ onToast }) {
             <td><Badge tone={user.status === "active" ? "green" : "gray"}>{user.status === "active" ? "Ativo" : "Inativo"}</Badge></td>
             <td>{fmt(user.last_sign_in_at)}</td><td>{fmt(user.created_at)}</td>
             <td><div className="row-actions" style={{ justifyContent: "flex-end" }}>
-              <button className="ra" title="Editar" onClick={() => setForm({ ...EMPTY, ...user, master_role_id: user.master_role?.id || "" })}><Icon name="Pencil" size={15} /></button>
+              <button className="ra" title="Editar" onClick={() => setForm({ ...EMPTY, ...user, global_role: user.super_admin ? "super_admin" : "user", master_role_id: user.master_role?.id || "" })}><Icon name="Pencil" size={15} /></button>
               <button className="ra" title="Redefinir senha" onClick={() => resetPassword(user)}><Icon name="KeyRound" size={15} /></button>
               <button className="ra" title={user.status === "active" ? "Desativar" : "Ativar"} onClick={() => changeStatus(user)}><Icon name={user.status === "active" ? "UserX" : "UserCheck"} size={15} /></button>
-              {!user.super_admin && <button className="ra danger-icon" title="Remover acesso" onClick={() => remove(user)}><Icon name="Trash2" size={15} /></button>}
+              <button className="ra danger-icon" title="Remover acesso" onClick={() => remove(user)}><Icon name="Trash2" size={15} /></button>
             </div></td>
           </tr>)}
           {!loading && filtered.length === 0 && <tr><td colSpan="7"><div className="empty"><div className="et">Nenhum usuario encontrado</div></div></td></tr>}
@@ -136,6 +136,7 @@ export function MasterUsers({ onToast }) {
           <div className="field"><label>Email</label><input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></div>
           <div className="field"><label>Telefone</label><input value={form.phone || ""} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></div>
           <div className="field"><label>Avatar URL</label><input value={form.avatar_url || ""} onChange={(event) => setForm({ ...form, avatar_url: event.target.value })} /></div>
+          <div className="field"><label>Tipo de acesso</label><select value={form.global_role || "user"} onChange={(event) => setForm({ ...form, global_role: event.target.value, master_role_id: event.target.value === "super_admin" ? "" : form.master_role_id })}><option value="user">Funcao interna</option><option value="super_admin">Super Admin</option></select></div>
           <div className="field"><label>Funcao</label><select value={form.master_role_id || ""} onChange={(event) => setForm({ ...form, master_role_id: event.target.value })} disabled={form.global_role === "super_admin"}><option value="">Selecione</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></div>
           <div className="field"><label>Status</label><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">Ativo</option><option value="inactive">Inativo</option><option value="suspended">Suspenso</option></select></div>
           {!form.id && <div className="field full"><label>Senha inicial</label><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Minimo de 8 caracteres" /></div>}

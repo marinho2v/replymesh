@@ -43,6 +43,17 @@ class User < ApplicationRecord
     super_admin? || master_role&.allows?(permission)
   end
 
+  def release_email_for_reuse!
+    original_email = email
+    timestamp = Time.current.to_i
+
+    self.email = "deleted+#{id}-#{timestamp}-#{original_email}"
+    self.status = "inactive"
+    self.master_role = nil
+    self.password = SecureRandom.base58(32)
+    save!
+  end
+
   def as_json(options = {})
     super({ only: %i[id name email phone avatar_url global_role status last_sign_in_at created_at updated_at] }.merge(options))
       .merge(master_role: master_role&.as_json_safe)

@@ -54,7 +54,7 @@ module Api
 
         def destroy
           @member.update!(status: "inactive")
-          @member.user.update!(status: "inactive") if @member.user.company_members.active.count <= 1
+          release_or_disable_user!(@member.user)
           render_ok(user: serialize(@member.reload), message: "Usuario desativado")
         end
 
@@ -99,6 +99,13 @@ module Api
           return ActiveModel::Type::Boolean.new.cast(user_params[:is_active]) if user_params.key?(:is_active)
 
           true
+        end
+
+        def release_or_disable_user!(user)
+          return if user.master_user?
+          return if user.company_members.active.exists?
+
+          user.release_email_for_reuse!
         end
 
         def serialize(member)

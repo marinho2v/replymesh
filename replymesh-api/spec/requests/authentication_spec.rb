@@ -38,4 +38,42 @@ RSpec.describe "Authentication", type: :request do
     expect(response).to have_http_status(:forbidden)
     expect(json["error"]).to eq("master_forbidden")
   end
+
+  it "allows a master role user when the permission is granted" do
+    role = MasterRole.create!(
+      name: "Empresas",
+      key: "companies-#{SecureRandom.hex(2)}",
+      permissions: { "companies.view" => true },
+      status: "active"
+    )
+    master_user = create_user(email: "companies-reader@example.com", master_role: role)
+
+    get "/api/v1/master/companies", headers: auth_headers(master_user)
+
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "releases the email when a master user is removed" do
+    role = MasterRole.create!(
+      name: "Usuarios",
+      key: "users-#{SecureRandom.hex(2)}",
+      permissions: { "users.edit" => true },
+      status: "active"
+    )
+    target = create_user(email: "removed-master@example.com", master_role: role)
+
+    delete "/api/v1/master/users/#{target.id}", headers: auth_headers(master)
+
+    expect(response).to have_http_status(:ok)
+    expect(target.reload.email).to start_with("deleted+")
+    expect(User.create!(name: "Novo Master", email: "removed-master@example.com", password: "admin123456", global_role: "user", status: "active", master_role: role)).to be_persisted
+  end
+
+  it "releases the email when a store user has no active company membership" do
+    delete "/api/v1/store/users/#{store_user.id}", headers: auth_headers(store_user, company: company)
+
+    expect(response).to have_http_status(:ok)
+    expect(store_user.reload.email).to start_with("deleted+")
+    expect(User.create!(name: "Novo Loja", email: "loja@example.com", password: "admin123456", global_role: "user", status: "active")).to be_persisted
+  end
 end

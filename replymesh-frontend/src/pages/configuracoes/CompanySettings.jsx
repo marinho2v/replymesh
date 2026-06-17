@@ -108,7 +108,7 @@ export function CompanySettings({ onToast }) {
     if (!companyId) return;
 
     setError("");
-    const data = await api.getCompanySettings(companyId);
+    const data = await api.getMasterCompanyStoreSettings(companyId);
     setForm(normalizeSettings(data.settings));
   };
 
@@ -126,7 +126,7 @@ export function CompanySettings({ onToast }) {
         setSelectedCompanyId(firstId);
 
         if (firstId) {
-          const settingsData = await api.getCompanySettings(firstId);
+          const settingsData = await api.getMasterCompanyStoreSettings(firstId);
           if (!active) return;
           setForm(normalizeSettings(settingsData.settings));
         }
@@ -213,7 +213,7 @@ export function CompanySettings({ onToast }) {
           company_id: selectedCompanyId,
         },
       };
-      const data = await api.updateCompanySettings(payload);
+      const data = await api.updateMasterCompanyStoreSettings(selectedCompanyId, payload);
       setForm(normalizeSettings(data.settings));
       onToast?.("Configuracoes salvas", "ok");
     } catch (err) {

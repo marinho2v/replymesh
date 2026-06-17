@@ -21,13 +21,17 @@ export function isSuperAdmin(user) {
   return user?.global_role === "super_admin";
 }
 
+export function isMasterUser(user) {
+  return isSuperAdmin(user) || Boolean(user?.master_role || user?.master_role_id);
+}
+
 export function getStoredUser() {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
 
   try {
     const user = JSON.parse(raw);
-    if (!isSuperAdmin(user)) {
+    if (!isMasterUser(user)) {
       clearSession();
       return null;
     }
@@ -38,9 +42,9 @@ export function getStoredUser() {
 }
 
 export function saveSession({ token, user }) {
-  if (!isSuperAdmin(user)) {
+  if (!isMasterUser(user)) {
     clearSession();
-    throw new ApiError("Acesso restrito ao super admin.", {
+    throw new ApiError("Acesso restrito ao painel Master.", {
       status: 403,
       data: { error: "master_forbidden" },
     });
@@ -74,11 +78,23 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
 
-  if (response.status === 401 || (response.status === 403 && data?.error === "master_forbidden")) {
+  if (response.status === 401) {
     clearSession();
     window.dispatchEvent(new CustomEvent("replymesh:unauthorized"));
     throw new ApiError(
       data.message || data.error || "Sessao expirada. Faca login novamente.",
+      { status: response.status, data },
+    );
+  }
+
+  if (response.status === 403 && data?.error === "master_forbidden") {
+    if (!getStoredUser()) {
+      clearSession();
+      window.dispatchEvent(new CustomEvent("replymesh:unauthorized"));
+    }
+
+    throw new ApiError(
+      data.message || data.error || "Voce nao tem permissao para esta area.",
       { status: response.status, data },
     );
   }

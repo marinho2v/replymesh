@@ -21,34 +21,36 @@ class ApplicationController < ActionController::API
 
   def require_super_admin!
     return if current_user&.super_admin?
-
-    record_denied_master_access(master_permission_for_request)
-    render json: {
-      success: false,
-      error: "master_forbidden",
-      message: "Acesso restrito ao super admin"
-    }, status: :forbidden
-  end
-
-  def require_master_permission!(permission)
-    return if current_user&.super_admin?
+    permission = master_permission_for_request
+    return if permission.present? && current_user&.master_permission?(permission)
 
     record_denied_master_access(permission)
     render json: {
       success: false,
       error: "master_forbidden",
-      message: "Acesso restrito ao super admin"
+      message: "Acesso restrito ao Master"
+    }, status: :forbidden
+  end
+
+  def require_master_permission!(permission)
+    return if current_user&.master_permission?(permission)
+
+    record_denied_master_access(permission)
+    render json: {
+      success: false,
+      error: "master_forbidden",
+      message: "Acesso restrito ao Master"
     }, status: :forbidden
   end
 
   def require_master_user!
-    return if current_user&.super_admin?
+    return if current_user&.master_user?
 
     record_denied_master_access(master_permission_for_request)
     render json: {
       success: false,
       error: "master_forbidden",
-      message: "Acesso restrito ao super admin"
+      message: "Acesso restrito ao Master"
     }, status: :forbidden
   end
 
@@ -131,6 +133,8 @@ class ApplicationController < ActionController::API
     action = action_name
 
     case controller
+    when "dashboard"
+      "companies.view"
     when "companies"
       return "companies.view" if %w[index show].include?(action)
       return "companies.create" if action == "create"
