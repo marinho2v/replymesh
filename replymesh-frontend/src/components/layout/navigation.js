@@ -81,7 +81,7 @@ export const NAV = [
       { id: "logs:atividades", label: "Atividades", path: "/logs/atividades" },
       { id: "logs:erros", label: "Erros", path: "/logs/erros" },
       { id: "logs:webhooks", label: "Webhooks", path: "/logs/webhooks" },
-      { id: "logs:evolution", label: "Evolution", path: "/logs/evolution" },
+      { id: "logs:evolution", label: "WhatsApp", path: "/logs/evolution" },
       { id: "logs:automacoes", label: "Automacoes", path: "/logs/automacoes" },
     ],
   },

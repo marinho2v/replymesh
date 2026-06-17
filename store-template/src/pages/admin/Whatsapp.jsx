@@ -153,7 +153,7 @@ const Whatsapp = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">WhatsApp</h1>
-          <p className="text-sm text-gray-400">Uma empresa usa uma unica instancia WhatsApp via Evolution Go.</p>
+          <p className="text-sm text-gray-400">Uma empresa usa uma unica conexao WhatsApp via Replymesh Connect.</p>
         </div>
         <Link
           to={`${basePath}/admin/whatsapp/templates`}

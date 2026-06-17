@@ -294,8 +294,8 @@ export const KB = {
 
   whatsapp: {
     title: 'WhatsApp',
-    keywords: ['whatsapp', 'conectar', 'desconectar', 'qr code', 'mensagem automática', 'notificação', 'evolution', 'instância'],
-    description: 'Integração com WhatsApp via Evolution API. Envio automático de notificações de pedidos.',
+    keywords: ['whatsapp', 'conectar', 'desconectar', 'qr code', 'mensagem automática', 'notificação', 'replymesh connect', 'instância'],
+    description: 'Integração com WhatsApp via Replymesh Connect. Envio automático de notificações de pedidos.',
     sections: [
       {
         title: 'Conectar o WhatsApp',

@@ -67,7 +67,7 @@ export default function AppBanners() {
     if (!confirm('Enviar esta mensagem pelo WhatsApp conectado da loja?')) return
     try {
       await sendIndividualMarketingMessage(message.phone, message.text)
-      toast.success('Mensagem enviada pela Evolution e registrada')
+      toast.success('Mensagem enviada pelo WhatsApp da loja e registrada')
       setMessage({ phone: '', text: '' })
     } catch (error) { toast.error(error.message) }
   }
@@ -118,12 +118,12 @@ export default function AppBanners() {
 
     {section === 'messages' && <Card><CardContent className="p-5 space-y-4">
       <h2 className="text-white font-semibold">Mensagens para usuarios do aplicativo</h2>
-      <p className="text-sm text-gray-400">Nesta fase a mensagem e entregue pelo WhatsApp da loja usando Evolution Go. Notificacao push nativa sera adicionada quando o aplicativo Android existir.</p>
+      <p className="text-sm text-gray-400">Nesta fase a mensagem e entregue pelo WhatsApp da loja usando o Replymesh Connect. Notificacao push nativa sera adicionada quando o aplicativo Android existir.</p>
       <div className="grid md:grid-cols-[280px_1fr] gap-4">
         <Input label="Telefone do usuario" value={message.phone} onChange={(e) => setMessage({ ...message, phone: e.target.value })} />
         <Textarea label="Mensagem" rows={4} value={message.text} onChange={(e) => setMessage({ ...message, text: e.target.value })} />
       </div>
-      <Button onClick={sendMessage}><Send size={16} className="mr-2" />Enviar pela Evolution</Button>
+      <Button onClick={sendMessage}><Send size={16} className="mr-2" />Enviar pelo WhatsApp</Button>
       <p className="text-xs text-amber-300">Mensagens em massa continuam no Marketing WhatsApp e sempre exigem confirmacao.</p>
     </CardContent></Card>}
   </div>

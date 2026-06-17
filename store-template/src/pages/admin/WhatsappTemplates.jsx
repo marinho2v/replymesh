@@ -192,7 +192,7 @@ const WhatsappTemplates = () => {
         <div>
           <h1 className="text-3xl font-bold text-white">Templates WhatsApp</h1>
           <p className="text-gray-400 mt-1">
-            Mensagens reutilizaveis com variaveis dinamicas enviadas pela Evolution.
+            Mensagens reutilizaveis com variaveis dinamicas enviadas pelo WhatsApp da loja.
           </p>
         </div>
         <Button onClick={handleCreate} loading={creating}>

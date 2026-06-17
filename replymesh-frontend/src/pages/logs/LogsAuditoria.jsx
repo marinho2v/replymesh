@@ -11,7 +11,7 @@ const TABS = [
   { path: "/logs/atividades", key: "atividades", label: "Atividades", icon: "Activity" },
   { path: "/logs/erros", key: "erros", label: "Erros", icon: "AlertTriangle" },
   { path: "/logs/webhooks", key: "webhooks", label: "Webhooks", icon: "Webhook" },
-  { path: "/logs/evolution", key: "evolution", label: "Evolution", icon: "MessageCircle" },
+  { path: "/logs/evolution", key: "evolution", label: "WhatsApp", icon: "MessageCircle" },
   { path: "/logs/automacoes", key: "automacoes", label: "Automacoes", icon: "Bot" },
 ];
 
@@ -143,7 +143,7 @@ export function LogsAuditoria({ onToast }) {
 
       <div className="stat-grid">
         <StatCard icon="ScrollText" label="Logs totais" value={String(activityMetrics.total_count || 0)} delta={`${activityMetrics.today_count || 0} hoje`} dir="flat" />
-        <StatCard icon="MessageCircle" label="Evolution" value={String(activityMetrics.evolution_count || 0)} delta="eventos auditados" dir="flat" />
+        <StatCard icon="MessageCircle" label="WhatsApp" value={String(activityMetrics.evolution_count || 0)} delta="eventos auditados" dir="flat" />
         <StatCard icon="AlertTriangle" label="Pendentes" value={String(alertMetrics.pending_count || 0)} delta="alertas abertos" dir={alertMetrics.pending_count ? "down" : "flat"} />
         <StatCard icon="ShieldAlert" label="Criticos" value={String(alertMetrics.critical_count || 0)} delta={`${alertMetrics.error_count || 0} erros`} dir={alertMetrics.critical_count ? "down" : "flat"} />
         <StatCard icon="CheckCircle2" label="Resolvidos" value={String(alertMetrics.resolved_count || 0)} delta="historico" dir="flat" />

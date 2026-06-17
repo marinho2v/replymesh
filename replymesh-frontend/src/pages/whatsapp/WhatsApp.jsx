@@ -44,10 +44,10 @@ export function WhatsApp({ onToast }) {
       <div className="page-head">
         <div>
           <div className="pt">WhatsApp</div>
-          <div className="ps">Instancias, conexoes, templates e registros via Rails + Evolution Go</div>
+          <div className="ps">Instancias, conexoes, templates e registros via Replymesh Connect</div>
         </div>
         <div className="grow" />
-        <button className="btn btn-ghost" onClick={() => api.testEvolutionConnection().then(() => onToast?.("Evolution Go conectada", "ok")).catch((err) => onToast?.(err.message, "err"))}>
+        <button className="btn btn-ghost" onClick={() => api.testWhatsappConnection().then(() => onToast?.("Replymesh Connect conectado", "ok")).catch((err) => onToast?.(err.message, "err"))}>
           <Icon name="PlugZap" size={15} /> Testar conexao
         </button>
         <button className="btn btn-primary" onClick={() => navigate("/whatsapp/qrcode")}><Icon name="QrCode" size={17} /> QR Code</button>
@@ -135,7 +135,7 @@ function WAInstances({ onToast }) {
   };
 
   const createTestInstance = async () => {
-    const confirmed = window.confirm("Criar ou sincronizar a instancia teste replymesh_teste_local na Evolution Go? A instancia Lanche nao sera alterada.");
+    const confirmed = window.confirm("Criar ou sincronizar a instancia teste replymesh_teste_local no Replymesh Connect? A instancia Lanche nao sera alterada.");
     if (!confirmed) return;
 
     setCreatingTest(true);
@@ -187,7 +187,7 @@ function WAInstances({ onToast }) {
                 return (
                   <tr key={item.id || `remote-${item.instance_name}`}>
                     <td><div className="cell-co"><CoAvatar name={item.instance_name} size={32} /><div><div className="t">{item.instance_name}</div><div className="s mono">{item.profile_name || item.provider}</div></div></div></td>
-                    <td>{item.company?.name || "Evolution Go"}</td>
+                    <td>{item.company?.name || "Replymesh Connect"}</td>
                     <td className="mono">{item.connected_number || "-"}</td>
                     <td><Badge tone={status[0]}>{status[1]}</Badge></td>
                     <td><Badge tone={originTone} dot={false}>{originLabel}</Badge></td>
@@ -195,7 +195,7 @@ function WAInstances({ onToast }) {
                     <td>
                       <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                         <button className="ra" title={isRemote ? "Disponivel apos vincular a uma empresa" : "QR Code pendente de token seguro"} disabled onClick={() => navigate("/whatsapp/qrcode", { state: { instanceId: item.id } })}><Icon name="QrCode" size={16} /></button>
-                        <button className="ra" title={isRemote ? "Status ja veio da Evolution" : "Status"} disabled={isRemote || actionId === item.id} onClick={() => run(item, api.getWhatsappStatus, "Status atualizado")}><Icon name="Radar" size={16} /></button>
+                        <button className="ra" title={isRemote ? "Status ja veio do Replymesh Connect" : "Status"} disabled={isRemote || actionId === item.id} onClick={() => run(item, api.getWhatsappStatus, "Status atualizado")}><Icon name="Radar" size={16} /></button>
                         <button className="ra" title={isRemote ? "Acao bloqueada para leitura segura" : "Desconectar"} disabled={isRemote || actionId === item.id} onClick={() => run(item, api.disconnectWhatsappInstance, "Instancia desconectada")}><Icon name="Unplug" size={16} /></button>
                         <button className="ra" title={isRemote ? "Acao bloqueada para leitura segura" : "Reiniciar"} disabled={isRemote || actionId === item.id} onClick={() => run(item, api.restartWhatsappInstance, "Instancia reiniciada")}><Icon name="RefreshCw" size={15} /></button>
                         <button className="ra" title="Logs" onClick={() => navigate("/whatsapp/logs")}><Icon name="ScrollText" size={15} /></button>
