@@ -14,8 +14,7 @@ export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
   const resolvedSlug = slug || COMPANY_SLUG
 
   useEffect(() => {
-    const isDomainIdentifier = String(resolvedSlug || '').includes('.')
-    if (resolvedSlug && !isDomainIdentifier && !ensureStoreAuthTenant(resolvedSlug)) {
+    if (resolvedSlug && !ensureStoreAuthTenant(resolvedSlug)) {
       window.dispatchEvent(new Event('replymesh-auth-changed'))
     }
     localStorage.removeItem('replymesh_store_company_id')

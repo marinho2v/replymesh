@@ -30,7 +30,7 @@ export const resolveDefaultCompanySlug = (fallback) =>
 export const companyBasePath = (slug, hostname = window.location.hostname) => {
   const hostSlug = companySlugFromHostname(hostname)
   const customDomain = customDomainFromHostname(hostname)
-  if (customDomain && customDomain === slug) return ''
+  if (customDomain) return ''
   return hostSlug && hostSlug === slug ? '' : `/loja/${slug}`
 }
 

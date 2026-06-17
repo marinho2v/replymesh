@@ -111,28 +111,15 @@ class OrderStatusService
   end
 
   def active_status_sequence
-    statuses = %w[pending accepted]
-
-    if @order.dine_in?
-      statuses << "ready"
-      statuses << "completed"
-      return statuses
-    end
-
-    if @order.pickup?
-      statuses << "ready"
-      statuses << "completed"
-      return statuses
-    end
-
     if @order.pos?
-      statuses << "completed"
-      return statuses
+      return %w[pending accepted completed]
     end
 
-    statuses << "preparing" if template_enabled_for_status?("preparing")
-    statuses << "ready" if template_enabled_for_status?("ready")
-    statuses << "out_for_delivery" if @order.order_type == "delivery" && template_enabled_for_status?("out_for_delivery", default: true)
+    statuses = %w[pending]
+    statuses << "accepted" if template_enabled_for_status?("accepted", default: true)
+    statuses << "preparing" if template_enabled_for_status?("preparing", default: false)
+    statuses << "ready" if template_enabled_for_status?("ready", default: false)
+    statuses << "out_for_delivery" if @order.delivery? && template_enabled_for_status?("out_for_delivery", default: true)
     statuses << "completed" if template_enabled_for_status?("completed", default: true)
     statuses
   end

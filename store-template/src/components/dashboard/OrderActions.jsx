@@ -1,4 +1,4 @@
-import { Button } from '../ui/Button'
+﻿import { Button } from '../ui/Button'
 import { useOrderActions } from '../../hooks/useOrders'
 import { getNextStatuses } from '../../utils/orderStatus.jsx'
 import { ORDER_STATUSES } from '../../lib/constants'
@@ -45,12 +45,12 @@ const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMoto
         variant: 'primary',
       },
       [ORDER_STATUSES.PREPARING]: {
-        label: 'Marcar preparo',
+        label: 'Em preparo',
         icon: ChefHat,
         variant: 'warning',
       },
       [ORDER_STATUSES.READY]: {
-        label: 'Marcar pronto',
+        label: 'Pronto',
         icon: Package,
         variant: 'info',
       },

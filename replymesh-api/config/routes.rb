@@ -292,7 +292,7 @@ Rails.application.routes.draw do
       end
 
       namespace :public do
-        scope ":company_slug", constraints: { company_slug: /[^\/]+/ } do
+        scope ":company_slug", constraints: { company_slug: /[^\/]+/ }, format: false do
           get  "store",           to: "stores#show"
           get  "menu",            to: "stores#menu"
           get  "products/:id",     to: "stores#product"

@@ -13,6 +13,7 @@ const MotoboyLogin = () => {
   const companySlug = useCompanySlug()
   const basePath = useCompanyBasePath()
   const { store } = usePublicStoreInfo()
+  const resolvedCompanySlug = store?.slug || companySlug
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,7 +24,7 @@ const MotoboyLogin = () => {
 
     setLoading(true)
     try {
-      await motoboyLogin({ phone: phone.trim(), password, companySlug })
+      await motoboyLogin({ phone: phone.trim(), password, companySlug: resolvedCompanySlug })
       navigate(`${basePath}/motoboy/dashboard`, { replace: true })
     } catch (error) {
       console.error('Erro ao fazer login do motoboy:', error)
@@ -37,9 +38,9 @@ const MotoboyLogin = () => {
     <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <BrandLogo size="lg" className="justify-center" name={store?.store_name || companySlug} logoUrl={store?.logo_url} />
+          <BrandLogo size="lg" className="justify-center" name={store?.store_name || resolvedCompanySlug} logoUrl={store?.logo_url} />
           <p className="mt-2 text-sm text-gray-400">Portal do Motoboy</p>
-          <p className="mt-1 text-xs text-gray-500">{companySlug}</p>
+          <p className="mt-1 text-xs text-gray-500">{resolvedCompanySlug}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-dark-600 bg-dark-800 p-6">

@@ -11,6 +11,7 @@ import {
   cleanLegacyCompanyPath,
   companyBasePath,
   companySlugFromHostname,
+  customDomainFromHostname,
 } from '../utils/companyDomain'
 
 // Public Pages
@@ -101,8 +102,9 @@ const AdminIndexRedirect = () => {
 const LegacySubdomainRedirect = ({ companySlug, children }) => {
   const location = useLocation()
   const hostSlug = companySlugFromHostname()
+  const customDomain = customDomainFromHostname()
 
-  if (hostSlug && hostSlug === companySlug) {
+  if ((hostSlug && hostSlug === companySlug) || customDomain) {
     const cleanPath = cleanLegacyCompanyPath(location.pathname, companySlug)
     return <Navigate to={`${cleanPath}${location.search}${location.hash}`} replace />
   }
@@ -296,11 +298,19 @@ export const router = createBrowserRouter([
     element: <SluggedMotoboyPage component={MotoboyHistory} />,
   },
   {
+    path: '/loja/:companySlug/motoboy/historico',
+    element: <SluggedMotoboyPage component={MotoboyHistory} />,
+  },
+  {
     path: '/loja/:companySlug/motoboy/financeiro',
     element: <SluggedMotoboyPage component={MotoboyFinance} />,
   },
   {
     path: '/loja/:companySlug/motoboy/profile',
+    element: <SluggedMotoboyPage component={MotoboyProfile} />,
+  },
+  {
+    path: '/loja/:companySlug/motoboy/perfil',
     element: <SluggedMotoboyPage component={MotoboyProfile} />,
   },
 
@@ -384,6 +394,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'historico',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyHistory)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
         path: 'financeiro',
         element: (
           <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
@@ -393,6 +411,14 @@ export const router = createBrowserRouter([
       },
       {
         path: 'profile',
+        element: (
+          <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+            {page(MotoboyProfile)}
+          </CompanySlugProvider>
+        ),
+      },
+      {
+        path: 'perfil',
         element: (
           <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
             {page(MotoboyProfile)}

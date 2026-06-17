@@ -19,7 +19,7 @@ export const STATUS_TEMPLATE_KEYS = {
 }
 
 export const normalizeOrderStatusFlow = (flow = {}) => ({
-  accepted: true,
+  accepted: flow?.accepted !== false,
   preparing: Boolean(flow?.preparing),
   ready: Boolean(flow?.ready),
   out_for_delivery: flow?.out_for_delivery !== false,
@@ -51,7 +51,8 @@ const getStatusSequence = (orderType, flow = DEFAULT_ORDER_STATUS_FLOW) => {
   }
 
   if (orderType === 'dine_in' || orderType === 'pickup') {
-    sequence.push(ORDER_STATUSES.READY)
+    if (normalizedFlow.preparing) sequence.push(ORDER_STATUSES.PREPARING)
+    if (normalizedFlow.ready) sequence.push(ORDER_STATUSES.READY)
     if (normalizedFlow.completed) sequence.push(ORDER_STATUSES.COMPLETED)
     return sequence
   }
