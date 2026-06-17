@@ -1,3 +1,5 @@
+import { PIZZA_PRICE_GROUP_NAME, cleanPizzaOptionName } from './pizzaProduct'
+
 export const normalizeSelectedOptions = (selectedOptions = []) => (
   Array.isArray(selectedOptions)
     ? selectedOptions
@@ -6,12 +8,12 @@ export const normalizeSelectedOptions = (selectedOptions = []) => (
           options: Array.isArray(group.options)
             ? group.options.map(option => (
                 typeof option === 'string'
-                  ? option
-                  : option?.name
+                  ? cleanPizzaOptionName(option)
+                  : cleanPizzaOptionName(option?.name)
               )).filter(Boolean)
             : [],
         }))
-        .filter(group => group.group_name && group.options.length > 0)
+        .filter(group => group.group_name && group.group_name !== PIZZA_PRICE_GROUP_NAME && group.options.length > 0)
     : []
 )
 

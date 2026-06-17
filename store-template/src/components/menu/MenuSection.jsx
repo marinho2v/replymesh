@@ -9,6 +9,8 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Badge } from '../ui/Badge'
 import ProductCustomizationModal from './ProductCustomizationModal'
+import PizzaCustomizationModal from './PizzaCustomizationModal'
+import { isPizzaProduct } from '../../utils/pizzaProduct'
 
 const isPublicCategory = (category) => {
   const value = String(category?.slug || category?.name || '')
@@ -94,6 +96,7 @@ const MenuSection = ({
   const [selectedCategory, setSelectedCategory] = useState(categorySlug || '')
   const [showFeatured, setShowFeatured] = useState(false)
   const [customizingProduct, setCustomizingProduct] = useState(null)
+  const [pizzaProduct, setPizzaProduct] = useState(null)
   const [optionGroups, setOptionGroups] = useState([])
 
   const {
@@ -143,6 +146,11 @@ const MenuSection = ({
     : 'Todos os Produtos'
 
   const handleAddToCart = async (product) => {
+    if (isPizzaProduct(product)) {
+      setPizzaProduct(product)
+      return
+    }
+
     if (product.is_customizable && !product.is_local) {
       setCustomizingProduct(product)
       setOptionGroups(product.option_groups || [])
@@ -158,6 +166,12 @@ const MenuSection = ({
     toast.success(`${product.name} adicionado ao carrinho`)
     setCustomizingProduct(null)
     setOptionGroups([])
+  }
+
+  const handleConfirmPizza = ({ product, selectedOptions, notes }) => {
+    addToCart(product, 1, notes || '', selectedOptions)
+    toast.success(`${product.name} adicionada ao carrinho`)
+    setPizzaProduct(null)
   }
 
   return (
@@ -319,6 +333,13 @@ const MenuSection = ({
         optionGroups={optionGroups}
         loading={false}
         onConfirm={handleConfirmCustomization}
+      />
+      <PizzaCustomizationModal
+        isOpen={Boolean(pizzaProduct)}
+        onClose={() => setPizzaProduct(null)}
+        product={pizzaProduct}
+        optionGroups={pizzaProduct?.option_groups || []}
+        onConfirm={handleConfirmPizza}
       />
     </section>
   )

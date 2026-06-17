@@ -6,6 +6,8 @@ import { useCart } from '../../../hooks/useCart'
 import PremiumProductCard from './PremiumProductCard'
 import { IconSearch, IconClose, IconStar } from '../icons.jsx'
 import ProductCustomizationModal from '../../../components/menu/ProductCustomizationModal'
+import PizzaCustomizationModal from '../../../components/menu/PizzaCustomizationModal'
+import { isPizzaProduct } from '../../../utils/pizzaProduct'
 
 const PREM = {
   gold: '#f7a325',
@@ -32,6 +34,7 @@ const PremiumMenuSection = ({ store }) => {
   const [activeCategory, setActiveCategory] = useState('all')
   const [query, setQuery] = useState('')
   const [customizingProduct, setCustomizingProduct] = useState(null)
+  const [pizzaProduct, setPizzaProduct] = useState(null)
 
   const visibleCategories = useMemo(
     () => (categories || []).filter(isPublicCategory),
@@ -43,6 +46,11 @@ const PremiumMenuSection = ({ store }) => {
       .reduce((sum, item) => sum + Number(item.quantity || 0), 0)
 
   const handleAdd = (product) => {
+    if (isPizzaProduct(product)) {
+      setPizzaProduct(product)
+      return
+    }
+
     if (product.is_customizable && product.option_groups?.length > 0) {
       setCustomizingProduct(product)
       return
@@ -53,6 +61,11 @@ const PremiumMenuSection = ({ store }) => {
   }
 
   const handleInc = (product) => {
+    if (isPizzaProduct(product)) {
+      setPizzaProduct(product)
+      return
+    }
+
     if (product.is_customizable && product.option_groups?.length > 0) {
       setCustomizingProduct(product)
       return
@@ -78,6 +91,12 @@ const PremiumMenuSection = ({ store }) => {
     addToCart(product, 1, '', selectedOptions)
     toast.success(`${product.name} adicionado!`, { duration: 1500 })
     setCustomizingProduct(null)
+  }
+
+  const handleConfirmPizza = ({ product, selectedOptions, notes }) => {
+    addToCart(product, 1, notes || '', selectedOptions)
+    toast.success(`${product.name} adicionada!`, { duration: 1500 })
+    setPizzaProduct(null)
   }
 
   const filteredProducts = useMemo(() => {
@@ -217,6 +236,13 @@ const PremiumMenuSection = ({ store }) => {
         optionGroups={customizingProduct?.option_groups || []}
         loading={false}
         onConfirm={handleConfirmCustomization}
+      />
+      <PizzaCustomizationModal
+        isOpen={Boolean(pizzaProduct)}
+        onClose={() => setPizzaProduct(null)}
+        product={pizzaProduct}
+        optionGroups={pizzaProduct?.option_groups || []}
+        onConfirm={handleConfirmPizza}
       />
     </div>
   )

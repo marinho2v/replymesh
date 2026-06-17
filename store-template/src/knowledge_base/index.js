@@ -259,6 +259,46 @@ export const KB = {
     ],
   },
 
+  pizzas: {
+    title: 'Como cadastrar pizza',
+    keywords: ['pizza', 'pizzaria', 'sabores', 'tamanho', 'borda', 'massa', 'meio a meio', 'produto pizza', 'cardapio pizza'],
+    description: 'Guia para cadastrar pizzas com tamanhos, sabores, bordas, massas e regras de preço no cardápio.',
+    sections: [
+      {
+        title: 'Criar um produto do tipo Pizza',
+        steps: [
+          'Acesse Cardápio > Produtos',
+          'Clique em "Novo Produto"',
+          'No campo Tipo de produto, escolha "Pizza"',
+          'Preencha nome, descrição, categoria e imagem',
+          'Use o bloco "Configuração da Pizza" para cadastrar tamanhos, sabores, bordas e massas',
+          'Salve o produto',
+        ],
+      },
+      {
+        title: 'Modelo Pizzaria Completo',
+        content: 'O botão "Modelo Pizzaria Completo" cria uma estrutura inicial com tamanhos, sabores, bordas e massas. Depois disso, edite os nomes, preços e itens ativos de acordo com o cardápio da loja.',
+      },
+      {
+        title: 'Tamanhos e sabores',
+        content: 'Cada tamanho pode ter preço base, quantidade máxima de sabores e número de fatias. Em Sabores, informe o preço de cada sabor para cada tamanho. No cardápio público, o cliente escolhe o tamanho primeiro e depois os sabores permitidos.',
+      },
+      {
+        title: 'Regras de preço',
+        content: 'A regra mais comum é cobrar pelo sabor mais caro. Também é possível configurar média dos sabores, soma dos sabores ou preço base do tamanho. O valor final é recalculado no checkout usando as opções escolhidas.',
+      },
+      {
+        title: 'Bordas, massas e observação',
+        content: 'Bordas e massas podem ter valor adicional. O cliente também pode enviar observações como "sem cebola" ou "massa bem assada"; essas informações aparecem no pedido, na cozinha e na impressão.',
+      },
+    ],
+    faq: [
+      { q: 'Produto simples continua funcionando?', a: 'Sim. O fluxo de pizza é separado e não altera produtos simples, combos, pastel ou produtos customizáveis antigos.' },
+      { q: 'Como faço pizza meio a meio?', a: 'Defina o tamanho com máximo de 2 sabores. O cliente poderá selecionar até dois sabores no cardápio público.' },
+      { q: 'A cozinha vê os sabores escolhidos?', a: 'Sim. O pedido mostra tamanho, sabores, borda, massa e observação de forma limpa.' },
+    ],
+  },
+
   motoboy: {
     title: 'Motoboys',
     keywords: ['motoboy', 'entregador', 'entrega', 'delivery', 'atribuir', 'rota', 'financeiro motoboy'],
@@ -528,6 +568,7 @@ export const KB_TOPICS = [
   'estoque',
   'caixa',
   'pdv',
+  'pizzas',
   'motoboy',
   'whatsapp',
   'marketing',

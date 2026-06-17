@@ -10,6 +10,8 @@ import { formatCurrency } from '../../utils/currency'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import ProductCustomizationModal from '../../components/menu/ProductCustomizationModal'
+import PizzaCustomizationModal from '../../components/menu/PizzaCustomizationModal'
+import { isPizzaProduct } from '../../utils/pizzaProduct'
 
 const ProductDetails = () => {
   const { productId } = useParams()
@@ -22,6 +24,7 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
   const [customizing, setCustomizing] = useState(false)
+  const [customizingPizza, setCustomizingPizza] = useState(false)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -47,6 +50,11 @@ const ProductDetails = () => {
   const handleAddToCart = () => {
     if (!product) return
 
+    if (isPizzaProduct(product)) {
+      setCustomizingPizza(true)
+      return
+    }
+
     if (product.is_customizable && product.option_groups?.length > 0) {
       setCustomizing(true)
       return
@@ -61,6 +69,13 @@ const ProductDetails = () => {
     addToCart(customizedProduct, quantity, '', selectedOptions)
     toast.success(`${customizedProduct.name} adicionado ao carrinho`)
     setCustomizing(false)
+    navigate(`${basePath}/cart`)
+  }
+
+  const handleConfirmPizza = ({ product: customizedProduct, selectedOptions, notes }) => {
+    addToCart(customizedProduct, quantity, notes || '', selectedOptions)
+    toast.success(`${customizedProduct.name} adicionada ao carrinho`)
+    setCustomizingPizza(false)
     navigate(`${basePath}/cart`)
   }
 
@@ -215,6 +230,13 @@ const ProductDetails = () => {
           loading={false}
           onConfirm={handleConfirmCustomization}
         />
+        <PizzaCustomizationModal
+          isOpen={customizingPizza}
+          onClose={() => setCustomizingPizza(false)}
+          product={product}
+          optionGroups={product.option_groups || []}
+          onConfirm={handleConfirmPizza}
+        />
       </div>
     )
   }
@@ -328,6 +350,13 @@ const ProductDetails = () => {
         optionGroups={product.option_groups || []}
         loading={false}
         onConfirm={handleConfirmCustomization}
+      />
+      <PizzaCustomizationModal
+        isOpen={customizingPizza}
+        onClose={() => setCustomizingPizza(false)}
+        product={product}
+        optionGroups={product.option_groups || []}
+        onConfirm={handleConfirmPizza}
       />
     </div>
   )

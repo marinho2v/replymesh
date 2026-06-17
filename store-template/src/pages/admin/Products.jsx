@@ -17,66 +17,37 @@ import { Badge } from '../../components/ui/Badge'
 import { formatCurrency } from '../../utils/currency'
 import { Plus, Edit, Trash2, Star, Tag, Package, Search, Settings2, RotateCcw, ArrowUp, ArrowDown, ListOrdered, Pizza } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  buildPizzaOptionGroups,
+  defaultAdvancedPizzaConfig,
+  parsePizzaConfigFromOptionGroups,
+} from '../../utils/pizzaProduct'
 
 const pizzaGroupNames = ['Tamanho', 'Sabores', 'Borda', 'Massa']
 
-const createPizzaOptionGroups = () => ([
-  {
-    name: 'Tamanho',
-    type: 'single',
-    required: true,
-    min_select: 1,
-    max_select: 1,
-    sort_order: 0,
-    items: [
-      { name: 'Pequena - ate 1 sabor', additional_price: 0, is_active: true, sort_order: 0 },
-      { name: 'Media - ate 2 sabores', additional_price: 10, is_active: true, sort_order: 1 },
-      { name: 'Grande - ate 2 sabores', additional_price: 20, is_active: true, sort_order: 2 },
-      { name: 'Familia - ate 3 sabores', additional_price: 30, is_active: true, sort_order: 3 },
-    ],
-  },
-  {
-    name: 'Sabores',
-    type: 'multiple',
-    required: true,
-    min_select: 1,
-    max_select: 2,
-    sort_order: 1,
-    items: [
-      { name: 'Calabresa', additional_price: 0, is_active: true, sort_order: 0 },
-      { name: 'Portuguesa', additional_price: 3, is_active: true, sort_order: 1 },
-      { name: 'Mussarela', additional_price: 0, is_active: true, sort_order: 2 },
-    ],
-  },
-  {
-    name: 'Borda',
-    type: 'single',
-    required: false,
-    min_select: 0,
-    max_select: 1,
-    sort_order: 2,
-    items: [
-      { name: 'Sem borda', additional_price: 0, is_active: true, sort_order: 0 },
-      { name: 'Catupiry', additional_price: 8, is_active: true, sort_order: 1 },
-      { name: 'Cheddar', additional_price: 8, is_active: true, sort_order: 2 },
-      { name: 'Chocolate', additional_price: 10, is_active: true, sort_order: 3 },
-    ],
-  },
-  {
-    name: 'Massa',
-    type: 'single',
-    required: false,
-    min_select: 0,
-    max_select: 1,
-    sort_order: 3,
-    items: [
-      { name: 'Tradicional', additional_price: 0, is_active: true, sort_order: 0 },
-      { name: 'Fina', additional_price: 0, is_active: true, sort_order: 1 },
-      { name: 'Grossa', additional_price: 0, is_active: true, sort_order: 2 },
-      { name: 'Integral', additional_price: 5, is_active: true, sort_order: 3 },
-    ],
-  },
-])
+const emptyPizzaConfig = () => defaultAdvancedPizzaConfig()
+
+const priceOrZero = (value) => {
+  const number = Number(value || 0)
+  return Number.isFinite(number) ? number : 0
+}
+
+const updatePizzaCollection = (config, collection, index, changes) => ({
+  ...config,
+  [collection]: (config[collection] || []).map((item, currentIndex) => (
+    currentIndex === index ? { ...item, ...changes } : item
+  )),
+})
+
+const removePizzaCollectionItem = (config, collection, index) => ({
+  ...config,
+  [collection]: (config[collection] || []).filter((_, currentIndex) => currentIndex !== index),
+})
+
+const addPizzaCollectionItem = (config, collection, item) => ({
+  ...config,
+  [collection]: [...(config[collection] || []), item],
+})
 
 const inferProductType = (product, groups = []) => {
   const names = groups.map(group => group.name)
@@ -94,6 +65,7 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [featuredFilter, setFeaturedFilter] = useState(false)
   const [optionGroups, setOptionGroups] = useState([])
+  const [pizzaConfig, setPizzaConfig] = useState(emptyPizzaConfig())
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [formData, setFormData] = useState({
     name: '',
@@ -174,11 +146,18 @@ const Products = () => {
       }
 
       const productType = formData.product_type || 'simple'
+      const pizzaBasePrice = productType === 'pizza'
+        ? Math.min(...(pizzaConfig.sizes || []).filter(size => size.active !== false).map(size => priceOrZero(size.base_price)).filter(price => price >= 0))
+        : null
+      const resolvedPizzaBasePrice = Number.isFinite(pizzaBasePrice) ? pizzaBasePrice : Number(formData.price)
+      const groupsToSave = productType === 'pizza'
+        ? buildPizzaOptionGroups(pizzaConfig, resolvedPizzaBasePrice, optionGroups)
+        : optionGroups
       const data = {
         ...formData,
         is_customizable: productType !== 'simple',
         category_id: formData.category_id || null,
-        price: Number(formData.price),
+        price: productType === 'pizza' ? resolvedPizzaBasePrice : Number(formData.price),
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
         cost_method: formData.cost_method || 'average_cost',
         promotional_price: formData.promotional_price ? Number(formData.promotional_price) : null,
@@ -192,13 +171,13 @@ const Products = () => {
       if (editingProduct) {
         savedProduct = await railsUpdateProduct(editingProduct.id, data)
         if (data.is_customizable) {
-          await railsSaveOptionGroups(editingProduct.id, optionGroups)
+          await railsSaveOptionGroups(editingProduct.id, groupsToSave)
         }
         toast.success('Produto atualizado com sucesso!')
       } else {
         savedProduct = await railsCreateProduct(data)
         if (data.is_customizable) {
-          await railsSaveOptionGroups(savedProduct.id, optionGroups)
+          await railsSaveOptionGroups(savedProduct.id, groupsToSave)
         }
         toast.success('Produto criado com sucesso!')
       }
@@ -244,6 +223,7 @@ const Products = () => {
       stock_item_id: product.stock_item_id || '',
     })
     setOptionGroups(groups)
+    setPizzaConfig(parsePizzaConfigFromOptionGroups(groups, product.promotional_price || product.price || 0))
     setModalOpen(true)
   }
 
@@ -296,6 +276,7 @@ const Products = () => {
       stock_item_id: '',
     })
     setOptionGroups([])
+    setPizzaConfig(emptyPizzaConfig())
   }
 
   const updateOptionGroup = (groupIndex, changes) => {
@@ -376,7 +357,12 @@ const Products = () => {
     }
 
     if (productType === 'pizza' && optionGroups.length === 0) {
-      setOptionGroups(createPizzaOptionGroups())
+      setPizzaConfig(emptyPizzaConfig())
+      return
+    }
+
+    if (productType === 'pizza') {
+      setPizzaConfig(parsePizzaConfigFromOptionGroups(optionGroups, formData.price || 0))
     }
   }
 
@@ -516,6 +502,208 @@ const Products = () => {
   const formProfit = calculateProfit(
     formData.promotional_price || formData.price,
     formData.cost_price
+  )
+
+  const applyCompletePizzaModel = () => {
+    const config = emptyPizzaConfig()
+    setPizzaConfig(config)
+    const basePrice = Math.min(...config.sizes.map(size => Number(size.base_price || 0)))
+    setFormData(prev => ({
+      ...prev,
+      product_type: 'pizza',
+      is_customizable: true,
+      price: String(basePrice || prev.price || 0),
+    }))
+  }
+
+  const updatePizzaSize = (index, changes) => {
+    setPizzaConfig(prev => updatePizzaCollection(prev, 'sizes', index, changes))
+  }
+
+  const updatePizzaFlavor = (index, changes) => {
+    setPizzaConfig(prev => updatePizzaCollection(prev, 'flavors', index, changes))
+  }
+
+  const updateFlavorPrice = (flavorIndex, sizeId, value) => {
+    setPizzaConfig(prev => ({
+      ...prev,
+      flavors: prev.flavors.map((flavor, index) => (
+        index === flavorIndex
+          ? { ...flavor, prices: { ...(flavor.prices || {}), [sizeId]: value } }
+          : flavor
+      )),
+    }))
+  }
+
+  const addPizzaSize = () => {
+    setPizzaConfig(prev => {
+      const id = `tamanho-${(prev.sizes || []).length + 1}`
+      return {
+        ...prev,
+        sizes: [...prev.sizes, { id, name: 'Novo tamanho', base_price: 0, max_flavors: 1, slices: '', active: true }],
+        flavors: prev.flavors.map(flavor => ({
+          ...flavor,
+          prices: { ...(flavor.prices || {}), [id]: 0 },
+        })),
+      }
+    })
+  }
+
+  const removePizzaSize = (index) => {
+    setPizzaConfig(prev => {
+      const removed = prev.sizes[index]
+      return {
+        ...removePizzaCollectionItem(prev, 'sizes', index),
+        flavors: prev.flavors.map(flavor => {
+          const prices = { ...(flavor.prices || {}) }
+          delete prices[removed?.id]
+          return { ...flavor, prices }
+        }),
+      }
+    })
+  }
+
+  const addPizzaFlavor = () => {
+    setPizzaConfig(prev => {
+      const id = `sabor-${(prev.flavors || []).length + 1}`
+      const prices = Object.fromEntries((prev.sizes || []).map(size => [size.id, size.base_price || 0]))
+      return addPizzaCollectionItem(prev, 'flavors', { id, name: 'Novo sabor', description: '', prices, active: true })
+    })
+  }
+
+  const renderPizzaEditor = () => (
+    <div className="mt-4 space-y-5 rounded-xl border border-yellow-700/40 bg-yellow-950/10 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+            <Pizza size={20} className="text-yellow-400" />
+            Configuracao da Pizza
+          </h3>
+          <p className="mt-1 text-sm text-gray-400">
+            Cadastre tamanhos, sabores, bordas e massas em uma tela propria para pizzaria.
+          </p>
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={applyCompletePizzaModel}>
+          Modelo Pizzaria Completo
+        </Button>
+      </div>
+
+      <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h4 className="font-semibold text-white">Tamanhos</h4>
+          <Button type="button" size="sm" onClick={addPizzaSize}>Adicionar tamanho</Button>
+        </div>
+        <div className="mt-3 space-y-3">
+          {(pizzaConfig.sizes || []).map((size, index) => (
+            <div key={`${size.id}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 lg:grid-cols-[1.2fr_120px_120px_100px_80px_auto]">
+              <Input label="Nome do tamanho" value={size.name} onChange={(event) => updatePizzaSize(index, { name: event.target.value })} />
+              <Input label="Preco base" type="number" step="0.01" value={size.base_price} onChange={(event) => updatePizzaSize(index, { base_price: event.target.value })} />
+              <Input label="Max. sabores" type="number" min="1" value={size.max_flavors} onChange={(event) => updatePizzaSize(index, { max_flavors: event.target.value })} />
+              <Input label="Fatias" type="number" min="0" value={size.slices} onChange={(event) => updatePizzaSize(index, { slices: event.target.value })} />
+              <label className="flex items-end gap-2 pb-2 text-sm text-white">
+                <input type="checkbox" checked={size.active !== false} onChange={(event) => updatePizzaSize(index, { active: event.target.checked })} />
+                Ativo
+              </label>
+              <Button type="button" size="sm" variant="danger" className="self-end" onClick={() => removePizzaSize(index)}>Remover</Button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h4 className="font-semibold text-white">Sabores</h4>
+          <Button type="button" size="sm" onClick={addPizzaFlavor}>Adicionar sabor</Button>
+        </div>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-dark-700 text-left text-gray-400">
+                <th className="p-2">Sabor</th>
+                <th className="p-2">Descricao</th>
+                {(pizzaConfig.sizes || []).map(size => <th key={size.id} className="p-2">{size.name}</th>)}
+                <th className="p-2">Ativo</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(pizzaConfig.flavors || []).map((flavor, flavorIndex) => (
+                <tr key={`${flavor.id}-${flavorIndex}`} className="border-b border-dark-800">
+                  <td className="p-2 min-w-[180px]">
+                    <Input value={flavor.name} onChange={(event) => updatePizzaFlavor(flavorIndex, { name: event.target.value })} />
+                  </td>
+                  <td className="p-2 min-w-[220px]">
+                    <Input value={flavor.description || ''} onChange={(event) => updatePizzaFlavor(flavorIndex, { description: event.target.value })} />
+                  </td>
+                  {(pizzaConfig.sizes || []).map(size => (
+                    <td key={size.id} className="p-2 min-w-[110px]">
+                      <Input type="number" step="0.01" value={flavor.prices?.[size.id] ?? size.base_price ?? 0} onChange={(event) => updateFlavorPrice(flavorIndex, size.id, event.target.value)} />
+                    </td>
+                  ))}
+                  <td className="p-2">
+                    <input type="checkbox" checked={flavor.active !== false} onChange={(event) => updatePizzaFlavor(flavorIndex, { active: event.target.checked })} />
+                  </td>
+                  <td className="p-2">
+                    <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'flavors', flavorIndex))}>Remover</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="font-semibold text-white">Bordas</h4>
+            <Button type="button" size="sm" onClick={() => setPizzaConfig(prev => addPizzaCollectionItem(prev, 'edges', { name: 'Nova borda', price: 0, active: true }))}>Adicionar borda</Button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {(pizzaConfig.edges || []).map((edge, index) => (
+              <div key={`${edge.name}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-[1fr_120px_70px_auto]">
+                <Input value={edge.name} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { name: event.target.value }))} />
+                <Input type="number" step="0.01" value={edge.price} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { price: event.target.value }))} />
+                <label className="flex items-center gap-2 text-sm text-white"><input type="checkbox" checked={edge.active !== false} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { active: event.target.checked }))} />Ativo</label>
+                <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'edges', index))}>Remover</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="font-semibold text-white">Massas</h4>
+            <Button type="button" size="sm" onClick={() => setPizzaConfig(prev => addPizzaCollectionItem(prev, 'doughs', { name: 'Nova massa', price: 0, active: true }))}>Adicionar massa</Button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {(pizzaConfig.doughs || []).map((dough, index) => (
+              <div key={`${dough.name}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-[1fr_120px_70px_auto]">
+                <Input value={dough.name} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { name: event.target.value }))} />
+                <Input type="number" step="0.01" value={dough.price} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { price: event.target.value }))} />
+                <label className="flex items-center gap-2 text-sm text-white"><input type="checkbox" checked={dough.active !== false} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { active: event.target.checked }))} />Ativo</label>
+                <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'doughs', index))}>Remover</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
+        <Select
+          label="Regra de preco"
+          value={pizzaConfig.pricing_rule || 'highest_flavor'}
+          onChange={(event) => setPizzaConfig(prev => ({ ...prev, pricing_rule: event.target.value }))}
+          options={[
+            { value: 'highest_flavor', label: 'Cobrar sabor mais caro' },
+            { value: 'average_flavors', label: 'Cobrar media dos sabores' },
+            { value: 'sum_flavors', label: 'Somar sabores' },
+            { value: 'base_size', label: 'Usar preco base do tamanho' },
+          ]}
+        />
+        <p className="mt-2 text-xs text-gray-400">Em pizza meio a meio, normalmente a loja cobra pelo sabor mais caro.</p>
+      </div>
+    </div>
   )
 
   return (
@@ -947,21 +1135,15 @@ const Products = () => {
                 )}
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-400">
-              Para precificacao avancada de pizza por matriz tamanho/sabor, sera necessaria uma evolucao de banco em fase propria.
-            </p>
 
-            {(formData.product_type !== 'simple') && (
+            {formData.product_type === 'pizza' ? renderPizzaEditor() : (formData.product_type !== 'simple') && (
               <div className="mt-4 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
                     <Settings2 size={18} />
-                    {formData.product_type === 'pizza' ? 'Tamanhos, sabores e complementos' : 'Grupos de opcoes'}
+                    Grupos de opcoes
                   </h3>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setOptionGroups(createPizzaOptionGroups())}>
-                      Modelo Pizzaria
-                    </Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => setOptionGroups(pastelOptionGroups)}>
                       Modelo Pastel
                     </Button>

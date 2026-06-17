@@ -11,6 +11,7 @@ const TOPIC_ICONS = {
   estoque: '📦',
   caixa: '💰',
   pdv: '🖥️',
+  pizzas: '🍕',
   motoboy: '🏍️',
   whatsapp: '💬',
   marketing: '📣',
