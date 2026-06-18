@@ -60,4 +60,8 @@ RSpec.describe MercadoPagoPaymentProcessor do
     expect(result[:cancelled]).to be(true)
     expect(result[:payment_status]).to eq("cancelled")
   end
+
+  it "keeps pending Pix payable for the same window used by the checkout polling" do
+    expect(described_class::EXPIRATION_WINDOW).to eq(15.minutes)
+  end
 end

@@ -1,6 +1,6 @@
 class MercadoPagoPaymentProcessor
   ProcessorError = Class.new(StandardError)
-  EXPIRATION_WINDOW = 3.minutes
+  EXPIRATION_WINDOW = 15.minutes
   FINAL_PAYMENT_STATUSES = %w[paid expired cancelled failed refunded].freeze
 
   def self.refresh!(order)
