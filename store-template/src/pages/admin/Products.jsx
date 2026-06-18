@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useProducts } from '../../hooks/useProducts'
 import { useCategories } from '../../hooks/useCategories'
 import { useInventory } from '../../hooks/useInventory'
@@ -31,6 +31,8 @@ const priceOrZero = (value) => {
   const number = Number(value || 0)
   return Number.isFinite(number) ? number : 0
 }
+
+const toSelectId = (value) => (value == null ? '' : String(value))
 
 const updatePizzaCollection = (config, collection, index, changes) => ({
   ...config,
@@ -132,11 +134,12 @@ const Products = () => {
     e.preventDefault()
 
     try {
+      const selectedCategoryId = toSelectId(formData.category_id)
       if (!formData.name.trim()) {
         toast.error('Informe o nome do produto')
         return
       }
-      if (!formData.category_id) {
+      if (!selectedCategoryId) {
         toast.error('Selecione uma categoria')
         return
       }
@@ -156,7 +159,7 @@ const Products = () => {
       const data = {
         ...formData,
         is_customizable: productType !== 'simple',
-        category_id: formData.category_id || null,
+        category_id: selectedCategoryId,
         price: productType === 'pizza' ? resolvedPizzaBasePrice : Number(formData.price),
         cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
         cost_method: formData.cost_method || 'average_cost',
@@ -210,7 +213,7 @@ const Products = () => {
       cost_price: product.cost_price || '',
       cost_method: product.cost_method || 'average_cost',
       promotional_price: product.promotional_price || '',
-      category_id: product.category_id || '',
+      category_id: toSelectId(product.category_id),
       image_url: product.image_url || '',
       is_featured: product.is_featured,
       is_promotional: product.is_promotional,
@@ -366,10 +369,17 @@ const Products = () => {
     }
   }
 
-  const categoryOptions = categories?.map(cat => ({
-    value: cat.id,
-    label: cat.name,
-  })) || []
+  const categoryOptions = useMemo(() => (
+    categories?.map(cat => ({
+      value: toSelectId(cat.id),
+      label: cat.name,
+    })) || []
+  ), [categories])
+
+  useEffect(() => {
+    if (!modalOpen || editingProduct || formData.category_id || categoryOptions.length !== 1) return
+    setFormData(prev => ({ ...prev, category_id: categoryOptions[0].value }))
+  }, [modalOpen, editingProduct, formData.category_id, categoryOptions])
 
   const stockItemOptions = inventoryItems?.map(item => ({
     value: item.id,
@@ -380,7 +390,7 @@ const Products = () => {
     const term = searchTerm.trim().toLowerCase()
 
     return (products || []).filter((product) => {
-      const matchesCategory = !categoryFilter || product.category_id === categoryFilter
+      const matchesCategory = !categoryFilter || toSelectId(product.category_id) === toSelectId(categoryFilter)
       const matchesFeatured = !featuredFilter || product.is_featured
       const matchesSearch = !term || (
         product.name?.toLowerCase().includes(term) ||
@@ -1064,7 +1074,10 @@ const Products = () => {
 
           <Select
             label="Categoria"
-            options={categoryOptions}
+            options={[
+              { value: '', label: 'Selecione uma categoria' },
+              ...categoryOptions,
+            ]}
             value={formData.category_id}
             onChange={(e) => setFormData(prev => ({ ...prev, category_id: e.target.value }))}
           />
