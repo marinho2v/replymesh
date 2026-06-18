@@ -2,29 +2,34 @@ module Api
   module V1
     module Store
       class DashboardController < BaseController
+        BUSINESS_TIME_ZONE = "America/Sao_Paulo".freeze
+
         # GET /api/v1/store/dashboard
         def show
-          today_range = Time.current.beginning_of_day..Time.current.end_of_day
-          week_range  = 6.days.ago.beginning_of_day..Time.current.end_of_day
+          zone = ActiveSupport::TimeZone[BUSINESS_TIME_ZONE]
+          local_today = Time.current.in_time_zone(zone).to_date
+          today_range = local_day_range(local_today, zone)
 
-          today_orders     = company_scope(Order).today
-          completed_today  = today_orders.where(status: "completed")
+          today_orders     = company_scope(Order).where(created_at: today_range)
+          valid_today      = today_orders.where.not(status: "cancelled")
+          completed_today  = valid_today.where(status: "completed")
           today_revenue    = completed_today.sum(:total_cents)
-          today_count      = today_orders.count
-          avg_ticket       = today_count > 0 ? today_revenue / today_count : 0
+          today_count      = valid_today.count
+          completed_count  = completed_today.count
+          avg_ticket       = completed_count > 0 ? today_revenue / completed_count : 0
 
           new_customers    = company_scope(Customer).where(created_at: today_range).count
           recurring        = company_scope(Customer).recurring.count
 
-          status_counts    = company_scope(Order).active.group(:status).count
+          status_counts    = today_orders.reorder(nil).group(:status).count
           total_orders     = company_scope(Order).count
           total_revenue    = company_scope(Order).where(status: "completed").sum(:total_cents)
-          used_coupons     = company_scope(Order).today.where.not(coupon_id: nil).count
+          used_coupons     = valid_today.where.not(coupon_id: nil).count
 
           low_stock      = company_scope(InventoryItem).active.low_stock.count
           out_of_stock   = company_scope(InventoryItem).active.where("current_quantity <= 0").count
 
-          trend_data = build_trend_data(week_range)
+          trend_data = build_trend_data(local_today, zone)
 
           render_ok(
             today_revenue_cents:  today_revenue,
@@ -44,16 +49,21 @@ module Api
 
         private
 
-        def build_trend_data(range)
-          rows = company_scope(Order)
-            .where(status: "completed", created_at: range)
-            .group("DATE(created_at AT TIME ZONE 'America/Sao_Paulo')")
-            .sum(:total_cents)
+        def build_trend_data(local_today, zone)
+          (6).downto(0).map do |days_ago|
+            date = local_today - days_ago
+            revenue = company_scope(Order)
+              .where(status: "completed", created_at: local_day_range(date, zone))
+              .sum(:total_cents)
 
-          (0..6).map do |days_ago|
-            date = days_ago.days.ago.to_date
-            { date: date.iso8601, revenue_cents: rows[date] || 0 }
-          end.reverse
+            { date: date.iso8601, revenue_cents: revenue }
+          end
+        end
+
+        def local_day_range(date, zone)
+          starts_at = zone.local(date.year, date.month, date.day)
+          ends_at = zone.local(date.next_day.year, date.next_day.month, date.next_day.day)
+          starts_at.utc...ends_at.utc
         end
       end
     end

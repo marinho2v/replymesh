@@ -174,6 +174,8 @@ module Api
             is_promotional:          p.is_promotional,
             is_customizable:         p.is_customizable,
             is_combo:                p.is_combo,
+            sort_order:               p.sort_order,
+            updated_at:               p.updated_at,
             category:                p.category&.as_json(only: %i[id name slug is_active]),
             option_groups:           p.product_option_groups.ordered.map { |g|
               {

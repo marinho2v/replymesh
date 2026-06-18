@@ -82,10 +82,22 @@ const PremiumMenuSection = ({ store }) => {
 
   const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase()
-    return (products || []).filter(p => {
+    const filtered = (products || []).filter(p => {
       const matchCat = activeCategory === 'all' ? p.is_featured : p.category?.slug === activeCategory
       const matchQ = !term || p.name?.toLowerCase().includes(term) || p.description?.toLowerCase().includes(term)
       return matchCat && matchQ
+    })
+
+    if (activeCategory !== 'all') return filtered
+
+    return [...filtered].sort((left, right) => {
+      const updatedDifference = Date.parse(right.updated_at || 0) - Date.parse(left.updated_at || 0)
+      if (Number.isFinite(updatedDifference) && updatedDifference !== 0) return updatedDifference
+
+      const orderDifference = Number(left.sort_order || 0) - Number(right.sort_order || 0)
+      if (orderDifference !== 0) return orderDifference
+
+      return String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR')
     })
   }, [products, activeCategory, query])
 
