@@ -38,6 +38,8 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
           <img
             src={product.image_url}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%',
