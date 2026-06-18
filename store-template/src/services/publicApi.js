@@ -13,6 +13,28 @@ const resolvedPublicSlug = (slug) => {
 }
 
 const publicPath = (slug, path) => `/public/${encodeURIComponent(resolvedPublicSlug(slug))}${path}`
+const PUBLIC_CACHE_TTL_MS = 30000
+const publicGetCache = new Map()
+
+const cachedPublicRequest = async (slug, path) => {
+  const key = publicPath(slug, path)
+  const now = Date.now()
+  const cached = publicGetCache.get(key)
+
+  if (cached && cached.expiresAt > now) return cached.promise
+
+  const promise = request(key, { token: null }).catch((error) => {
+    publicGetCache.delete(key)
+    throw error
+  })
+
+  publicGetCache.set(key, {
+    expiresAt: now + PUBLIC_CACHE_TTL_MS,
+    promise,
+  })
+
+  return promise
+}
 
 const mapStore = (store = {}) => ({
   ...store,
@@ -58,19 +80,19 @@ const mapProduct = (product = {}, category = null) => ({
 })
 
 export const getPublicStoreInfo = async (slug = COMPANY_SLUG) => {
-  const payload = await request(publicPath(slug, '/store'), { token: null })
+  const payload = await cachedPublicRequest(slug, '/store')
   const store = mapStore(payload.store || {})
   setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: store.slug || slug })
   return store
 }
 
 export const getPublicBanners = async (slug = COMPANY_SLUG) => {
-  const payload = await request(publicPath(slug, '/banners'), { token: null })
+  const payload = await cachedPublicRequest(slug, '/banners')
   return payload.banners || []
 }
 
 export const getPublicBusinessHours = async (slug = COMPANY_SLUG) => {
-  const payload = await request(publicPath(slug, '/business_hours'), { token: null })
+  const payload = await cachedPublicRequest(slug, '/business_hours')
   return {
     business_hours: payload.business_hours || [],
     exceptions: payload.exceptions || [],
@@ -78,7 +100,7 @@ export const getPublicBusinessHours = async (slug = COMPANY_SLUG) => {
 }
 
 export const getPublicDeliveryZones = async (slug = COMPANY_SLUG) => {
-  const payload = await request(publicPath(slug, '/delivery_zones'), { token: null })
+  const payload = await cachedPublicRequest(slug, '/delivery_zones')
   return (payload.delivery_zones || []).map((zone) => ({
     ...zone,
     delivery_fee: centsToCurrency(zone.delivery_fee_cents),
@@ -87,7 +109,7 @@ export const getPublicDeliveryZones = async (slug = COMPANY_SLUG) => {
 }
 
 export const getPublicMenu = async (slug = COMPANY_SLUG) => {
-  const payload = await request(publicPath(slug, '/menu'), { token: null })
+  const payload = await cachedPublicRequest(slug, '/menu')
   const categories = (payload.menu || []).map(mapCategory)
   const products = categories.flatMap((category) => (
     (category.products || []).map((product) => mapProduct(product, {

@@ -137,7 +137,7 @@ const ProductDetails = () => {
           >
             <div style={{ minHeight: 420, background: '#121214' }}>
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={product.image_url} alt={product.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div
                   style={{

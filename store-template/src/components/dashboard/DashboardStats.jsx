@@ -33,10 +33,13 @@ const Sparkline = ({ data = [], color = '#22c55e' }) => {
 // Donut SVG puro
 const DonutChart = ({ statusCounts = {} }) => {
   const items = [
-    { key: 'pending',          label: 'Pendentes',         color: '#eab308' },
-    { key: 'accepted',         label: 'Em Preparo',        color: '#f97316' },
-    { key: 'ready',            label: 'Prontos',           color: '#a855f7' },
-    { key: 'out_for_delivery', label: 'Saiu p/ Entrega',  color: '#06b6d4' },
+    { key: 'pending',          label: 'Pendentes',        color: '#eab308' },
+    { key: 'accepted',         label: 'Aceitos',          color: '#f97316' },
+    { key: 'preparing',        label: 'Em preparo',       color: '#a855f7' },
+    { key: 'ready',            label: 'Prontos',          color: '#3b82f6' },
+    { key: 'out_for_delivery', label: 'Saiu p/ entrega', color: '#06b6d4' },
+    { key: 'completed',        label: 'Finalizados',      color: '#22c55e' },
+    { key: 'cancelled',        label: 'Cancelados',       color: '#ef4444' },
   ]
 
   const values = items.map(item => statusCounts[item.key] || 0)
