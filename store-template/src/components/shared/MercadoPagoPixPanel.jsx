@@ -56,7 +56,7 @@ const MercadoPagoPixPanel = ({ orderId, qrCode, qrCodeBase64, ticketUrl, testMod
   }, [confirmed, status, onConfirmed])
 
   const countdown = useMemo(() => {
-    if (!expiresAt) return '03:00'
+    if (!expiresAt) return '15:00'
 
     const seconds = Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 1000))
     return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`

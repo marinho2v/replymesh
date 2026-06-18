@@ -34,6 +34,9 @@ class MercadoPagoPixService
       payment_method_id:  'pix',
       description:        description,
       payer:              { email: email },
+      external_reference: external_reference_for(order),
+      notification_url:   notification_url,
+      metadata:           payment_metadata(order)
     }
 
     response = post('/v1/payments', payload, { 'X-Idempotency-Key' => idempotency_key })
@@ -52,9 +55,11 @@ class MercadoPagoPixService
 
     response = get("/v1/payments/#{payment_id}")
     {
-      id:     response['id'],
-      status: response['status'],
-      detail: response['status_detail'],
+      id:                 response['id'],
+      status:             response['status'],
+      detail:             response['status_detail'],
+      external_reference: response['external_reference'],
+      metadata:           response['metadata'] || {},
     }
   rescue => e
     Rails.logger.error("[MercadoPagoPixService] check_payment error: #{e.message}")
@@ -128,6 +133,30 @@ class MercadoPagoPixService
       ticket_url:      tx['ticket_url'],
       status:          response['status'],
     )
+  end
+
+  def external_reference_for(order)
+    [
+      "replymesh",
+      order.company&.slug,
+      order.id,
+      order.public_token
+    ].compact.join(":")
+  end
+
+  def payment_metadata(order)
+    {
+      order_id: order.id,
+      order_number: order.order_number,
+      public_token: order.public_token,
+      company_id: order.company_id,
+      company_slug: order.company&.slug
+    }.compact
+  end
+
+  def notification_url
+    ENV["MERCADOPAGO_NOTIFICATION_URL"].presence ||
+      "https://#{ENV.fetch("REPLYMESH_API_HOST", "api.replymesh.cloud")}/api/v1/webhooks/mercadopago"
   end
 
   def dev_token?

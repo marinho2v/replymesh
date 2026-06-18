@@ -1,5 +1,5 @@
 class PaymentExpirationService
-  EXPIRATION_WINDOW = 3.minutes
+  EXPIRATION_WINDOW = 15.minutes
 
   Result = Struct.new(:checked, :expired, :errors, keyword_init: true)
 

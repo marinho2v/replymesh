@@ -3,7 +3,7 @@ import { request } from '../services/replymeshApi'
 import { useCompanySlug } from '../contexts/CompanySlugContext'
 
 const POLL_INTERVAL_MS = 5_000  // 5 segundos
-const MAX_POLLS        = 120    // até 10 minutos
+const MAX_POLLS        = 180    // ate 15 minutos
 
 export const usePixPayment = (orderId, { enabled = false } = {}) => {
   const [status, setStatus]         = useState('pending_payment')
