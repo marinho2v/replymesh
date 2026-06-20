@@ -1,20 +1,11 @@
-import { COMPANY_SLUG, ReplymeshApiError, centsToCurrency, request } from './replymeshApi'
+import { COMPANY_SLUG, centsToCurrency, request } from './replymeshApi'
 import { setCurrentStoreCompany } from './storeApi'
 
-const resolvedPublicSlug = (slug) => {
-  const resolved = String(slug || COMPANY_SLUG || '').trim()
-  if (!resolved) {
-    throw new ReplymeshApiError('Loja nao encontrada', {
-      status: 404,
-      payload: { error: 'Loja nao encontrada', code: 'store_not_found' },
-    })
-  }
-  return resolved
-}
-
-const publicPath = (slug, path) => `/public/${encodeURIComponent(resolvedPublicSlug(slug))}${path}`
 const PUBLIC_CACHE_TTL_MS = 30000
 const publicGetCache = new Map()
+
+const resolvedPublicSlug = (slug) => String(slug || COMPANY_SLUG || '').trim()
+const publicPath = (slug, path) => `/public/${encodeURIComponent(resolvedPublicSlug(slug))}${path}`
 
 const cachedPublicRequest = async (slug, path) => {
   const key = publicPath(slug, path)
@@ -36,10 +27,20 @@ const cachedPublicRequest = async (slug, path) => {
   return promise
 }
 
+export const primePublicStoreCache = (slug, payload) => {
+  const resolvedSlug = resolvedPublicSlug(slug)
+  if (!resolvedSlug || !payload) return
+
+  publicGetCache.set(publicPath(resolvedSlug, '/store'), {
+    expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS,
+    promise: Promise.resolve(payload),
+  })
+}
+
 const mapStore = (store = {}) => ({
   ...store,
   name: store.store_name || store.name,
-  logo_url: store.logo_url || '',
+  logo_url: store.logo_url || '/logo.png',
   cover_url: store.cover_url || store.banner_url || '',
   display_address: [store.address, store.city, store.state].filter(Boolean).join(' - '),
   default_delivery_fee: centsToCurrency(store.default_delivery_fee_cents),
@@ -80,10 +81,21 @@ const mapProduct = (product = {}, category = null) => ({
 })
 
 export const getPublicStoreInfo = async (slug = COMPANY_SLUG) => {
+  return (await getPublicStoreBundle(slug)).store
+}
+
+export const getPublicStoreBundle = async (slug = COMPANY_SLUG) => {
   const payload = await cachedPublicRequest(slug, '/store')
   const store = mapStore(payload.store || {})
   setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: store.slug || slug })
-  return store
+
+  return {
+    store,
+    banners: payload.app_banners || payload.banners || [],
+    business_hours: payload.business_hours || [],
+    exceptions: payload.business_hour_exceptions || payload.exceptions || [],
+    delivery_zones: (payload.delivery_zones || []).map(mapDeliveryZone),
+  }
 }
 
 export const getPublicBanners = async (slug = COMPANY_SLUG) => {
@@ -99,13 +111,15 @@ export const getPublicBusinessHours = async (slug = COMPANY_SLUG) => {
   }
 }
 
+const mapDeliveryZone = (zone = {}) => ({
+  ...zone,
+  delivery_fee: centsToCurrency(zone.delivery_fee_cents),
+  minimum_order: centsToCurrency(zone.minimum_order_cents),
+})
+
 export const getPublicDeliveryZones = async (slug = COMPANY_SLUG) => {
   const payload = await cachedPublicRequest(slug, '/delivery_zones')
-  return (payload.delivery_zones || []).map((zone) => ({
-    ...zone,
-    delivery_fee: centsToCurrency(zone.delivery_fee_cents),
-    minimum_order: centsToCurrency(zone.minimum_order_cents),
-  }))
+  return (payload.delivery_zones || []).map(mapDeliveryZone)
 }
 
 export const getPublicMenu = async (slug = COMPANY_SLUG) => {

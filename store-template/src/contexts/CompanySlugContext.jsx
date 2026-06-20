@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { COMPANY_SLUG, REPLYMESH_API_URL } from '../services/replymeshApi'
-import { ensureStoreAuthTenant, readStoreAuthSession } from '../services/storeAuthStorage'
+import { ensureStoreAuthTenant } from '../services/storeAuthStorage'
+import { primePublicStoreCache } from '../services/publicApi'
 
 const CompanySlugContext = createContext({
   slug: COMPANY_SLUG,
@@ -11,13 +12,14 @@ export const useCompanySlug    = () => useContext(CompanySlugContext).slug
 export const useCompanyBasePath = () => useContext(CompanySlugContext).basePath
 
 const isDomainIdentifier = value => String(value || '').includes('.')
+const domainSlugStorageKey = identifier => `replymesh_store_company_slug:${identifier}`
 
 export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
   const companyIdentifier = slug || COMPANY_SLUG
   const [resolvedSlug, setResolvedSlug] = useState(() => {
-    const storedSlug = localStorage.getItem('replymesh_store_company_slug')
-    if (isDomainIdentifier(companyIdentifier) && storedSlug && !isDomainIdentifier(storedSlug)) {
-      return storedSlug
+    if (isDomainIdentifier(companyIdentifier)) {
+      const storedSlug = localStorage.getItem(domainSlugStorageKey(companyIdentifier))
+      return storedSlug && !isDomainIdentifier(storedSlug) ? storedSlug : null
     }
     return companyIdentifier
   })
@@ -31,31 +33,41 @@ export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
       return undefined
     }
 
-    const previousSlug = localStorage.getItem('replymesh_store_company_slug')
-    const previousSession = previousSlug ? readStoreAuthSession(previousSlug) : null
     const customDomain = isDomainIdentifier(companyIdentifier)
+    const storedSlug = customDomain
+      ? localStorage.getItem(domainSlugStorageKey(companyIdentifier))
+      : localStorage.getItem('replymesh_store_company_slug')
     let active = true
-    let authChangeDispatched = false
 
-    const applyResolvedCompany = (canonicalSlug, companyId = null) => {
+    const applyResolvedCompany = (canonicalSlug, companyId = null, payload = null) => {
       if (!active || !canonicalSlug) return
+
+      if (payload) {
+        primePublicStoreCache(companyIdentifier, payload)
+        primePublicStoreCache(canonicalSlug, payload)
+      }
+
+      if (!ensureStoreAuthTenant(canonicalSlug)) {
+        window.dispatchEvent(new Event('replymesh-auth-changed'))
+      }
 
       setResolvedSlug(canonicalSlug)
       localStorage.setItem('replymesh_store_company_slug', canonicalSlug)
-      if (companyId) localStorage.setItem('replymesh_store_company_id', String(companyId))
-
-      if (
-        previousSession?.token
-        && previousSlug !== canonicalSlug
-        && !ensureStoreAuthTenant(canonicalSlug)
-        && !authChangeDispatched
-      ) {
-        authChangeDispatched = true
-        window.dispatchEvent(new Event('replymesh-auth-changed'))
+      if (customDomain) {
+        localStorage.setItem(domainSlugStorageKey(companyIdentifier), canonicalSlug)
       }
+      if (companyId) localStorage.setItem('replymesh_store_company_id', String(companyId))
     }
 
-    if (!customDomain) applyResolvedCompany(companyIdentifier)
+    if (!customDomain) {
+      applyResolvedCompany(companyIdentifier)
+      return () => { active = false }
+    }
+
+    if (storedSlug && !isDomainIdentifier(storedSlug)) {
+      applyResolvedCompany(storedSlug)
+      return () => { active = false }
+    }
 
     fetch(`${REPLYMESH_API_URL}/public/${encodeURIComponent(companyIdentifier)}/store`, {
       headers: { Accept: 'application/json' },
@@ -64,10 +76,10 @@ export const CompanySlugProvider = ({ slug, basePath = '', children }) => {
       .then(payload => {
         if (!active || !payload?.store) return
         const companyId = payload.store.company_id || payload.store.id
-        applyResolvedCompany(payload.store.slug || companyIdentifier, companyId)
+        applyResolvedCompany(payload.store.slug || companyIdentifier, companyId, payload)
       })
       .catch(() => {
-        if (!customDomain) applyResolvedCompany(companyIdentifier)
+        applyResolvedCompany(companyIdentifier)
       })
 
     return () => { active = false }

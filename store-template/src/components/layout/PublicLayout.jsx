@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useCart } from '../../hooks/useCart'
 import { Link, useNavigate } from 'react-router-dom'
 import BrandLogo from '../shared/BrandLogo'
-import { usePublicStoreInfoLoader } from '../../hooks/usePublicStoreInfo'
+import { usePublicStoreInfo } from '../../hooks/usePublicStoreInfo'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import { PublicStoreInfoProvider } from '../../contexts/PublicStoreInfoContext'
 import { StoreTemplateProvider } from '../../contexts/StoreTemplateContext'
@@ -14,7 +14,7 @@ import { updateTenantFavicon } from '../../utils/tenantBranding'
 export const PublicLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { cart } = useCart()
-  const publicStoreInfo = usePublicStoreInfoLoader()
+  const publicStoreInfo = usePublicStoreInfo()
   const { store, loading, error, refetch } = publicStoreInfo
   const navigate = useNavigate()
   const location = useLocation()
