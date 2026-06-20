@@ -195,7 +195,17 @@ const PremiumFooter = ({ store }) => {
           }}
         >
           <span>© {new Date().getFullYear()} {storeName}. Todos os direitos reservados.</span>
-          <span>Desenvolvido por Replymesh</span>
+          <span>
+            Desenvolvido por{' '}
+            <a
+              href="https://replymesh.cloud"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              Replymesh
+            </a>
+          </span>
         </div>
       </div>
     </footer>

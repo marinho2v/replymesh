@@ -201,7 +201,15 @@ export const PublicLayout = () => {
             />
             <p className="text-sm">© {new Date().getFullYear()} {storeName}. Todos os direitos reservados.</p>
             <p className="text-xs mt-2">
-              Desenvolvido por Replymesh
+              Desenvolvido por{' '}
+              <a
+                href="https://replymesh.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-400 transition-colors"
+              >
+                Replymesh
+              </a>
             </p>
           </div>
         </div>

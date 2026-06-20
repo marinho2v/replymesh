@@ -56,17 +56,15 @@ const ProductCard = ({ product, featured = false, onAddToCart }) => {
           )}
 
           {hasDescription && (
-            <>
-              <p className="text-gray-400 text-sm mb-1 line-clamp-2">{product.description}</p>
-              <button
-                type="button"
-                onClick={() => setDetailsOpen(true)}
-                className="mb-3 text-sm font-semibold text-yellow-400 hover:text-yellow-300"
-              >
-                Ver detalhes do item
-              </button>
-            </>
+            <p className="text-gray-400 text-sm mb-1 line-clamp-2">{product.description}</p>
           )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(true)}
+            className="mb-3 text-sm font-semibold text-yellow-400 hover:text-yellow-300"
+          >
+            Ver detalhes do item
+          </button>
 
           <div className="flex items-center justify-between mb-4">
             <div>

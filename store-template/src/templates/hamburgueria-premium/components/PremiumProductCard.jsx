@@ -177,11 +177,9 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
               <IconCart s={17} /> Adicionar
             </button>
           )}
-          {hasDescription && (
-            <button type="button" onClick={() => setDetailsOpen(true)} style={detailsButtonStyle}>
-              Ver detalhes do item
-            </button>
-          )}
+          <button type="button" onClick={() => setDetailsOpen(true)} style={detailsButtonStyle}>
+            Ver detalhes do item
+          </button>
         </div>
       </div>
     </div>
