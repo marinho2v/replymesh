@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ShoppingBag, Ticket, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ShoppingBag, Ticket, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -76,6 +76,7 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState('')
   const [saveCustomerData, setSaveCustomerData] = useState(false)
   const [deletingAddressId, setDeletingAddressId] = useState(null)
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState(null)
   const [mpPixData, setMpPixData] = useState(null) // { pix_payment_id, pix_qr_code, pix_qr_code_base64, pix_ticket_url, order_id }
   const lookupAbortRef = useRef(null)
 
@@ -96,6 +97,7 @@ const Checkout = () => {
     const phone = digitsOnly(formData.whatsapp)
     if (phone.length < 10) {
       setCustomerProfile(null)
+      setSelectedSavedAddressId(null)
       setLookupStatus('idle')
       setLookupMessage('')
       return
@@ -114,6 +116,7 @@ const Checkout = () => {
 
         if (!result.found || !result.customer) {
           setCustomerProfile(null)
+          setSelectedSavedAddressId(null)
           setLookupStatus('not_found')
           setLookupMessage('Cliente nao encontrado. Preencha os dados normalmente.')
           return
@@ -173,6 +176,9 @@ const Checkout = () => {
 
   const updateFormData = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    if (['street', 'number', 'complement', 'reference'].includes(field)) {
+      setSelectedSavedAddressId(null)
+    }
   }, [])
 
   const findDeliveryZoneForAddress = useCallback((address) => (
@@ -184,6 +190,8 @@ const Checkout = () => {
 
   const applyLookupAddress = useCallback((address) => {
     if (!address) return
+
+    setSelectedSavedAddressId(address.id ?? null)
 
     setFormData(prev => ({
       ...prev,
@@ -209,6 +217,7 @@ const Checkout = () => {
 
       const result = await lookupPublicCustomer(digitsOnly(formData.whatsapp), slug)
       setCustomerProfile(result.found ? result.customer : null)
+      if (String(selectedSavedAddressId) === String(address.id)) setSelectedSavedAddressId(null)
       toast.success('Endereco removido')
     } catch (error) {
       toast.error(error.message || 'Nao foi possivel remover o endereco')
@@ -512,16 +521,27 @@ const Checkout = () => {
                         {customerProfile.addresses.map((address, index) => (
                           <div
                             key={address.id || index}
-                            className="grid grid-cols-[1fr_auto] items-stretch rounded-lg border border-dark-600 transition-colors hover:border-white"
+                            className={`grid grid-cols-[1fr_auto] items-stretch rounded-lg border transition-all ${
+                              selectedSavedAddressId != null && String(selectedSavedAddressId) === String(address.id)
+                                ? 'border-green-500 bg-green-900/25 ring-1 ring-green-500/40'
+                                : 'border-dark-600 hover:border-white'
+                            }`}
                           >
                             <button
                               type="button"
                               onClick={() => applyLookupAddress(address)}
                               className="min-w-0 p-3 text-left text-sm"
                             >
-                              <p className="font-semibold text-white">
-                                {address.street || 'Rua nao informada'}, {address.number || 's/n'}
-                              </p>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="font-semibold text-white">
+                                  {address.street || 'Rua nao informada'}, {address.number || 's/n'}
+                                </p>
+                                {selectedSavedAddressId != null && String(selectedSavedAddressId) === String(address.id) && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-2 py-1 text-xs font-semibold text-green-300">
+                                    <CheckCircle2 size={14} /> Selecionado
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-gray-400">
                                 {address.neighborhood || 'Regiao nao informada'}{address.reference ? ` - Ref.: ${address.reference}` : ''}
                               </p>
@@ -532,7 +552,9 @@ const Checkout = () => {
                               title="Remover endereco salvo"
                               onClick={() => handleDeleteSavedAddress(address)}
                               disabled={deletingAddressId === address.id}
-                              className="flex w-12 items-center justify-center border-l border-dark-600 text-gray-400 transition-colors hover:bg-red-900/30 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                              className={`flex w-12 items-center justify-center border-l text-gray-400 transition-colors hover:bg-red-900/30 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                selectedSavedAddressId != null && String(selectedSavedAddressId) === String(address.id) ? 'border-green-500/40' : 'border-dark-600'
+                              }`}
                             >
                               <Trash2 size={17} />
                             </button>

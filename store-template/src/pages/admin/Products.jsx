@@ -582,7 +582,7 @@ const Products = () => {
   }
 
   const renderPizzaEditor = () => (
-    <div className="mt-4 space-y-5 rounded-xl border border-yellow-700/40 bg-yellow-950/10 p-4">
+    <div className="mt-4 min-w-0 space-y-5 overflow-x-hidden rounded-xl border border-yellow-700/40 bg-yellow-950/10 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="flex items-center gap-2 text-lg font-bold text-white">
@@ -599,22 +599,26 @@ const Products = () => {
       </div>
 
       <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h4 className="font-semibold text-white">Tamanhos</h4>
           <Button type="button" size="sm" onClick={addPizzaSize}>Adicionar tamanho</Button>
         </div>
         <div className="mt-3 space-y-3">
           {(pizzaConfig.sizes || []).map((size, index) => (
-            <div key={`${size.id}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 lg:grid-cols-[1.2fr_120px_120px_100px_80px_auto]">
-              <Input label="Nome do tamanho" value={size.name} onChange={(event) => updatePizzaSize(index, { name: event.target.value })} />
-              <Input label="Preco base" type="number" step="0.01" value={size.base_price} onChange={(event) => updatePizzaSize(index, { base_price: event.target.value })} />
-              <Input label="Max. sabores" type="number" min="1" value={size.max_flavors} onChange={(event) => updatePizzaSize(index, { max_flavors: event.target.value })} />
-              <Input label="Fatias" type="number" min="0" value={size.slices} onChange={(event) => updatePizzaSize(index, { slices: event.target.value })} />
-              <label className="flex items-end gap-2 pb-2 text-sm text-white">
-                <input type="checkbox" checked={size.active !== false} onChange={(event) => updatePizzaSize(index, { active: event.target.checked })} />
-                Ativo
-              </label>
-              <Button type="button" size="sm" variant="danger" className="self-end" onClick={() => removePizzaSize(index)}>Remover</Button>
+            <div key={`${size.id}-${index}`} className="min-w-0 rounded-lg bg-dark-800 p-3">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.6fr)]">
+                <Input label="Nome do tamanho" value={size.name} onChange={(event) => updatePizzaSize(index, { name: event.target.value })} />
+                <Input label="Preco base" type="number" step="0.01" value={size.base_price} onChange={(event) => updatePizzaSize(index, { base_price: event.target.value })} />
+                <Input label="Max. sabores" type="number" min="1" value={size.max_flavors} onChange={(event) => updatePizzaSize(index, { max_flavors: event.target.value })} />
+                <Input label="Fatias" type="number" min="0" value={size.slices} onChange={(event) => updatePizzaSize(index, { slices: event.target.value })} />
+              </div>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-2 text-sm text-white">
+                  <input type="checkbox" checked={size.active !== false} onChange={(event) => updatePizzaSize(index, { active: event.target.checked })} />
+                  Ativo
+                </label>
+                <Button type="button" size="sm" variant="danger" className="w-full sm:w-auto" onClick={() => removePizzaSize(index)}>Remover</Button>
+              </div>
             </div>
           ))}
         </div>
@@ -625,74 +629,67 @@ const Products = () => {
           <h4 className="font-semibold text-white">Sabores</h4>
           <Button type="button" size="sm" onClick={addPizzaFlavor}>Adicionar sabor</Button>
         </div>
-        <div className="mt-3 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-dark-700 text-left text-gray-400">
-                <th className="p-2">Sabor</th>
-                <th className="p-2">Descricao</th>
-                {(pizzaConfig.sizes || []).map(size => <th key={size.id} className="p-2">{size.name}</th>)}
-                <th className="p-2">Ativo</th>
-                <th className="p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(pizzaConfig.flavors || []).map((flavor, flavorIndex) => (
-                <tr key={`${flavor.id}-${flavorIndex}`} className="border-b border-dark-800">
-                  <td className="p-2 min-w-[180px]">
-                    <Input value={flavor.name} onChange={(event) => updatePizzaFlavor(flavorIndex, { name: event.target.value })} />
-                  </td>
-                  <td className="p-2 min-w-[220px]">
-                    <Input value={flavor.description || ''} onChange={(event) => updatePizzaFlavor(flavorIndex, { description: event.target.value })} />
-                  </td>
-                  {(pizzaConfig.sizes || []).map(size => (
-                    <td key={size.id} className="p-2 min-w-[110px]">
-                      <Input type="number" step="0.01" value={flavor.prices?.[size.id] ?? size.base_price ?? 0} onChange={(event) => updateFlavorPrice(flavorIndex, size.id, event.target.value)} />
-                    </td>
-                  ))}
-                  <td className="p-2">
-                    <input type="checkbox" checked={flavor.active !== false} onChange={(event) => updatePizzaFlavor(flavorIndex, { active: event.target.checked })} />
-                  </td>
-                  <td className="p-2">
-                    <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'flavors', flavorIndex))}>Remover</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-3 space-y-3">
+          {(pizzaConfig.flavors || []).map((flavor, flavorIndex) => (
+            <div key={`${flavor.id}-${flavorIndex}`} className="min-w-0 rounded-lg bg-dark-800 p-3">
+              <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                <Input label="Sabor" value={flavor.name} onChange={(event) => updatePizzaFlavor(flavorIndex, { name: event.target.value })} />
+                <Input label="Descricao" value={flavor.description || ''} onChange={(event) => updatePizzaFlavor(flavorIndex, { description: event.target.value })} />
+              </div>
+              <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {(pizzaConfig.sizes || []).map(size => (
+                  <Input
+                    key={size.id}
+                    label={`Preco ${size.name}`}
+                    type="number"
+                    step="0.01"
+                    value={flavor.prices?.[size.id] ?? size.base_price ?? 0}
+                    onChange={(event) => updateFlavorPrice(flavorIndex, size.id, event.target.value)}
+                  />
+                ))}
+              </div>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-2 text-sm text-white">
+                  <input type="checkbox" checked={flavor.active !== false} onChange={(event) => updatePizzaFlavor(flavorIndex, { active: event.target.checked })} />
+                  Ativo
+                </label>
+                <Button type="button" size="sm" variant="danger" className="w-full sm:w-auto" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'flavors', flavorIndex))}>Remover</Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h4 className="font-semibold text-white">Bordas</h4>
             <Button type="button" size="sm" onClick={() => setPizzaConfig(prev => addPizzaCollectionItem(prev, 'edges', { name: 'Nova borda', price: 0, active: true }))}>Adicionar borda</Button>
           </div>
           <div className="mt-3 space-y-2">
             {(pizzaConfig.edges || []).map((edge, index) => (
-              <div key={`${edge.name}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-[1fr_120px_70px_auto]">
+              <div key={`${edge.name}-${index}`} className="grid min-w-0 gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_72px_auto]">
                 <Input value={edge.name} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { name: event.target.value }))} />
                 <Input type="number" step="0.01" value={edge.price} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { price: event.target.value }))} />
                 <label className="flex items-center gap-2 text-sm text-white"><input type="checkbox" checked={edge.active !== false} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'edges', index, { active: event.target.checked }))} />Ativo</label>
-                <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'edges', index))}>Remover</Button>
+                <Button type="button" size="sm" variant="danger" className="w-full xl:w-auto" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'edges', index))}>Remover</Button>
               </div>
             ))}
           </div>
         </div>
 
         <div className="rounded-lg border border-dark-600 bg-dark-900/70 p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h4 className="font-semibold text-white">Massas</h4>
             <Button type="button" size="sm" onClick={() => setPizzaConfig(prev => addPizzaCollectionItem(prev, 'doughs', { name: 'Nova massa', price: 0, active: true }))}>Adicionar massa</Button>
           </div>
           <div className="mt-3 space-y-2">
             {(pizzaConfig.doughs || []).map((dough, index) => (
-              <div key={`${dough.name}-${index}`} className="grid gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-[1fr_120px_70px_auto]">
+              <div key={`${dough.name}-${index}`} className="grid min-w-0 gap-2 rounded-lg bg-dark-800 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_72px_auto]">
                 <Input value={dough.name} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { name: event.target.value }))} />
                 <Input type="number" step="0.01" value={dough.price} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { price: event.target.value }))} />
                 <label className="flex items-center gap-2 text-sm text-white"><input type="checkbox" checked={dough.active !== false} onChange={(event) => setPizzaConfig(prev => updatePizzaCollection(prev, 'doughs', index, { active: event.target.checked }))} />Ativo</label>
-                <Button type="button" size="sm" variant="danger" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'doughs', index))}>Remover</Button>
+                <Button type="button" size="sm" variant="danger" className="w-full xl:w-auto" onClick={() => setPizzaConfig(prev => removePizzaCollectionItem(prev, 'doughs', index))}>Remover</Button>
               </div>
             ))}
           </div>
@@ -994,7 +991,7 @@ const Products = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingProduct ? 'Editar Produto' : 'Novo Produto'}
-        size="lg"
+        size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

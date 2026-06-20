@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Card, CardContent } from '../ui/Card'
 import { formatCurrency } from '../../utils/currency'
 import {
@@ -122,6 +123,8 @@ const DonutChart = ({ statusCounts = {} }) => {
 }
 
 const DashboardStats = ({ stats, loading }) => {
+  const [openSummary, setOpenSummary] = useState(null)
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -147,6 +150,7 @@ const DashboardStats = ({ stats, loading }) => {
       color:   'text-green-500',
       bgColor: 'bg-green-500/10',
       sparkColor: '#22c55e',
+      comparison: stats?.revenueChangePercent || 0,
     },
     {
       title:   'Pedidos do Dia',
@@ -176,52 +180,83 @@ const DashboardStats = ({ stats, loading }) => {
 
   const resumoItems = [
     {
+      key: 'orders',
       label: 'Total de Pedidos',
       value: stats?.totalOrders || 0,
       icon: ShoppingBag,
       iconColor: 'text-blue-400',
       iconBg: 'bg-blue-500/10',
       highlight: false,
+      details: [
+        ['Pedidos hoje', stats?.todayOrders || 0],
+        ['Pendentes', stats?.statusCounts?.pending || 0],
+        ['Finalizados', stats?.statusCounts?.completed || 0],
+      ],
     },
     {
+      key: 'revenue',
       label: 'Faturamento Total',
       value: formatCurrency(stats?.totalRevenue || 0),
       icon: TrendingUp,
       iconColor: 'text-green-400',
       iconBg: 'bg-green-500/10',
       highlight: false,
+      details: [
+        ['Faturamento hoje', formatCurrency(stats?.todayRevenue || 0)],
+        ['Ticket medio', formatCurrency(stats?.averageTicket || 0)],
+      ],
     },
     {
+      key: 'low-stock',
       label: 'Estoque Baixo',
       value: stats?.lowStockItems || 0,
       icon: AlertTriangle,
       iconColor: (stats?.lowStockItems || 0) > 0 ? 'text-yellow-400' : 'text-gray-500',
       iconBg: (stats?.lowStockItems || 0) > 0 ? 'bg-yellow-500/10' : 'bg-dark-800',
       highlight: (stats?.lowStockItems || 0) > 0,
+      details: [
+        ['Itens abaixo do minimo', stats?.lowStockItems || 0],
+        ['Acao sugerida', 'Abrir Itens de Estoque'],
+      ],
     },
     {
+      key: 'out-stock',
       label: 'Sem Estoque',
       value: stats?.outOfStockItems || 0,
       icon: PackageX,
       iconColor: (stats?.outOfStockItems || 0) > 0 ? 'text-red-400' : 'text-gray-500',
       iconBg: (stats?.outOfStockItems || 0) > 0 ? 'bg-red-500/10' : 'bg-dark-800',
       highlight: (stats?.outOfStockItems || 0) > 0,
+      details: [
+        ['Itens zerados', stats?.outOfStockItems || 0],
+        ['Acao sugerida', 'Repor ou desativar produtos'],
+      ],
     },
     {
+      key: 'recurring',
       label: 'Clientes Recorrentes',
       value: stats?.recurringCustomers || 0,
       icon: RefreshCw,
       iconColor: 'text-purple-400',
       iconBg: 'bg-purple-500/10',
       highlight: false,
+      details: [
+        ['Clientes que compraram novamente', stats?.recurringCustomers || 0],
+        ['Novos clientes hoje', stats?.newCustomers || 0],
+      ],
     },
     {
+      key: 'coupons',
       label: 'Cupons Utilizados',
       value: stats?.usedCoupons || 0,
       icon: Ticket,
       iconColor: 'text-orange-400',
       iconBg: 'bg-orange-500/10',
       highlight: false,
+      details: [
+        ['Cupons aplicados', stats?.usedCoupons || 0],
+        ['Origem', 'Pedidos com desconto/cupom'],
+      ],
     },
   ]
 
@@ -242,7 +277,11 @@ const DashboardStats = ({ stats, loading }) => {
                 </div>
                 <p className="text-gray-400 text-sm mb-0.5">{card.title}</p>
                 <p className="text-2xl font-bold text-white">{card.value}</p>
-                <p className="text-xs text-gray-500 mt-1">0% vs ontem</p>
+                {card.comparison !== undefined ? (
+                  <p className={`text-xs mt-1 ${card.comparison > 0 ? 'text-green-400' : card.comparison < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                    {card.comparison > 0 ? '+' : ''}{card.comparison.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% vs ontem
+                  </p>
+                ) : <p className="text-xs text-transparent mt-1" aria-hidden="true">comparacao</p>}
               </CardContent>
             </Card>
           )
@@ -262,21 +301,37 @@ const DashboardStats = ({ stats, loading }) => {
           <CardContent className="p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-4">Resumo Geral</h3>
             <div className="divide-y divide-dark-800">
-              {resumoItems.map((item, i) => {
+              {resumoItems.map((item) => {
                 const Icon = item.icon
+                const isOpen = openSummary === item.key
                 return (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 py-2.5 hover:bg-dark-800 -mx-2 px-2 rounded-lg transition-colors cursor-default"
-                  >
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ${item.iconBg}`}>
-                      <Icon size={15} className={item.iconColor} />
-                    </div>
-                    <span className="text-gray-400 text-sm flex-1">{item.label}</span>
-                    <span className={`font-semibold text-sm tabular-nums ${item.highlight ? 'text-yellow-400' : 'text-white'}`}>
-                      {item.value}
-                    </span>
-                    <ChevronRight size={14} className="text-gray-600 shrink-0" />
+                  <div key={item.key} className="-mx-2 rounded-lg transition-colors hover:bg-dark-800">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-2 py-2.5 text-left"
+                      onClick={() => setOpenSummary((current) => current === item.key ? null : item.key)}
+                      aria-expanded={isOpen}
+                    >
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ${item.iconBg}`}>
+                        <Icon size={15} className={item.iconColor} />
+                      </div>
+                      <span className="text-gray-400 text-sm flex-1">{item.label}</span>
+                      <span className={`font-semibold text-sm tabular-nums ${item.highlight ? 'text-yellow-400' : 'text-white'}`}>
+                        {item.value}
+                      </span>
+                      <ChevronRight size={14} className={`text-gray-600 shrink-0 transition-transform ${isOpen ? 'rotate-90 text-yellow-400' : ''}`} />
+                    </button>
+
+                    {isOpen && (
+                      <div className="ml-12 mr-3 mb-3 rounded-lg border border-dark-700 bg-dark-900/80 p-3">
+                        {item.details.map(([label, value]) => (
+                          <div key={label} className="flex items-center justify-between gap-3 py-1 text-xs">
+                            <span className="text-gray-500">{label}</span>
+                            <span className="text-gray-200 font-medium text-right">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}

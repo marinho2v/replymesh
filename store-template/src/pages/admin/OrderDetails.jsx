@@ -174,7 +174,7 @@ const OrderDetails = () => {
     setSelectedStatus(ORDER_STATUSES.CANCELLED)
     setActionLoading('cancel')
     try {
-      const updatedOrder = await updateStoreOrderStatus(order.id, ORDER_STATUSES.CANCELLED, { skipSideEffects: true })
+      const updatedOrder = await updateStoreOrderStatus(order.id, ORDER_STATUSES.CANCELLED, { skipSideEffects: false })
       refreshWith(updatedOrder)
       toast.success('Pedido cancelado')
       await loadOrder()

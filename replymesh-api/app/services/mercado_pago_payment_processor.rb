@@ -110,7 +110,8 @@ class MercadoPagoPaymentProcessor
       title: "Pagamento confirmado - Pedido ##{@order.order_number}",
       message: "Pix Mercado Pago aprovado. Pedido aceito automaticamente.",
       type: "billing",
-      link_url: "/admin/orders/#{@order.id}"
+      link_url: "/admin/orders/#{@order.id}",
+      metadata: { payment_status: "paid", order_id: @order.id }
     ) rescue nil
 
     Rails.logger.info("[MP Pix] Payment confirmed for order #{@order.id}")
@@ -133,7 +134,8 @@ class MercadoPagoPaymentProcessor
       title: "Pix #{payment_status == 'expired' ? 'expirado' : 'cancelado'} - Pedido ##{@order.order_number}",
       message: "Pedido cancelado automaticamente. Motivo: #{detail}.",
       type: "billing",
-      link_url: "/admin/orders/#{@order.id}"
+      link_url: "/admin/orders/#{@order.id}",
+      metadata: { payment_status: payment_status, order_id: @order.id }
     ) rescue nil
 
     Rails.logger.info("[MP Pix] Payment #{payment_status} for order #{@order.id}: #{detail}")

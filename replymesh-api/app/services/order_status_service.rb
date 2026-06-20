@@ -43,7 +43,7 @@ class OrderStatusService
 
   def initialize(order:, new_status:, user: nil, notes: nil, skip_side_effects: false, allow_inactive_status: false)
     @order = order
-    @new_status = new_status
+    @new_status = normalize_status(new_status)
     @user = user
     @notes = notes
     @skip_side_effects = skip_side_effects
@@ -116,7 +116,7 @@ class OrderStatusService
     end
 
     statuses = %w[pending]
-    statuses << "accepted" if template_enabled_for_status?("accepted", default: true)
+    statuses << "accepted"
     statuses << "preparing" if template_enabled_for_status?("preparing", default: false)
     statuses << "ready" if template_enabled_for_status?("ready", default: false)
     statuses << "out_for_delivery" if @order.delivery? && template_enabled_for_status?("out_for_delivery", default: true)
@@ -156,11 +156,27 @@ class OrderStatusService
         WheelService.grant_for_order(@order)
       end
     when "cancelled"
+      cancel_delivery_assignment
       return unless @order.inventory_deducted?
 
       result = InventoryService.restore_for_order(order: @order, user: @user)
       raise ServiceError, result.error unless result.success?
     end
+  end
+
+  def cancel_delivery_assignment
+    return unless @order.delivery?
+    return unless @order.delivery_status.in?(%w[assigned on_the_way delivered])
+
+    result = DeliveryService.cancel(order: @order, user: @user, notes: @notes)
+    raise ServiceError, result.error unless result.success?
+  end
+
+  def normalize_status(status)
+    normalized = status.to_s
+    return "cancelled" if normalized == "canceled"
+
+    normalized
   end
 
   def prepare_whatsapp_update

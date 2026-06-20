@@ -57,6 +57,20 @@ class DeliveryService
   end
 
   # ─── Confirmar entrega (pelo motoboy) ───────────────────────────────────────
+  def self.cancel(order:, user: nil, notes: nil)
+    ActiveRecord::Base.transaction do
+      order.update!(delivery_status: "cancelled")
+      order.delivery_history&.update!(
+        status: "cancelled",
+        notes: notes.presence || "Pedido cancelado"
+      )
+    end
+
+    Result.new(success: true, data: order.reload)
+  rescue ActiveRecord::RecordInvalid => e
+    Result.new(success: false, error: e.record.errors.full_messages.join(", "))
+  end
+
   def self.complete(order:, motoboy:, notes: nil, user: nil)
     unless order.motoboy_id == motoboy.id
       return Result.new(success: false, error: "Pedido não pertence a este motoboy")

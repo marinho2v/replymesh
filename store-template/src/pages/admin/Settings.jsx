@@ -9,7 +9,6 @@ import { PIX_KEY_TYPE_LABELS } from '../../utils/pix'
 import { getEffectiveStoreStatus, normalizeTime } from '../../utils/storeSchedule'
 import {
   Check,
-  Bot,
   ChevronDown,
   Clock,
   CreditCard,
@@ -25,10 +24,6 @@ import {
   Upload,
 } from 'lucide-react'
 import { DEFAULT_TEMPLATE_ID, getAllTemplates, getTemplateById, getTemplateCategories } from '../../templates'
-import {
-  railsGetStoreAiSettings,
-  railsUpdateStoreAiSettings,
-} from '../../services/storeApi'
 
 const TEMPLATE_CATEGORY_LABELS = {
   hamburgueria: 'Hamburgueria',
@@ -344,120 +339,6 @@ const SettingsSection = ({ id, icon: Icon, title, description, openSection, setO
 }
 
 const compactCheckboxClass = 'flex items-center gap-3 rounded-lg border border-dark-700 bg-dark-900 px-3 py-2 text-sm text-gray-200'
-
-const defaultStoreAiSettings = {
-  enabled: false,
-  auto_reply_whatsapp: false,
-  assistant_name: 'Assistente da Loja',
-  initial_message: 'Ola! Como posso ajudar?',
-  tone: 'simpatico, objetivo e natural',
-  allow_orders: true,
-  allow_products: true,
-  allow_hours: true,
-  allow_delivery: true,
-  allow_payments: true,
-  allow_promotions: true,
-  allow_order_status: true,
-}
-
-const StoreAiSection = ({ openSection, setOpenSection }) => {
-  const [settings, setSettings] = useState(defaultStoreAiSettings)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    let alive = true
-    railsGetStoreAiSettings()
-      .then((payload) => {
-        if (!alive) return
-        setSettings({ ...defaultStoreAiSettings, ...(payload.settings || {}) })
-      })
-      .catch((error) => {
-        if (alive) setMessage(error.message || 'Nao foi possivel carregar a IA da loja.')
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
-      })
-    return () => { alive = false }
-  }, [])
-
-  const update = (field, value) => setSettings((current) => ({ ...current, [field]: value }))
-
-  const save = async () => {
-    setSaving(true)
-    setMessage('')
-    try {
-      const payload = await railsUpdateStoreAiSettings(settings)
-      setSettings({ ...defaultStoreAiSettings, ...(payload.settings || {}) })
-      setMessage('Configuracoes da IA salvas com sucesso.')
-    } catch (error) {
-      setMessage(error.message || 'Nao foi possivel salvar a IA da loja.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <SettingsSection
-      id="store-ai"
-      icon={Bot}
-      title="Inteligencia Artificial"
-      description="Configure o atendimento automatico aos clientes da sua loja."
-      openSection={openSection}
-      setOpenSection={setOpenSection}
-    >
-      {loading ? (
-        <p className="text-sm text-gray-400">Carregando IA da loja...</p>
-      ) : (
-        <>
-          {message && <div className="rounded-lg border border-dark-600 bg-dark-900 p-3 text-sm text-gray-200">{message}</div>}
-
-          <label className={compactCheckboxClass}>
-            <input type="checkbox" checked={settings.enabled} onChange={(event) => update('enabled', event.target.checked)} />
-            Ativar IA da loja
-          </label>
-          <label className={compactCheckboxClass}>
-            <input
-              type="checkbox"
-              checked={settings.auto_reply_whatsapp}
-              onChange={(event) => update('auto_reply_whatsapp', event.target.checked)}
-              disabled={!settings.enabled}
-            />
-            Responder automaticamente no WhatsApp
-          </label>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input label="Nome da IA" value={settings.assistant_name} onChange={(event) => update('assistant_name', event.target.value)} />
-            <Input label="Tom de voz" value={settings.tone} onChange={(event) => update('tone', event.target.value)} />
-          </div>
-          <Textarea label="Mensagem inicial" rows={2} value={settings.initial_message} onChange={(event) => update('initial_message', event.target.value)} />
-
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {[
-              ['allow_orders', 'Responder sobre pedidos'],
-              ['allow_products', 'Responder sobre produtos'],
-              ['allow_hours', 'Responder sobre horarios'],
-              ['allow_delivery', 'Responder sobre entrega'],
-              ['allow_payments', 'Responder sobre pagamentos'],
-              ['allow_promotions', 'Responder sobre promocoes'],
-              ['allow_order_status', 'Consultar status do pedido'],
-            ].map(([field, label]) => (
-              <label className={compactCheckboxClass} key={field}>
-                <input type="checkbox" checked={Boolean(settings[field])} onChange={(event) => update(field, event.target.checked)} />
-                {label}
-              </label>
-            ))}
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={save} loading={saving}>Salvar IA da loja</Button>
-          </div>
-        </>
-      )}
-    </SettingsSection>
-  )
-}
 
 const Settings = () => {
   const { settings, businessHours, loading, error, saveSettings, saveBusinessHours } = useSettings()
@@ -1146,7 +1027,6 @@ const Settings = () => {
           </Button>
         </SettingsSection>
 
-        <StoreAiSection openSection={openSection} setOpenSection={setOpenSection} />
       </div>
     </div>
   )

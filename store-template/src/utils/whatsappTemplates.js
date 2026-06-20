@@ -109,10 +109,11 @@ export const processTemplate = (template = '', data = {}, { keepMissing = false 
 
 export const normalizeTemplate = (template = {}) => ({
   ...template,
-  name: template.name || template.title || template.key || 'Template',
-  type: template.type || template.key || 'custom',
+  key: template.key || template.template_key,
+  name: template.name || template.title || template.key || template.template_key || 'Template',
+  type: template.type || template.key || template.template_key || 'custom',
   content: template.content || template.message || '',
-  active: template.active !== false,
+  active: template.active !== undefined ? template.active !== false : template.enabled !== false,
 })
 
 export const buildAddress = (order = {}) => {

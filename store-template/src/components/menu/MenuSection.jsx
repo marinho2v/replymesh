@@ -22,62 +22,141 @@ const isPublicCategory = (category) => {
   return !['adicionais', 'adicional', 'extras'].includes(value)
 }
 
-const ProductCard = ({ product, featured = false, onAddToCart }) => (
-  <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:border-white transition-colors">
-    {product.image_url && (
-      <img
-        src={product.image_url}
-        alt={product.name}
-        loading="lazy"
-        decoding="async"
-        className="w-full h-48 object-cover"
-      />
-    )}
-    <div className="p-4">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-        {(featured || product.is_featured) && (
-          <Badge variant="primary">
-            <Star size={12} className="mr-1" />
-            Destaque
-          </Badge>
+const ProductCard = ({ product, featured = false, onAddToCart }) => {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const hasDescription = Boolean(product.description?.trim())
+
+  return (
+    <>
+      <div className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:border-white transition-colors">
+        {product.image_url && (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-48 object-cover"
+          />
         )}
-      </div>
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+            {(featured || product.is_featured) && (
+              <Badge variant="primary">
+                <Star size={12} className="mr-1" />
+                Destaque
+              </Badge>
+            )}
+          </div>
 
-      {product.is_promotional && (
-        <Badge variant="warning" className="mb-2">
-          Promocao
-        </Badge>
-      )}
-
-      <p className="text-gray-400 text-sm mb-3 line-clamp-2">{product.description}</p>
-
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          {product.promotional_price ? (
-            <>
-              <span className="text-xl font-bold text-white">
-                {formatCurrency(product.promotional_price)}
-              </span>
-              <span className="text-sm text-gray-500 line-through ml-2">
-                {formatCurrency(product.price)}
-              </span>
-            </>
-          ) : (
-            <span className="text-xl font-bold text-white">
-              {formatCurrency(product.price)}
-            </span>
+          {product.is_promotional && (
+            <Badge variant="warning" className="mb-2">
+              Promocao
+            </Badge>
           )}
+
+          {hasDescription && (
+            <>
+              <p className="text-gray-400 text-sm mb-1 line-clamp-2">{product.description}</p>
+              <button
+                type="button"
+                onClick={() => setDetailsOpen(true)}
+                className="mb-3 text-sm font-semibold text-yellow-400 hover:text-yellow-300"
+              >
+                Ver detalhes do item
+              </button>
+            </>
+          )}
+
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              {product.promotional_price ? (
+                <>
+                  <span className="text-xl font-bold text-white">
+                    {formatCurrency(product.promotional_price)}
+                  </span>
+                  <span className="text-sm text-gray-500 line-through ml-2">
+                    {formatCurrency(product.price)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xl font-bold text-white">
+                  {formatCurrency(product.price)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <Button onClick={() => onAddToCart(product)} className="w-full">
+            <ShoppingCart size={20} className="mr-2" />
+            Adicionar
+          </Button>
         </div>
       </div>
 
-      <Button onClick={() => onAddToCart(product)} className="w-full">
-        <ShoppingCart size={20} className="mr-2" />
-        Adicionar
-      </Button>
-    </div>
-  </div>
-)
+      {detailsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detalhes de ${product.name}`}
+          onClick={() => setDetailsOpen(false)}
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-dark-600 bg-dark-800 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {product.image_url && (
+              <img src={product.image_url} alt={product.name} className="h-48 w-full object-cover" />
+            )}
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-2xl font-bold leading-tight text-white">{product.name}</h3>
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(false)}
+                  className="h-9 w-9 rounded-lg border border-dark-600 bg-dark-900 text-white"
+                  aria-label="Fechar detalhes"
+                >
+                  x
+                </button>
+              </div>
+              {hasDescription && (
+                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-300">{product.description}</p>
+              )}
+              <div className="mt-4">
+                {product.promotional_price ? (
+                  <>
+                    <span className="text-2xl font-bold text-white">
+                      {formatCurrency(product.promotional_price)}
+                    </span>
+                    <span className="ml-2 text-sm text-gray-500 line-through">
+                      {formatCurrency(product.price)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-2xl font-bold text-white">
+                    {formatCurrency(product.price)}
+                  </span>
+                )}
+              </div>
+              <Button
+                onClick={() => {
+                  setDetailsOpen(false)
+                  onAddToCart(product)
+                }}
+                className="mt-5 w-full"
+              >
+                <ShoppingCart size={20} className="mr-2" />
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
 const MenuSection = ({
   title = 'Cardapio',

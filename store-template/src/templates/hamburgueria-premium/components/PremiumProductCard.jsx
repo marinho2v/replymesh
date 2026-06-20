@@ -13,25 +13,45 @@ const PREM = {
 
 const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent = PREM.gold }) => {
   const [hover, setHover] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const price = product.promotional_price || product.price || 0
   const originalPrice = product.promotional_price ? product.price : null
+  const hasDescription = Boolean(product.description?.trim())
+
+  const handleAdd = () => onAdd(product)
+  const handleInc = () => onInc(product)
+  const handleDec = () => onDec(product)
+
+  const detailsButtonStyle = {
+    alignSelf: 'flex-start',
+    marginTop: 7,
+    border: 'none',
+    background: 'none',
+    color: accent,
+    cursor: 'pointer',
+    fontSize: 12.5,
+    fontWeight: 700,
+    padding: 0,
+    fontFamily: 'inherit',
+  }
 
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        background: PREM.card,
-        border: `1px solid ${hover ? '#34343a' : PREM.line}`,
-        borderRadius: 16,
-        overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
-        transform: hover ? 'translateY(-4px)' : 'none',
-        boxShadow: hover ? '0 16px 36px rgba(0,0,0,.45)' : '0 2px 10px rgba(0,0,0,.25)',
-        transition: 'all .22s',
-      }}
-    >
+    <>
+      <div
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          background: PREM.card,
+          border: `1px solid ${hover ? '#34343a' : PREM.line}`,
+          borderRadius: 16,
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          transform: hover ? 'translateY(-4px)' : 'none',
+          boxShadow: hover ? '0 16px 36px rgba(0,0,0,.45)' : '0 2px 10px rgba(0,0,0,.25)',
+          transition: 'all .22s',
+        }}
+      >
       {/* image */}
       <div style={{ position: 'relative', aspectRatio: '16/11', overflow: 'hidden' }}>
         {product.image_url ? (
@@ -117,7 +137,7 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
               borderRadius: 10, padding: 4,
             }}>
               <button
-                onClick={() => onDec(product)}
+              onClick={handleDec}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: 7, color: accent, borderRadius: 7,
@@ -130,7 +150,7 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
                 {quantity}
               </span>
               <button
-                onClick={() => onInc(product)}
+              onClick={handleInc}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: 7, color: accent, borderRadius: 7,
@@ -142,7 +162,7 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
             </div>
           ) : (
             <button
-              onClick={() => onAdd(product)}
+              onClick={handleAdd}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 background: accent, color: '#08120c',
@@ -157,9 +177,125 @@ const PremiumProductCard = ({ product, quantity = 0, onAdd, onInc, onDec, accent
               <IconCart s={17} /> Adicionar
             </button>
           )}
+          {hasDescription && (
+            <button type="button" onClick={() => setDetailsOpen(true)} style={detailsButtonStyle}>
+              Ver detalhes do item
+            </button>
+          )}
         </div>
       </div>
     </div>
+
+      {detailsOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detalhes de ${product.name}`}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 14,
+            background: 'rgba(0,0,0,.72)',
+            backdropFilter: 'blur(6px)',
+          }}
+          onClick={() => setDetailsOpen(false)}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(440px, 100%)',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              background: PREM.card,
+              border: `1px solid ${PREM.line}`,
+              borderRadius: 18,
+              boxShadow: '0 22px 70px rgba(0,0,0,.6)',
+            }}
+          >
+            {product.image_url && (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover', display: 'block' }}
+              />
+            )}
+            <div style={{ padding: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <h3 style={{ color: PREM.text, fontSize: 22, lineHeight: 1.15, fontWeight: 800, margin: 0 }}>
+                  {product.name}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(false)}
+                  aria-label="Fechar detalhes"
+                  style={{
+                    border: `1px solid ${PREM.line}`,
+                    background: PREM.bg2,
+                    color: PREM.text,
+                    borderRadius: 10,
+                    width: 36,
+                    height: 36,
+                    cursor: 'pointer',
+                    fontSize: 20,
+                    lineHeight: 1,
+                  }}
+                >
+                  x
+                </button>
+              </div>
+
+              {hasDescription && (
+                <p style={{ color: PREM.muted, fontSize: 15, lineHeight: 1.55, marginTop: 12, whiteSpace: 'pre-line' }}>
+                  {product.description}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 16 }}>
+                <span style={{ color: PREM.text, fontSize: 24, fontWeight: 800 }}>
+                  {formatCurrency(price)}
+                </span>
+                {originalPrice && (
+                  <span style={{ color: PREM.muted, fontSize: 14, textDecoration: 'line-through' }}>
+                    {formatCurrency(originalPrice)}
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDetailsOpen(false)
+                  handleAdd()
+                }}
+                style={{
+                  marginTop: 18,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  border: 'none',
+                  borderRadius: 12,
+                  background: accent,
+                  color: '#08120c',
+                  fontFamily: 'inherit',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  padding: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                <IconCart s={17} /> Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

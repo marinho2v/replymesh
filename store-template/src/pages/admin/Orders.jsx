@@ -128,7 +128,7 @@ const Orders = () => {
 
   const handleRailsStatusChange = async (order, status) => {
     try {
-      const updatedOrder = await updateStoreOrderStatus(order.id, status, { skipSideEffects: true })
+      const updatedOrder = await updateStoreOrderStatus(order.id, status, { skipSideEffects: status !== 'cancelled' })
       updateOrderLocally(updatedOrder)
       toast.success(`Pedido #${order.order_number} atualizado`)
       return { success: true, order: normalizeOrder(updatedOrder) }

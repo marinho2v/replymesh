@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle, ChefHat, Copy, MessageSquare, Package, Plus, Save, ToggleLeft, ToggleRight, Truck } from 'lucide-react'
+import { CheckCircle, ChefHat, Copy, MessageSquare, Package, Plus, Save, ToggleLeft, ToggleRight, Truck, XCircle } from 'lucide-react'
 import { useWhatsappTemplates } from '../../hooks/useWhatsappTemplates'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Badge } from '../../components/ui/Badge'
 import { ORDER_STATUS_FLOW_UPDATED_EVENT } from '../../hooks/useStoreSettings'
+import { railsUpdateWhatsappTemplate } from '../../services/storeApi'
 import {
   WHATSAPP_TEMPLATE_TYPES,
   WHATSAPP_VARIABLES,
@@ -16,14 +17,13 @@ import {
   normalizeTemplate,
   renderWhatsappTemplate,
 } from '../../utils/whatsappTemplates'
-import { getStoreSettings, updateStoreSettings } from '../../services/settings'
-
 const defaultStatusFlow = {
   accepted: true,
   preparing: false,
   ready: false,
   out_for_delivery: true,
   completed: true,
+  cancelled: true,
 }
 
 const normalizeStatusFlow = (flow = {}) => ({
@@ -32,7 +32,17 @@ const normalizeStatusFlow = (flow = {}) => ({
   ready: Boolean(flow?.ready),
   out_for_delivery: flow?.out_for_delivery !== false,
   completed: flow?.completed !== false,
+  cancelled: flow?.cancelled !== false,
 })
+
+const statusTemplateKeys = {
+  accepted: 'pedido_aceito',
+  preparing: 'pedido_em_preparo',
+  ready: 'pedido_pronto',
+  out_for_delivery: 'saiu_para_entrega',
+  completed: 'pedido_finalizado',
+  cancelled: 'pedido_cancelado',
+}
 
 const statusFlowSteps = [
   {
@@ -65,6 +75,12 @@ const statusFlowSteps = [
     description: 'Mostra o botao Finalizar e usa o template Pedido finalizado.',
     icon: CheckCircle,
   },
+  {
+    key: 'cancelled',
+    label: 'Pedido cancelado',
+    description: 'Envia uma mensagem quando o pedido for cancelado.',
+    icon: XCircle,
+  },
 ]
 
 const emptyTemplate = {
@@ -80,7 +96,6 @@ const WhatsappTemplates = () => {
   const [selectedId, setSelectedId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [storeSettings, setStoreSettings] = useState(null)
   const [statusFlow, setStatusFlow] = useState(defaultStatusFlow)
   const [savingFlow, setSavingFlow] = useState(false)
 
@@ -88,16 +103,15 @@ const WhatsappTemplates = () => {
     const normalized = (templates || []).map(normalizeTemplate)
     setLocalTemplates(normalized)
     setSelectedId(prev => prev || normalized[0]?.id || null)
+    setStatusFlow(normalizeStatusFlow(
+      Object.fromEntries(
+        Object.entries(statusTemplateKeys).map(([status, templateKey]) => {
+          const template = normalized.find(item => item.key === templateKey || item.type === templateKey)
+          return [status, template?.active !== false]
+        })
+      )
+    ))
   }, [templates])
-
-  useEffect(() => {
-    getStoreSettings()
-      .then(settings => {
-        setStoreSettings(settings)
-        setStatusFlow(normalizeStatusFlow(settings?.order_status_flow || defaultStatusFlow))
-      })
-      .catch(error => console.warn('Nao foi possivel carregar fluxo de pedidos:', error))
-  }, [])
 
   const selectedTemplate = useMemo(() => (
     localTemplates.find(template => template.id === selectedId) || null
@@ -154,14 +168,23 @@ const WhatsappTemplates = () => {
   const handleSaveFlow = async () => {
     setSavingFlow(true)
     try {
-      const updated = await updateStoreSettings({
-        ...(storeSettings || {}),
-        order_status_flow: statusFlow,
-      })
-      setStoreSettings(updated)
-      setStatusFlow(normalizeStatusFlow(updated?.order_status_flow || statusFlow))
+      const updatedTemplates = await Promise.all(
+        Object.entries(statusTemplateKeys).map(async ([status, templateKey]) => {
+          const template = localTemplates.find(item => item.key === templateKey || item.type === templateKey)
+          if (!template) return null
+
+          return railsUpdateWhatsappTemplate(template.id, {
+            title: template.name,
+            message: template.content,
+            enabled: Boolean(statusFlow[status]),
+          })
+        })
+      )
+
+      const byId = new Map(updatedTemplates.filter(Boolean).map(template => [template.id, normalizeTemplate(template)]))
+      setLocalTemplates(current => current.map(template => byId.get(template.id) || template))
       window.dispatchEvent(new CustomEvent(ORDER_STATUS_FLOW_UPDATED_EVENT, {
-        detail: { settings: updated },
+        detail: { statusFlow },
       }))
       toast.success('Fluxo dos pedidos salvo')
     } catch (error) {

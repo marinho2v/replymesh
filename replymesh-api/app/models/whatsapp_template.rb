@@ -1,5 +1,5 @@
 class WhatsappTemplate < ApplicationRecord
-  ENABLED_BY_DEFAULT = %w[pedido_recebido pedido_aceito saiu_para_entrega pedido_finalizado].freeze
+  ENABLED_BY_DEFAULT = %w[pedido_recebido pedido_aceito saiu_para_entrega pedido_finalizado pedido_cancelado].freeze
   STATUS_TEMPLATE_KEYS = {
     "pending" => "pedido_recebido",
     "order_created" => "pedido_recebido",
@@ -52,7 +52,7 @@ class WhatsappTemplate < ApplicationRecord
       template_key: "pedido_cancelado",
       title: "Pedido Cancelado",
       message: "❌ Pedido cancelado\n\nOlá, *{{nome_cliente}}* 👋\nSeu pedido foi cancelado.\n\nSe tiver qualquer dúvida, chama a gente por aqui que vamos te ajudar.\n\n*{{nome_loja}}* 🍔",
-      enabled: false
+      enabled: true
     },
     { template_key: "marketing", title: "Marketing", message: "Olá, *{{nome_cliente}}* 👋\nTemos uma oferta especial para você!\n\n*{{nome_loja}}* 🍔", enabled: false }
   ].freeze

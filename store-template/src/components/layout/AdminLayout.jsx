@@ -205,7 +205,7 @@ export const AdminLayout = () => {
     {
       title: 'Estoque',
       items: [
-        { path: '/admin/inventory', icon: Warehouse, label: 'Itens de Estoque', roles: ['admin'], feature: 'inventory' },
+        { path: '/admin/inventory', icon: Warehouse, label: 'Itens de Estoque', roles: ['admin'], feature: 'inventory', exact: true },
         { path: '/admin/inventory/movements', icon: History, label: 'Movimentacoes', roles: ['admin'], feature: 'inventory_movements' },
       ],
     },

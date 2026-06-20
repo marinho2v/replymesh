@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Store dashboard metrics", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
   let!(:company) { create_company(name: "Dashboard Brasil") }
   let!(:user) { create_user(email: "dashboard@example.com") }
 
@@ -15,9 +17,9 @@ RSpec.describe "Store dashboard metrics", type: :request do
       customer.update_columns(created_at: Time.utc(2026, 6, 17, 14))
 
       completed = create_order(company: company, customer: customer, status: "completed", total_cents: 10_000)
-      pending = create_order(company: company, status: "pending", total_cents: 5_000)
-      cancelled = create_order(company: company, status: "cancelled", total_cents: 9_000)
-      previous_day = create_order(company: company, status: "completed", total_cents: 7_000)
+      pending = create_order(company: company, customer: customer, status: "pending", total_cents: 5_000)
+      cancelled = create_order(company: company, customer: customer, status: "cancelled", total_cents: 9_000)
+      previous_day = create_order(company: company, customer: customer, status: "completed", total_cents: 7_000)
 
       completed.update_columns(created_at: Time.utc(2026, 6, 17, 15))
       pending.update_columns(created_at: Time.utc(2026, 6, 18, 0))
@@ -25,12 +27,14 @@ RSpec.describe "Store dashboard metrics", type: :request do
       previous_day.update_columns(created_at: Time.utc(2026, 6, 17, 2, 59))
 
       get "/api/v1/store/dashboard",
-          headers: auth_headers(user).merge("X-Company-Slug" => company.slug)
+          headers: auth_headers(user, company: company)
 
-      expect(response).to have_http_status(:ok)
+      expect(response).to have_http_status(:ok), response.body
       expect(json).to include(
         "today_orders" => 2,
         "today_revenue_cents" => 10_000,
+        "yesterday_revenue_cents" => 7_000,
+        "today_revenue_change_percent" => 42.9,
         "average_ticket_cents" => 10_000,
         "new_customers_today" => 1
       )

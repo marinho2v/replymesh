@@ -22,6 +22,7 @@ RSpec.describe MercadoPagoPaymentProcessor do
 
     expect(result[:payment_status]).to eq("paid")
     expect(result[:order_status]).to eq("accepted")
+    expect(Notification.order(:created_at).last.metadata).to include("payment_status" => "paid")
   end
 
   it "approves Pix even when the accepted WhatsApp template is disabled" do

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, ShoppingBag, LifeBuoy, Megaphone, MessageSquare, Package, Wallet, AlertTriangle, Trash2, X } from 'lucide-react'
+import { Bell, CheckCheck, CircleCheck, ShoppingBag, LifeBuoy, Megaphone, MessageSquare, Package, Wallet, AlertTriangle, Trash2, X } from 'lucide-react'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 
 const TYPE_ICON = {
@@ -11,7 +11,7 @@ const TYPE_ICON = {
   stock:         <Package size={15} />,
   cash:          <Wallet size={15} />,
   system_alert:  <AlertTriangle size={15} />,
-  billing:       <AlertTriangle size={15} />,
+  billing:       <Wallet size={15} />,
 }
 
 const TYPE_COLOR = {
@@ -22,7 +22,26 @@ const TYPE_COLOR = {
   stock:         'bg-orange-500/15 text-orange-400',
   cash:          'bg-emerald-500/15 text-emerald-400',
   system_alert:  'bg-red-500/15 text-red-400',
-  billing:       'bg-red-500/15 text-red-400',
+  billing:       'bg-orange-500/15 text-orange-400',
+}
+
+const notificationVisual = (notification) => {
+  const paymentStatus = notification.metadata?.payment_status
+  const approvedPayment = notification.notification_type === 'billing' && (
+    paymentStatus === 'paid' || notification.title?.startsWith('Pagamento confirmado')
+  )
+
+  if (approvedPayment) {
+    return {
+      color: 'bg-emerald-500/15 text-emerald-400',
+      icon: <CircleCheck size={15} />,
+    }
+  }
+
+  return {
+    color: TYPE_COLOR[notification.notification_type] || 'bg-gray-500/15 text-gray-400',
+    icon: TYPE_ICON[notification.notification_type] || <Bell size={15} />,
+  }
 }
 
 const relativeTime = (iso) => {
@@ -123,7 +142,9 @@ const NotificationsDropdown = ({ open, onClose, notifications, unreadCount, onMa
             <p className="text-sm text-gray-400">Nenhuma notificação</p>
           </div>
         ) : (
-          notifications.map(n => (
+          notifications.map(n => {
+            const visual = notificationVisual(n)
+            return (
             <button
               key={n.id}
               onClick={() => handleClick(n)}
@@ -131,8 +152,8 @@ const NotificationsDropdown = ({ open, onClose, notifications, unreadCount, onMa
                 !n.read ? 'bg-dark-700/20' : ''
               }`}
             >
-              <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${TYPE_COLOR[n.notification_type] || 'bg-gray-500/15 text-gray-400'}`}>
-                {TYPE_ICON[n.notification_type] || <Bell size={15} />}
+              <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${visual.color}`}>
+                {visual.icon}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -149,7 +170,8 @@ const NotificationsDropdown = ({ open, onClose, notifications, unreadCount, onMa
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-yellow-400" />
               )}
             </button>
-          ))
+            )
+          })
         )}
       </div>
 

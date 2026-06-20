@@ -14,6 +14,10 @@ module Api
           valid_today      = today_orders.where.not(status: "cancelled")
           completed_today  = valid_today.where(status: "completed")
           today_revenue    = completed_today.sum(:total_cents)
+          yesterday_revenue = company_scope(Order)
+            .where(status: "completed", created_at: local_day_range(local_today.yesterday, zone))
+            .sum(:total_cents)
+          revenue_change_percent = percentage_change(today_revenue, yesterday_revenue)
           today_count      = valid_today.count
           completed_count  = completed_today.count
           avg_ticket       = completed_count > 0 ? today_revenue / completed_count : 0
@@ -33,6 +37,8 @@ module Api
 
           render_ok(
             today_revenue_cents:  today_revenue,
+            yesterday_revenue_cents: yesterday_revenue,
+            today_revenue_change_percent: revenue_change_percent,
             today_orders:         today_count,
             average_ticket_cents: avg_ticket,
             new_customers_today:  new_customers,
@@ -64,6 +70,13 @@ module Api
           starts_at = zone.local(date.year, date.month, date.day)
           ends_at = zone.local(date.next_day.year, date.next_day.month, date.next_day.day)
           starts_at.utc...ends_at.utc
+        end
+
+        def percentage_change(current_value, previous_value)
+          return 0.0 if current_value.zero? && previous_value.zero?
+          return 100.0 if previous_value.zero?
+
+          (((current_value - previous_value).to_f / previous_value) * 100).round(1)
         end
       end
     end
