@@ -15,6 +15,16 @@ function roleLabel(role) {
   return role || "Perfil local";
 }
 
+function UserAvatar({ user, name, size }) {
+  const style = size ? { width: size, height: size } : undefined;
+
+  return (
+    <span className="avatar" style={style}>
+      {user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials(name)}
+    </span>
+  );
+}
+
 export function Topbar({ onMenu, user, onLogout, theme, onToggleTheme, notifications, unreadCount, onReadNotification, onReadAllNotifications }) {
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -72,7 +82,7 @@ export function Topbar({ onMenu, user, onLogout, theme, onToggleTheme, notificat
         </div>
         <div className="top-user-wrap" ref={menuRef}>
           <button className={`top-user${open ? " active" : ""}`} onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-haspopup="menu">
-            <span className="avatar" style={{ width: 36, height: 36 }}>{initials(name)}</span>
+            <UserAvatar user={user} name={name} size={36} />
             <span className="who" style={{ textAlign: "left" }}>
               <span className="n">{name}</span>
               <span className="e">{email}</span>
@@ -83,7 +93,7 @@ export function Topbar({ onMenu, user, onLogout, theme, onToggleTheme, notificat
           {open && (
             <div className="user-menu" role="menu">
               <div className="user-menu-head">
-                <span className="avatar">{initials(name)}</span>
+                <UserAvatar user={user} name={name} />
                 <div>
                   <div className="um-name">{name}</div>
                   <div className="um-email">{email}</div>

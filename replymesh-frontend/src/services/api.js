@@ -224,6 +224,7 @@ export const api = {
   updateMasterPassword: (payload) => request("/master/profile/password", { method: "PATCH", body: JSON.stringify(payload) }),
   getMasterBranding: () => request("/master/branding"),
   updateMasterBranding: (payload) => request("/master/branding", { method: "PATCH", body: JSON.stringify({ branding: payload }) }),
+  getPublicPlatformBranding: () => request("/public/platform"),
 
   // Financeiro
   getFinanceiro:              ()  => request("/master/financeiro"),

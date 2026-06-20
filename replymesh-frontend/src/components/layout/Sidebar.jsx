@@ -74,12 +74,13 @@ function initials(name = "") {
 export function Sidebar({ collapsed, setCollapsed, openGroup, setOpenGroup, user, branding }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const brandLogo = branding?.landing_logo_url || branding?.dark_logo_url || branding?.light_logo_url || "/mark.png";
 
   return (
     <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       <div className="brand">
-        <div className="brand-mark">
-          {branding?.dark_logo_url ? <img src={branding.dark_logo_url} alt="" /> : <Icon name="Hexagon" size={22} strokeWidth={2.2} />}
+        <div className="brand-mark has-image">
+          {brandLogo ? <img src={brandLogo} alt={branding?.platform_name || "Replymesh"} /> : <Icon name="Hexagon" size={22} strokeWidth={2.2} />}
         </div>
         <div className="brand-name">{branding?.platform_name || "REPLYMESH"}</div>
       </div>

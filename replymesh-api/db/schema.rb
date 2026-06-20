@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_09_211500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_19_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -179,6 +179,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_211500) do
     t.text "movement_type", null: false
     t.text "notes"
     t.bigint "order_id"
+    t.string "origin"
+    t.string "origin_table_name"
+    t.string "origin_waiter_name"
     t.datetime "updated_at", null: false
     t.index ["cash_session_id"], name: "index_cash_movements_on_cash_session_id"
     t.index ["company_id", "cash_session_id"], name: "index_cash_movements_on_company_id_and_cash_session_id"
@@ -608,14 +611,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_211500) do
   create_table "master_brand_settings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "dark_logo_url"
+    t.string "facebook_url"
     t.string "favicon_url"
+    t.string "instagram_url"
+    t.jsonb "landing_clients", default: [], null: false
+    t.string "landing_hero_image_url"
+    t.string "landing_logo_url"
     t.string "light_logo_url"
     t.string "platform_name", default: "Replymesh", null: false
     t.string "primary_color", default: "#18181b", null: false
     t.string "secondary_color", default: "#16a34a", null: false
     t.string "support_email"
+    t.string "support_location"
     t.string "support_whatsapp"
     t.datetime "updated_at", null: false
+    t.string "youtube_url"
   end
 
   create_table "master_impersonation_sessions", force: :cascade do |t|
