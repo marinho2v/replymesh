@@ -2,6 +2,12 @@ module Api
   module V1
     module Public
       class StoresController < BaseController
+        PUBLIC_CACHE_TTL = 60.seconds
+
+        before_action :set_public_cache_headers, only: %i[
+          show menu banners business_hours delivery_zones
+        ]
+
         # GET /api/v1/public/:company_slug/store
         def show
           settings = current_company.store_setting
@@ -17,9 +23,13 @@ module Api
 
         # GET /api/v1/public/:company_slug/menu
         def menu
-          categories = current_company.categories.active.ordered.includes(
-            products: { product_option_groups: :product_option_items }
-          )
+          categories = current_company.categories.active.ordered.to_a
+          products_by_category_id = current_company.products
+                                                   .active
+                                                   .ordered
+                                                   .includes(:category, product_option_groups: :product_option_items)
+                                                   .to_a
+                                                   .group_by(&:category_id)
 
           render_ok(
             menu: categories.map { |cat|
@@ -27,7 +37,7 @@ module Api
                 id:       cat.id,
                 name:     cat.name,
                 slug:     cat.slug,
-                products: cat.products.active.ordered.map { |p| serialize_product(p) }
+                products: (products_by_category_id[cat.id] || []).map { |p| serialize_product(p) }
               }
             }
           )
@@ -72,18 +82,23 @@ module Api
 
         private
 
-        def serialize_store(s)
+        def set_public_cache_headers
+          expires_in PUBLIC_CACHE_TTL, public: true
+        end
+
+        def serialize_store(s, include_media: true)
           return {} unless s
+          media = public_media_fields(s, include_media: include_media)
 
           {
             id:                      current_company.id,
             company_id:              current_company.id,
             store_name:              s.store_name.presence || s.company_name.presence || current_company.name,
             slug:                    current_company.slug,
-            logo_url:                s.logo_url,
-            favicon_url:             s.respond_to?(:favicon_url) ? s.favicon_url : nil,
-            cover_url:               s.cover_url,
-            banner_url:              s.banner_url,
+            logo_url:                media[:logo_url],
+            favicon_url:             media[:favicon_url],
+            cover_url:               media[:cover_url],
+            banner_url:              media[:banner_url],
             primary_color:           s.primary_color,
             secondary_color:         s.secondary_color,
             phone:                   s.phone,
@@ -133,12 +148,28 @@ module Api
         def serialize_store_settings(s)
           return {} unless s
 
-          serialize_store(s).merge(
+          serialize_store(s, include_media: false).merge(
             company_name: s.company_name,
             trade_name: s.trade_name,
             free_delivery_above_cents: s.free_delivery_above_cents,
             accepted_payment_methods: s.accepted_payment_methods
           )
+        end
+
+        def public_media_fields(s, include_media:)
+          return { logo_url: nil, favicon_url: nil, cover_url: nil, banner_url: nil } unless include_media
+
+          cover_url = s.cover_url.presence
+          banner_url = s.banner_url.presence
+          canonical_cover = cover_url || banner_url
+          duplicate_banner = cover_url.present? && banner_url.present? && cover_url == banner_url
+
+          {
+            logo_url: s.logo_url,
+            favicon_url: s.respond_to?(:favicon_url) ? s.favicon_url : nil,
+            cover_url: canonical_cover,
+            banner_url: duplicate_banner ? nil : banner_url
+          }
         end
 
         def serialize_banners(banners)
@@ -161,6 +192,8 @@ module Api
         end
 
         def serialize_product(p)
+          option_groups = p.product_option_groups.sort_by { |group| group.sort_order || 0 }
+
           {
             id:                      p.id,
             name:                    p.name,
@@ -177,7 +210,11 @@ module Api
             sort_order:               p.sort_order,
             updated_at:               p.updated_at,
             category:                p.category&.as_json(only: %i[id name slug is_active]),
-            option_groups:           p.product_option_groups.ordered.map { |g|
+            option_groups:           option_groups.map { |g|
+              option_items = g.product_option_items
+                              .select { |item| item.is_active != false }
+                              .sort_by { |item| item.sort_order || 0 }
+
               {
                 id:         g.id,
                 name:       g.name,
@@ -185,7 +222,7 @@ module Api
                 required:   g.required,
                 min_select: g.min_select,
                 max_select: g.max_select,
-                items:      g.product_option_items.active.ordered.as_json(
+                items:      option_items.as_json(
                   only: %i[id name additional_price_cents]
                 )
               }
