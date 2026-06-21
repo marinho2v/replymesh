@@ -4,7 +4,7 @@ import { CheckCircle, MessageSquare, QrCode, RefreshCw, Send, Smartphone } from 
 import {
   railsEnsureWhatsappInstance,
   railsGetWhatsappInstanceStatus,
-  railsGetWhatsappInstances,
+  railsGetWhatsappConfiguration,
   railsGetWhatsappQrCode,
   railsSendWhatsappTest,
   railsGetWhatsappTemplates,
@@ -33,6 +33,7 @@ const Whatsapp = () => {
   const [generating, setGenerating] = useState(false)
   const [testOrderId, setTestOrderId] = useState('')
   const [sendingTest, setSendingTest] = useState(false)
+  const [whatsappMode, setWhatsappMode] = useState('automatic')
   const pollRef = useRef(null)
 
   const instance = useMemo(() => instances[0] || null, [instances])
@@ -41,11 +42,12 @@ const Whatsapp = () => {
   const load = async () => {
     setLoading(true)
     try {
-      const [loadedInstances, loadedTemplates] = await Promise.all([
-        railsGetWhatsappInstances(),
+      const [configuration, loadedTemplates] = await Promise.all([
+        railsGetWhatsappConfiguration(),
         railsGetWhatsappTemplates().catch(() => []),
       ])
-      setInstances(loadedInstances)
+      setWhatsappMode(configuration.whatsapp_mode || 'automatic')
+      setInstances(configuration.instances || [])
       setTemplates(loadedTemplates || [])
     } catch (error) {
       toast.error(error.message || 'Erro ao carregar WhatsApp')
@@ -56,7 +58,7 @@ const Whatsapp = () => {
 
   // Atualiza status silenciosamente a cada 15s (sem resetar toda a tela)
   const pollStatus = async () => {
-    if (!instance) return
+    if (!instance || whatsappMode === 'manual') return
     try {
       const updated = await railsGetWhatsappInstanceStatus(instance.id)
       if (updated) {
@@ -146,7 +148,65 @@ const Whatsapp = () => {
     pollRef.current = window.setInterval(pollStatus, STATUS_POLL_INTERVAL)
     return () => window.clearInterval(pollRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instance?.id, instance?.status])
+  }, [instance?.id, instance?.status, whatsappMode])
+
+  if (!loading && whatsappMode === 'manual') {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">WhatsApp</h1>
+            <p className="text-sm text-gray-400">Envio manual pelo WhatsApp Web ou aplicativo.</p>
+          </div>
+          <Link
+            to={`${basePath}/admin/whatsapp/templates`}
+            className="inline-flex items-center justify-center rounded-lg border border-dark-600 px-4 py-2 text-sm text-gray-200 hover:bg-dark-800"
+          >
+            <MessageSquare size={18} className="mr-2" />
+            Templates WhatsApp
+          </Link>
+        </div>
+
+        <section className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-5">
+          <div className="flex items-start gap-3">
+            <Smartphone className="mt-0.5 shrink-0 text-blue-300" size={22} />
+            <div>
+              <h2 className="font-bold text-white">Modo manual ativo</h2>
+              <p className="mt-1 text-sm leading-6 text-blue-100/80">
+                As mensagens devem ser enviadas pelo atendente. Ao atualizar um pedido, o sistema prepara o texto usando seus templates e abre o WhatsApp para conferencia e envio.
+              </p>
+              <p className="mt-2 text-xs text-gray-400">Nenhuma instancia, QR Code ou reconexao com Replymesh Connect e necessaria neste modo.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-dark-700 bg-dark-900">
+          <div className="flex items-center justify-between border-b border-dark-700 px-5 py-4">
+            <div>
+              <h2 className="font-semibold text-white">Templates de mensagem</h2>
+              <p className="mt-0.5 text-xs text-gray-500">{templates.length} templates configurados para gerar mensagens manuais.</p>
+            </div>
+            <Link to={`${basePath}/admin/whatsapp/templates`} className="text-xs text-gray-400 underline underline-offset-2 hover:text-white">
+              Editar templates
+            </Link>
+          </div>
+          <div className="divide-y divide-dark-700">
+            {templates.map((template) => (
+              <div key={template.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">{template.title || template.template_key}</p>
+                  <p className="truncate text-xs text-gray-500">{template.template_key}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${template.enabled !== false ? 'bg-green-900/40 text-green-300' : 'bg-dark-700 text-gray-400'}`}>
+                  {template.enabled !== false ? 'Ativo' : 'Inativo'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

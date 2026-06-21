@@ -26,7 +26,7 @@ class OrderStatusService
     "cancelled" => :cancelled_at
   }.freeze
 
-  Result = Struct.new(:success, :order, :error, keyword_init: true) do
+  Result = Struct.new(:success, :order, :error, :whatsapp, keyword_init: true) do
     def success? = success
   end
 
@@ -73,7 +73,7 @@ class OrderStatusService
       after_transition
     end
 
-    Result.new(success: true, order: @order.reload)
+    Result.new(success: true, order: @order.reload, whatsapp: @whatsapp_result)
   rescue ServiceError => e
     Result.new(success: false, error: e.message)
   rescue ActiveRecord::RecordInvalid => e
@@ -183,7 +183,7 @@ class OrderStatusService
     return if @order.dine_in?
     return if @order.pos?
 
-    WhatsappStatusDispatcher.call(order: @order, status: @new_status, user: @user)
+    @whatsapp_result = WhatsappStatusDispatcher.call(order: @order, status: @new_status, user: @user)
   rescue StandardError => e
     Rails.logger.warn("WhatsApp status dispatch skipped: #{e.class} #{e.message}")
   end

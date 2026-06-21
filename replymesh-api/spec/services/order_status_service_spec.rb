@@ -91,4 +91,26 @@ RSpec.describe OrderStatusService do
     template = company.whatsapp_templates.find_by!(template_key: "pedido_cancelado")
     expect(template).to be_enabled
   end
+
+  it "changes status normally and returns a manual WhatsApp preview" do
+    create_store(company).update!(whatsapp_mode: "manual")
+    WhatsappTemplate.create!(
+      company: company,
+      template_key: "pedido_aceito",
+      title: "Aceito",
+      message: "Pedido {{numero_pedido}} aceito",
+      enabled: true
+    )
+
+    result = described_class.call(
+      order: order,
+      new_status: "accepted",
+      skip_side_effects: true
+    )
+
+    expect(result).to be_success
+    expect(result.order.status).to eq("accepted")
+    expect(result.whatsapp.sent).to be(false)
+    expect(result.whatsapp.manual_preview[:available]).to be(true)
+  end
 end

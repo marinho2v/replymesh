@@ -94,4 +94,22 @@ RSpec.describe WhatsappStatusDispatcher do
     expect(second.error).to eq("notificacao ja enviada")
     expect(client).to have_received(:send_text).once
   end
+
+  it "prepares a manual message without calling Evolution" do
+    create_store(company).update!(whatsapp_mode: "manual")
+    WhatsappTemplate.create!(
+      company: company, template_key: "pedido_aceito",
+      title: "Aceito", message: "Pedido {{numero_pedido}} aceito", enabled: true
+    )
+    allow(EvolutionGoClient).to receive(:new)
+
+    result = described_class.call(order: order, status: "accepted")
+
+    expect(result).to be_success
+    expect(result.sent).to be(false)
+    expect(result.manual_preview[:available]).to be(true)
+    expect(result.manual_preview[:url]).to start_with("https://wa.me/")
+    expect(result.log.metadata_json["skipped_reason"]).to eq("skipped_manual_mode")
+    expect(EvolutionGoClient).not_to have_received(:new)
+  end
 end

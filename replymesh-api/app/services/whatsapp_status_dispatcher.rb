@@ -1,5 +1,5 @@
 class WhatsappStatusDispatcher
-  Result = Struct.new(:success, :sent, :error, :log, keyword_init: true) do
+  Result = Struct.new(:success, :sent, :error, :log, :manual_preview, keyword_init: true) do
     def success? = success
   end
 
@@ -21,8 +21,10 @@ class WhatsappStatusDispatcher
     template = WhatsappTemplate.find_by(company_id: @order.company_id, template_key: template_key)
     return log_skip("template nao encontrado", template_key) unless template
     return log_skip("template desativado", template_key, template: template) unless template.enabled?
+    return log_skip("WhatsApp desativado para a empresa", template_key, template: template) if whatsapp_disabled?
+    return log_skip("pedido nao identificado como teste seguro", template_key, template: template) if @test_mode && !manual_mode? && !test_order?
+    return prepare_manual_message(template_key, template) if manual_mode?
     return log_skip("notificacao ja enviada", template_key, template: template) if notification_already_sent?(template_key)
-    return log_skip("pedido nao identificado como teste seguro", template_key, template: template) if @test_mode && !test_order?
 
     instance = WhatsappInstance.primary_for_company(@order.company)
     return log_skip("empresa sem instancia WhatsApp", template_key, template: template) unless instance
@@ -66,6 +68,39 @@ class WhatsappStatusDispatcher
   end
 
   private
+
+  def manual_mode?
+    @order.company.store_setting&.manual_whatsapp?
+  end
+
+  def whatsapp_disabled?
+    @order.company.store_setting&.whatsapp_disabled?
+  end
+
+  def prepare_manual_message(template_key, template)
+    preview = WhatsappManualMessageBuilder.call(order: @order, status: @status, template: template)
+    log = WhatsappLog.create!(
+      company_id: @order.company_id,
+      level: "info",
+      message: "WhatsApp preparado para envio manual no status #{@status}",
+      metadata_json: base_metadata(template_key, template).merge(
+        delivery_mode: "manual",
+        order_id: @order.id,
+        order_number: @order.order_number,
+        status: @status,
+        skipped_reason: "skipped_manual_mode",
+        destination_last4: preview.phone.to_s.last(4).presence,
+        preview_available: preview.available?
+      ).compact
+    )
+    Result.new(
+      success: true,
+      sent: false,
+      error: preview.error,
+      log: log,
+      manual_preview: preview.as_json
+    )
+  end
 
   def test_order?
     return true if @order.notes.to_s.downcase.include?("teste")

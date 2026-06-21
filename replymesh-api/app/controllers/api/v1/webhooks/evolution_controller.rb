@@ -35,6 +35,7 @@ module Api
           instance = authorized_instance(parsed, require_token: false)
 
           return render_error("Nao autorizado", :unauthorized) unless instance
+          return render_non_automatic_mode_ignored(instance) unless automatic_mode?(instance.company)
 
           if parsed.ignored_reason.present?
             log_webhook(instance, "warn", "Localizacao ignorada: #{parsed.ignored_reason}", parsed)
@@ -133,6 +134,7 @@ module Api
         def process_message(parsed)
           instance = authorized_instance(parsed, require_token: true)
           return render json: { success: false, error: "Nao autorizado" }, status: :unauthorized unless instance
+          return render_non_automatic_mode_ignored(instance) unless automatic_mode?(instance.company)
 
           setting = StoreAiSetting.for_company(instance.company)
           unless setting.enabled? && setting.auto_reply_whatsapp?
@@ -215,6 +217,7 @@ module Api
         def handle_from_me_message(parsed)
           instance = authorized_instance(parsed, require_token: false) || find_instance(parsed, require_token: false)
           return render json: { success: true, ignored: true, reason: parsed.ignored_reason }, status: :ok unless instance && parsed.phone.present?
+          return render_non_automatic_mode_ignored(instance) unless automatic_mode?(instance.company)
 
           if recent_ai_send?(instance, parsed.phone)
             return render json: { success: true, ignored: true, reason: "Mensagem automatica enviada pela IA" }, status: :ok
@@ -377,6 +380,19 @@ module Api
 
         def normalize_phone(value)
           value.to_s.gsub(/\D/, "")
+        end
+
+        def automatic_mode?(company)
+          company.store_setting.nil? || company.store_setting.automatic_whatsapp?
+        end
+
+        def render_non_automatic_mode_ignored(instance)
+          render json: {
+            success: true,
+            ignored: true,
+            company_id: instance.company_id,
+            reason: instance.company.store_setting&.manual_whatsapp? ? "skipped_manual_mode" : "whatsapp_disabled"
+          }, status: :ok
         end
       end
     end

@@ -3,7 +3,7 @@ module Api
     module Store
       module Whatsapp
         class TemplatesController < Api::V1::Store::BaseController
-          before_action -> { require_feature!("whatsapp_templates") }
+          before_action :require_templates_access!
           before_action :set_template, only: %i[update]
 
           def index
@@ -21,6 +21,12 @@ module Api
           end
 
           private
+
+          def require_templates_access!
+            return true if current_company.store_setting&.manual_whatsapp?
+
+            require_feature!("whatsapp_templates")
+          end
 
           def set_template
             @template = current_company.whatsapp_templates.find_by(id: params[:id])

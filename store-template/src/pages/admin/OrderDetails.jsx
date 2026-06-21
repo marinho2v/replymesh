@@ -84,6 +84,7 @@ const OrderDetails = () => {
   const [statusFlow, setStatusFlow] = useState()
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState('')
+  const [manualWhatsapp, setManualWhatsapp] = useState(null)
 
   const loadOrder = useCallback(async () => {
     try {
@@ -160,6 +161,7 @@ const OrderDetails = () => {
     try {
       const updatedOrder = await updateStoreOrderStatus(order.id, selectedStatus, { skipSideEffects: true })
       refreshWith(updatedOrder)
+      setManualWhatsapp(updatedOrder.manual_whatsapp || null)
       toast.success('Status atualizado')
       await loadOrder()
     } catch (error) {
@@ -176,6 +178,7 @@ const OrderDetails = () => {
     try {
       const updatedOrder = await updateStoreOrderStatus(order.id, ORDER_STATUSES.CANCELLED, { skipSideEffects: false })
       refreshWith(updatedOrder)
+      setManualWhatsapp(updatedOrder.manual_whatsapp || null)
       toast.success('Pedido cancelado')
       await loadOrder()
     } catch (error) {
@@ -207,8 +210,16 @@ const OrderDetails = () => {
   const handleWhatsapp = async () => {
     setActionLoading('whatsapp')
     try {
-      await railsSendWhatsappTest({ orderId: order.id, status: order.status === 'pending' ? 'accepted' : order.status })
-      toast.success('WhatsApp enviado/preparado pelo Rails')
+      const result = await railsSendWhatsappTest({ orderId: order.id, status: order.status === 'pending' ? 'accepted' : order.status })
+      if (result.manual_whatsapp?.available) {
+        setManualWhatsapp(result.manual_whatsapp)
+        window.open(result.manual_whatsapp.url, '_blank', 'noopener,noreferrer')
+        toast.success('Mensagem preparada. Confira e envie no WhatsApp.')
+      } else if (result.sent) {
+        toast.success('WhatsApp enviado pelo Replymesh Connect')
+      } else {
+        toast.info(result.message || 'Envio nao realizado')
+      }
     } catch (error) {
       toast.error(error.message || 'Nao foi possivel enviar WhatsApp')
     } finally {
@@ -455,8 +466,11 @@ const OrderDetails = () => {
             <CardContent className="space-y-4">
               <Button className="w-full" variant="outline" onClick={handleWhatsapp} loading={actionLoading === 'whatsapp'}>
                 <MessageCircle size={18} className="mr-2" />
-                Enviar WhatsApp
+                Enviar mensagem no WhatsApp
               </Button>
+              {manualWhatsapp && !manualWhatsapp.available && (
+                <p className="text-xs text-amber-300">{manualWhatsapp.error || 'Nao foi possivel preparar a mensagem.'}</p>
+              )}
 
               <div className="space-y-2 border-t border-dark-600 pt-4">
                 <p className="text-sm text-gray-400">Alterar status</p>

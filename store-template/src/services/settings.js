@@ -60,6 +60,7 @@ const optionalStoreSettingsColumns = [
   'print_footer',
   'whatsapp_provider',
   'whatsapp_auto_send_enabled',
+  'whatsapp_mode',
   'wasender_base_url',
   'wasender_session_id',
   'evolution_base_url',
@@ -153,6 +154,9 @@ const sanitizeStoreSettings = (settingsData = {}, includeOptionalColumns = true)
       ? settingsData.whatsapp_provider
       : 'evolution'
     payload.whatsapp_auto_send_enabled = settingsData.whatsapp_auto_send_enabled !== false
+    payload.whatsapp_mode = ['automatic', 'manual', 'disabled'].includes(settingsData.whatsapp_mode)
+      ? settingsData.whatsapp_mode
+      : 'automatic'
     payload.wasender_base_url = emptyToNull(settingsData.wasender_base_url) || 'https://www.wasenderapi.com'
     payload.wasender_session_id = emptyToNull(settingsData.wasender_session_id)
     payload.evolution_base_url = emptyToNull(settingsData.evolution_base_url) || 'https://marinho.replymesh.cloud'

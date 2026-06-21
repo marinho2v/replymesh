@@ -13,6 +13,7 @@ import {
   updateStoreOrderStatus,
 } from '../../services/storeApi'
 import { flowFromWhatsappTemplates } from '../../utils/orderStatus.jsx'
+import { getStoreSettings } from '../../services/settings'
 
 const POLL_INTERVAL = 5000
 const STATUS_SUMMARY_LABELS = {
@@ -59,6 +60,7 @@ const Orders = () => {
   const [orders, setOrders] = useState([])
   const [motoboys, setMotoboys] = useState([])
   const [statusFlow, setStatusFlow] = useState()
+  const [whatsappMode, setWhatsappMode] = useState('automatic')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const notificationSound = useNotificationSound('admin-orders')
@@ -103,8 +105,12 @@ const Orders = () => {
 
   const loadStatusFlow = useCallback(async () => {
     try {
-      const templates = await railsGetWhatsappTemplates()
+      const [templates, settings] = await Promise.all([
+        railsGetWhatsappTemplates(),
+        getStoreSettings(),
+      ])
       setStatusFlow(flowFromWhatsappTemplates(templates))
+      setWhatsappMode(settings.whatsapp_mode || 'automatic')
     } catch (err) {
       console.error('Erro ao carregar templates WhatsApp:', err)
     }
@@ -195,6 +201,12 @@ const Orders = () => {
         className="mb-0"
       />
 
+      {whatsappMode === 'manual' && (
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+          <strong>Modo WhatsApp manual ativo.</strong> As mensagens devem ser conferidas e enviadas pelo atendente após cada atualizacao.
+        </div>
+      )}
+
       <OrderFilters filters={filters} onChange={handleFilterChange} />
 
       <Card>
@@ -208,6 +220,7 @@ const Orders = () => {
             onAssignMotoboy={handleAssignMotoboy}
             motoboys={motoboys}
             statusFlow={statusFlow}
+            whatsappMode={whatsappMode}
           />
         </CardContent>
       </Card>

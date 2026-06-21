@@ -76,7 +76,10 @@ module Api
           )
 
           if result.success?
-            render_ok(order: serialize_full(result.order))
+            render_ok(
+              order: serialize_full(result.order),
+              manual_whatsapp: result.whatsapp&.manual_preview
+            )
           else
             render_error(result.error)
           end

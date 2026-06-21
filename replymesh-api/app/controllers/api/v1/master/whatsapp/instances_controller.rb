@@ -8,6 +8,7 @@ module Api
           before_action :authenticate_user!
           before_action :require_super_admin!
           before_action :set_instance, only: %i[show status qrcode disconnect restart destroy]
+          before_action :reject_non_automatic_instance_mode!, only: %i[status qrcode disconnect restart destroy]
 
           def index
             local_instances = WhatsappInstance.includes(:company).order(created_at: :desc).map { |instance| serialize_instance(instance) }
@@ -41,6 +42,12 @@ module Api
 
           def create
             company = Company.find(instance_params[:company_id])
+            unless company.store_setting.nil? || company.store_setting.automatic_whatsapp?
+              return render json: {
+                success: false,
+                errors: ["Empresa nao esta no modo WhatsApp automatico; nenhuma instancia deve ser criada"]
+              }, status: :unprocessable_entity
+            end
             name = instance_params[:instance_name].presence || "replymesh_#{company.slug}"
             instance = WhatsappInstance.find_or_initialize_by(company: company, instance_name: name)
             token = instance.instance_token.presence || SecureRandom.hex(32)
@@ -159,6 +166,18 @@ module Api
             params.require(:whatsapp_instance).permit(:company_id, :instance_name)
           end
 
+          def reject_non_automatic_instance_mode!
+            setting = @instance.company.store_setting
+            return if setting.nil? || setting.automatic_whatsapp?
+
+            render json: {
+              success: true,
+              skipped: true,
+              whatsapp_mode: setting.whatsapp_mode,
+              message: "WhatsApp nao esta no modo automatico. Nenhuma operacao na Evolution foi executada."
+            }, status: :ok
+          end
+
           def client
             @client ||= EvolutionGoClient.new
           end
@@ -272,7 +291,10 @@ module Api
 
               if local
                 local.update!(attrs.compact)
-                client.ensure_webhooks(local, remote: remote) if local.instance_token.present?
+                setting = local.company.store_setting
+                if local.instance_token.present? && (setting.nil? || setting.automatic_whatsapp?)
+                  client.ensure_webhooks(local, remote: remote)
+                end
                 linked << { instance_name: name, status: local.remote_status || local.status }
               else
                 record = WhatsappRemoteInstance.find_or_initialize_by(instance_name: name)

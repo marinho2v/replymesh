@@ -57,7 +57,7 @@ class CompanyOnboardingService
       create_default_delivery_zone! if option_enabled?(:create_default_settings, true)
       create_payment_methods! if option_enabled?(:create_default_payment_methods, true)
       create_whatsapp_templates! if option_enabled?(:create_default_templates, true)
-      create_whatsapp_instance! if option_enabled?(:create_whatsapp_instance, true)
+      create_whatsapp_instance! if option_enabled?(:create_whatsapp_instance, true) && @company.store_setting&.automatic_whatsapp?
       create_activity_log!
     end
 
@@ -165,6 +165,7 @@ class CompanyOnboardingService
       cover_url: DEFAULT_BANNER_URL,
       primary_color: "#16a34a",
       secondary_color: "#0b0b0d",
+      whatsapp_mode: StoreSetting::WHATSAPP_MODES.include?(company_params[:whatsapp_mode]) ? company_params[:whatsapp_mode] : "automatic",
       visual_template_id: DEFAULT_VISUAL_TEMPLATE_ID,
       accepted_payment_methods: StoreSetting::DEFAULT_ACCEPTED_PAYMENT_METHODS,
       opening_hours: StoreSetting::DEFAULT_OPENING_HOURS

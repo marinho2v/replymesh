@@ -85,7 +85,10 @@ export const updateStoreOrderStatus = (orderId, status, options = {}) => (
     method: 'PATCH',
     body: { status, skip_side_effects: Boolean(options.skipSideEffects) },
     headers: withCompanyHeader(options.companyId || currentCompanyId()),
-  }).then(payload => payload.order)
+  }).then(payload => ({
+    ...payload.order,
+    manual_whatsapp: payload.manual_whatsapp || null,
+  }))
 )
 
 export const railsGetMotoboys = (options = {}) => (
@@ -352,6 +355,9 @@ export const railsDeleteDeliveryZone = (id) =>
 export const railsGetWhatsappInstances = () =>
   request('/store/whatsapp/instances', { headers: h() })
     .then(r => r.instances || [])
+
+export const railsGetWhatsappConfiguration = () =>
+  request('/store/whatsapp/instances', { headers: h() })
 
 export const railsEnsureWhatsappInstance = () =>
   request('/store/whatsapp/instances/ensure', { method: 'POST', headers: h() })

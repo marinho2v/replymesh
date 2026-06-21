@@ -15,7 +15,12 @@ module Api
             )
 
             if result.success?
-              render_ok(sent: result.sent, log: serialize_log(result.log), message: result.error)
+              render_ok(
+                sent: result.sent,
+                log: serialize_log(result.log),
+                message: result.error,
+                manual_whatsapp: result.manual_preview
+              )
             else
               render_error(result.error, status: :bad_gateway, errors: [result.error])
             end

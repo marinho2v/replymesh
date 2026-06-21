@@ -65,6 +65,7 @@ module Api
           :phone,
           :whatsapp,
           :whatsapp_number,
+          :whatsapp_mode,
           :instagram,
           :facebook,
           :email,

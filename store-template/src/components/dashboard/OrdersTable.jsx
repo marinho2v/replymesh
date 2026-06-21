@@ -70,6 +70,7 @@ const OrdersTable = ({
   onAssignMotoboy,
   motoboys = [],
   statusFlow,
+  whatsappMode,
 }) => {
   const navigate = useNavigate()
   const basePath = useCompanyBasePath()
@@ -159,6 +160,7 @@ const OrdersTable = ({
                 onAssignMotoboy={onAssignMotoboy}
                 motoboys={motoboys}
                 statusFlow={statusFlow}
+                whatsappMode={whatsappMode}
               />
               <button
                 onClick={() => navigate(`${basePath}/admin/orders/${order.id}`)}
@@ -217,6 +219,7 @@ const OrdersTable = ({
                     onAssignMotoboy={onAssignMotoboy}
                     motoboys={motoboys}
                     statusFlow={statusFlow}
+                    whatsappMode={whatsappMode}
                   />
                   <button
                     onClick={() => navigate(`${basePath}/admin/orders/${order.id}`)}

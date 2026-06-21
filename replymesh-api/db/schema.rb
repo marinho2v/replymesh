@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_19_113000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1136,9 +1136,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_19_113000) do
     t.datetime "updated_at", null: false
     t.string "visual_template_id", default: "hamburgueria-premium", null: false
     t.text "whatsapp"
+    t.string "whatsapp_mode", default: "automatic", null: false
     t.text "whatsapp_number"
     t.text "zip_code"
     t.index ["company_id"], name: "index_store_settings_on_company_id", unique: true
+    t.check_constraint "whatsapp_mode::text = ANY (ARRAY['automatic'::character varying, 'manual'::character varying, 'disabled'::character varying]::text[])", name: "store_settings_whatsapp_mode_check"
   end
 
   create_table "subscriptions", force: :cascade do |t|

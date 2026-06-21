@@ -259,6 +259,7 @@ const defaultSettings = {
   block_orders_when_closed: true,
   whatsapp_provider: 'evolution',
   whatsapp_auto_send_enabled: true,
+  whatsapp_mode: 'automatic',
   pix_key: '',
   pix_key_type: '',
   pix_receiver_name: '',
@@ -358,7 +359,8 @@ const Settings = () => {
         banner_url: settings.banner_url || settings.cover_url || '',
         cover_url: settings.cover_url || settings.banner_url || '',
         whatsapp_provider: 'evolution',
-        whatsapp_auto_send_enabled: settings.whatsapp_auto_send_enabled !== false,
+        whatsapp_auto_send_enabled: settings.whatsapp_mode !== 'manual',
+        whatsapp_mode: settings.whatsapp_mode || 'automatic',
       })
     }
   }, [settings])
@@ -375,7 +377,7 @@ const Settings = () => {
   const companySlug = localStorage.getItem('replymesh_store_company_slug') || ''
   const publicUrl = companySlug ? `${window.location.origin}/loja/${companySlug}` : window.location.origin
   const whatsappAdminUrl = companySlug ? `/loja/${companySlug}/admin/whatsapp` : '/admin/whatsapp'
-  const whatsappApiConnected = localSettings.whatsapp_auto_send_enabled !== false
+  const manualWhatsappMode = localSettings.whatsapp_mode === 'manual'
   const effectiveStatus = getEffectiveStoreStatus(localSettings, localHours)
   const effectiveStatusText = effectiveStatus.isOpen ? 'Loja aberta agora' : 'Loja fechada agora'
   const effectiveStatusHelper = effectiveStatus.isOpen && effectiveStatus.closesAt
@@ -1009,17 +1011,53 @@ const Settings = () => {
               onChange={(e) => updateSetting('whatsapp_number', e.target.value)}
             />
             <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
-              <p className="text-sm text-gray-400">Status da API</p>
+              <p className="text-sm text-gray-400">Modo atual</p>
               <div className="mt-2 flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${whatsappApiConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${manualWhatsappMode ? 'bg-blue-400' : 'bg-green-400'}`} />
                 <span className="font-semibold text-white">
-                  {whatsappApiConnected ? 'Conectado' : 'Desconectado'}
+                  {manualWhatsappMode ? 'Manual pelo WhatsApp Web/App' : 'Automatico com Replymesh Connect'}
                 </span>
               </div>
             </div>
           </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className={`cursor-pointer rounded-xl border p-4 ${!manualWhatsappMode ? 'border-yellow-400 bg-yellow-400/5' : 'border-dark-700 bg-dark-900'}`}>
+              <div className="flex items-start gap-3">
+                <input
+                  type="radio"
+                  name="whatsapp_mode"
+                  value="automatic"
+                  checked={!manualWhatsappMode}
+                  onChange={() => updateSetting('whatsapp_mode', 'automatic')}
+                  className="mt-1"
+                />
+                <div>
+                  <strong className="text-white">Automatico com Replymesh Connect</strong>
+                  <p className="mt-1 text-sm text-gray-400">As mensagens sao enviadas automaticamente pelo Replymesh Connect.</p>
+                </div>
+              </div>
+            </label>
+            <label className={`cursor-pointer rounded-xl border p-4 ${manualWhatsappMode ? 'border-blue-400 bg-blue-400/5' : 'border-dark-700 bg-dark-900'}`}>
+              <div className="flex items-start gap-3">
+                <input
+                  type="radio"
+                  name="whatsapp_mode"
+                  value="manual"
+                  checked={manualWhatsappMode}
+                  onChange={() => updateSetting('whatsapp_mode', 'manual')}
+                  className="mt-1"
+                />
+                <div>
+                  <strong className="text-white">Manual pelo WhatsApp Web/App</strong>
+                  <p className="mt-1 text-sm text-gray-400">O sistema abre o WhatsApp com a mensagem pronta. Voce confere e envia manualmente.</p>
+                </div>
+              </div>
+            </label>
+          </div>
           <div className="rounded-lg border border-dark-700 bg-dark-900 p-4 text-sm text-gray-300">
-            As mensagens automaticas sao configuradas na area WhatsApp.
+            {manualWhatsappMode
+              ? 'Modo manual ativo. As mensagens devem ser enviadas pelo atendente.'
+              : 'As mensagens automaticas sao configuradas na area WhatsApp.'}
           </div>
           <Button type="button" variant="secondary" onClick={() => window.location.assign(whatsappAdminUrl)}>
             <ExternalLink size={16} className="mr-2" />

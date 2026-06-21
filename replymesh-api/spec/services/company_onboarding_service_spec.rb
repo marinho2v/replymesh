@@ -47,4 +47,26 @@ RSpec.describe CompanyOnboardingService do
     expect(client).to have_received(:create_instance).with("replymesh_nova_loja", token: instance.instance_token)
     expect(client).to have_received(:ensure_webhooks).with(instance, remote: hash_including(status: "created"))
   end
+
+  it "does not create an Evolution instance for a company configured in manual mode" do
+    allow(EvolutionGoClient).to receive(:new)
+
+    result = described_class.call(
+      {
+        name: "Loja Manual",
+        slug: "loja-manual",
+        responsible_name: "Dono Manual",
+        responsible_email: "manual@example.com",
+        responsible_phone: "21999990010",
+        admin_password: "senha-forte-123",
+        whatsapp_mode: "manual"
+      }
+    )
+
+    expect(result).to be_success
+    company = Company.find_by!(slug: "loja-manual")
+    expect(company.store_setting.whatsapp_mode).to eq("manual")
+    expect(company.whatsapp_instances).to be_empty
+    expect(EvolutionGoClient).not_to have_received(:new)
+  end
 end

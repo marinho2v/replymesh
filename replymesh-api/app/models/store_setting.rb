@@ -1,5 +1,6 @@
 class StoreSetting < ApplicationRecord
   STATUSES = %w[open closed paused].freeze
+  WHATSAPP_MODES = %w[automatic manual disabled].freeze
   PIX_KEY_TYPES = %w[cpf cnpj email phone random].freeze
   DEFAULT_ACCEPTED_PAYMENT_METHODS = %w[cash pix debit_card credit_card].freeze
   DEFAULT_VISUAL_TEMPLATE_ID = "hamburgueria-premium".freeze
@@ -17,6 +18,7 @@ class StoreSetting < ApplicationRecord
 
   validates :company_id, uniqueness: true
   validates :store_status, inclusion: { in: STATUSES }
+  validates :whatsapp_mode, inclusion: { in: WHATSAPP_MODES }
   validates :min_order_value_cents, :default_delivery_fee_cents, :delivery_fee_cents,
             :free_delivery_above_cents, :estimated_delivery_minutes,
             numericality: { greater_than_or_equal_to: 0 }
@@ -38,6 +40,7 @@ class StoreSetting < ApplicationRecord
     self.secondary_color = attrs["secondary_color"] if attrs.key?("secondary_color")
     self.whatsapp = attrs["whatsapp"] if attrs.key?("whatsapp")
     self.whatsapp_number = attrs["whatsapp_number"] if attrs.key?("whatsapp_number")
+    self.whatsapp_mode = attrs["whatsapp_mode"] if attrs.key?("whatsapp_mode")
     self.phone = attrs["phone"] if attrs.key?("phone")
     self.instagram = attrs["instagram"] if attrs.key?("instagram")
     self.facebook = attrs["facebook"] if attrs.key?("facebook")
@@ -108,6 +111,7 @@ class StoreSetting < ApplicationRecord
       secondary_color: secondary_color,
       whatsapp: whatsapp.presence || whatsapp_number.presence || phone,
       whatsapp_number: whatsapp_number.presence || whatsapp.presence || phone,
+      whatsapp_mode: whatsapp_mode.presence || "automatic",
       phone: phone.presence || whatsapp.presence || whatsapp_number,
       instagram: instagram,
       facebook: facebook,
@@ -160,6 +164,18 @@ class StoreSetting < ApplicationRecord
     }
   end
 
+  def automatic_whatsapp?
+    whatsapp_mode.blank? || whatsapp_mode == "automatic"
+  end
+
+  def manual_whatsapp?
+    whatsapp_mode == "manual"
+  end
+
+  def whatsapp_disabled?
+    whatsapp_mode == "disabled"
+  end
+
   private
 
   def mask_token(token)
@@ -176,6 +192,7 @@ class StoreSetting < ApplicationRecord
     self.cover_url = banner_url.presence || cover_url
     self.whatsapp = whatsapp.presence || whatsapp_number.presence || phone
     self.whatsapp_number = whatsapp.presence || whatsapp_number
+    self.whatsapp_mode = "automatic" if whatsapp_mode.blank?
     self.phone = whatsapp.presence || phone
     self.delivery_fee_cents = default_delivery_fee_cents if delivery_fee_cents.to_i.zero? && default_delivery_fee_cents.to_i.positive?
     self.free_delivery_above_cents = min_order_value_cents if free_delivery_above_cents.to_i.zero? && min_order_value_cents.to_i.positive?

@@ -2,14 +2,15 @@
 import { useOrderActions } from '../../hooks/useOrders'
 import { getNextStatuses } from '../../utils/orderStatus.jsx'
 import { ORDER_STATUSES } from '../../lib/constants'
-import { CheckCircle, X, ChefHat, Package, Truck, CircleCheck, Bike } from 'lucide-react'
+import { CheckCircle, X, ChefHat, Package, Truck, CircleCheck, Bike, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 
-const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMotoboy, motoboys = [], statusFlow }) => {
+const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMotoboy, motoboys = [], statusFlow, whatsappMode = 'automatic' }) => {
   const { handleStatusChange } = useOrderActions()
   const [loadingStatus, setLoadingStatus] = useState(null)
   const [selectedMotoboyId, setSelectedMotoboyId] = useState(order.motoboy?.id || '')
   const [assigningMotoboy, setAssigningMotoboy] = useState(false)
+  const [manualWhatsapp, setManualWhatsapp] = useState(order.manual_whatsapp || null)
   const railsMode = Boolean(onRailsStatusChange)
 
   if (order.payment_status === 'pending_payment') {
@@ -82,6 +83,10 @@ const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMoto
       ? await onRailsStatusChange(order, status)
       : await handleStatusChange(order, status, { prepareWhatsApp: true })
     setLoadingStatus(null)
+
+    if (result.success && whatsappMode === 'manual') {
+      setManualWhatsapp(result.order?.manual_whatsapp || null)
+    }
 
     if (result.success && onStatusChange) {
       onStatusChange(result.order)
@@ -166,7 +171,23 @@ const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMoto
             </Button>
           )
         })}
+
+        {whatsappMode === 'manual' && manualWhatsapp?.available && (
+          <a
+            href={manualWhatsapp.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-9 items-center rounded-lg border border-green-500/40 bg-green-500/10 px-3 text-sm font-semibold text-green-300 hover:bg-green-500/20"
+          >
+            <MessageCircle size={16} className="mr-2" />
+            Enviar mensagem no WhatsApp
+          </a>
+        )}
       </div>
+
+      {whatsappMode === 'manual' && manualWhatsapp && !manualWhatsapp.available && (
+        <p className="mt-2 text-xs text-amber-300">{manualWhatsapp.error || 'Nao foi possivel preparar a mensagem manual.'}</p>
+      )}
 
     </>
   )

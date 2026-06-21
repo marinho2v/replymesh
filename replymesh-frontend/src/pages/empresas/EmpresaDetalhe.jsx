@@ -93,6 +93,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
             description: storeForm.description,
             phone: storeForm.phone,
             whatsapp: storeForm.whatsapp,
+            whatsapp_mode: storeForm.whatsapp_mode || "automatic",
             logo_url: storeForm.logo_url,
             banner_url: storeForm.banner_url,
             cover_url: storeForm.cover_url,
@@ -205,6 +206,21 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
               <Field label="Descricao / chamada" value={storeForm.description} onChange={(value) => setStoreForm({ ...storeForm, description: value })} />
               <Field label="Telefone publico" value={storeForm.phone} onChange={(value) => setStoreForm({ ...storeForm, phone: value })} />
               <Field label="WhatsApp publico" value={storeForm.whatsapp} onChange={(value) => setStoreForm({ ...storeForm, whatsapp: value })} />
+              <div className="field">
+                <label>Modo de envio WhatsApp</label>
+                <select
+                  value={storeForm.whatsapp_mode || "automatic"}
+                  onChange={(event) => setStoreForm({ ...storeForm, whatsapp_mode: event.target.value })}
+                >
+                  <option value="automatic">Automatico com Replymesh Connect</option>
+                  <option value="manual">Manual pelo WhatsApp Web/App</option>
+                </select>
+                <span className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  {(storeForm.whatsapp_mode || "automatic") === "manual"
+                    ? "O atendente confere e envia as mensagens prontas manualmente."
+                    : "Mensagens, webhooks e conexao seguem pelo Replymesh Connect."}
+                </span>
+              </div>
               <Field label="Logo URL" value={storeForm.logo_url} onChange={(value) => setStoreForm({ ...storeForm, logo_url: value })} />
               <Field label="Banner URL" value={storeForm.banner_url} onChange={(value) => setStoreForm({ ...storeForm, banner_url: value })} />
               <Field label="Capa URL" value={storeForm.cover_url} onChange={(value) => setStoreForm({ ...storeForm, cover_url: value })} />

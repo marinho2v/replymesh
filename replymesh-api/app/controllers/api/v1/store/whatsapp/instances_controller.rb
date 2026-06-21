@@ -3,11 +3,16 @@ module Api
     module Store
       module Whatsapp
         class InstancesController < Api::V1::Store::BaseController
+          before_action :reject_non_automatic_mode!, only: %i[ensure status qrcode]
           before_action :set_instance, only: %i[status qrcode]
 
           def index
             instance = primary_instance
-            render_ok(instances: instance ? [instance.safe_json] : [])
+            render_ok(
+              instances: automatic_mode? && instance ? [instance.safe_json] : [],
+              whatsapp_mode: current_mode,
+              message: manual_mode? ? "Modo manual ativo. As mensagens devem ser enviadas pelo atendente." : nil
+            )
           end
 
           def ensure
@@ -56,6 +61,30 @@ module Api
           end
 
           private
+
+          def current_mode
+            current_company.store_setting&.whatsapp_mode.presence || "automatic"
+          end
+
+          def automatic_mode?
+            current_mode == "automatic"
+          end
+
+          def manual_mode?
+            current_mode == "manual"
+          end
+
+          def reject_non_automatic_mode!
+            return if automatic_mode?
+
+            render_ok(
+              skipped: true,
+              whatsapp_mode: current_mode,
+              message: manual_mode? ?
+                "Modo manual ativo. Nenhuma conexao Replymesh Connect e necessaria." :
+                "WhatsApp desativado para esta empresa."
+            )
+          end
 
           def set_instance
             @instance = primary_instance

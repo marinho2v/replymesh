@@ -254,8 +254,8 @@ module Api
             company: @company,
             resource: setting,
             metadata: {
-              previous: previous.slice(:store_name, :primary_color, :secondary_color, :store_status),
-              current: setting.as_company_settings_json.slice(:store_name, :primary_color, :secondary_color, :store_status)
+              previous: previous.slice(:store_name, :primary_color, :secondary_color, :store_status, :whatsapp_mode),
+              current: setting.as_company_settings_json.slice(:store_name, :primary_color, :secondary_color, :store_status, :whatsapp_mode)
             }
           )
 
@@ -297,7 +297,7 @@ module Api
             :name, :slug, :legal_name, :document_number, :responsible_name,
             :responsible_phone, :responsible_email, :plan_slug, :status,
             :plan_status, :admin_password, :timezone, :default_locale,
-            :custom_domain
+            :custom_domain, :whatsapp_mode
           )
         end
 
@@ -325,6 +325,7 @@ module Api
             :phone,
             :whatsapp,
             :whatsapp_number,
+            :whatsapp_mode,
             :logo_url,
             :banner_url,
             :cover_url,
