@@ -73,6 +73,27 @@ RSpec.describe "Motoboy flow", type: :request do
     expect(json["message"]).to include("Plano START")
   end
 
+  it "blocks direct localhost-style motoboy login without company slug when phone resolves one store" do
+    assign_plan(company, slug: "start")
+    admin = create_user(email: "direct-feature-owner@example.com")
+    CompanyFeatureOverride.create!(
+      company: company,
+      feature_key: "motoboy_panel",
+      mode: "block",
+      created_by: admin
+    )
+
+    post "/api/v1/motoboy/auth/login", params: {
+      phone: motoboy.phone, password: "senha123456"
+    }, headers: {
+      "Host" => "localhost:5173"
+    }
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("feature_not_available")
+    expect(json["feature"]).to eq("motoboy_panel")
+  end
+
   it "blocks motoboy API access when the panel is blocked after a token was issued" do
     assign_plan(company, slug: "start")
 

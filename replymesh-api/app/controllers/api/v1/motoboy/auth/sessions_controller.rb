@@ -50,7 +50,9 @@ module Api
             identifier = login_params[:company_slug].presence ||
                          request.headers["X-Company-Slug"].presence ||
                          request.host
-            company_from_identifier(identifier) || company_from_identifier(request.host)
+            company_from_identifier(identifier) ||
+              company_from_identifier(request.host) ||
+              company_from_motoboy_phone(login_params[:phone])
           end
 
           def company_from_identifier(identifier)
@@ -81,6 +83,20 @@ module Api
                      domains: candidates
                    )
                    .first
+          end
+
+          def company_from_motoboy_phone(phone)
+            normalized_phone = PhoneNormalizer.local_br(phone.to_s)
+            return if normalized_phone.blank?
+
+            matches = ::Motoboy.active
+                                .includes(:company)
+                                .where(phone: normalized_phone)
+                                .select { |record| record.company&.status == "active" }
+
+            return matches.first.company if matches.one?
+
+            nil
           end
 
           def unauthorized
