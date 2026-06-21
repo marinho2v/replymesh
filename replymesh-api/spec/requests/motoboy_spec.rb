@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Motoboy flow", type: :request do
   let!(:company) { create_company(slug: "motoboy-test") }
+  let!(:plan) { assign_plan(company, slug: "start") }
   let!(:user) { create_user(email: "motoboy@example.com", role: "motoboy", password: "senha123456") }
   let!(:motoboy) { Motoboy.create!(company: company, user: user, name: "Moto Teste", phone: "21988887777", active: true, is_available: true) }
   let!(:order) do
@@ -32,7 +33,11 @@ RSpec.describe "Motoboy flow", type: :request do
   end
 
   it "lists the most recent assigned delivery first" do
-    newer_order = create_order(company: company, status: "ready")
+    newer_order = create_order(
+      company: company,
+      customer: create_customer(company, phone: "21999990002"),
+      status: "ready"
+    )
     newer_order.update!(motoboy: motoboy, delivery_status: "assigned")
     DeliveryHistory.create!(
       company: company,
@@ -54,7 +59,6 @@ RSpec.describe "Motoboy flow", type: :request do
   end
 
   it "blocks motoboy login when the web panel feature is manually blocked" do
-    assign_plan(company, slug: "start")
     admin = create_user(email: "feature-owner@example.com")
     CompanyFeatureOverride.create!(
       company: company,
@@ -74,7 +78,6 @@ RSpec.describe "Motoboy flow", type: :request do
   end
 
   it "blocks direct localhost-style motoboy login without company slug when phone resolves one store" do
-    assign_plan(company, slug: "start")
     admin = create_user(email: "direct-feature-owner@example.com")
     CompanyFeatureOverride.create!(
       company: company,
@@ -95,8 +98,6 @@ RSpec.describe "Motoboy flow", type: :request do
   end
 
   it "blocks motoboy API access when the panel is blocked after a token was issued" do
-    assign_plan(company, slug: "start")
-
     post "/api/v1/motoboy/auth/login", params: {
       phone: motoboy.phone, password: "senha123456", company_slug: company.slug
     }
