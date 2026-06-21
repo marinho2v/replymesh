@@ -5,7 +5,7 @@ module Api
         PUBLIC_CACHE_TTL = 60.seconds
 
         before_action :set_public_cache_headers, only: %i[
-          show menu banners business_hours delivery_zones
+          menu banners business_hours delivery_zones
         ]
 
         # GET /api/v1/public/:company_slug/store
@@ -141,7 +141,23 @@ module Api
             pix_provider:            s.respond_to?(:pix_provider) ? (s.pix_provider.presence || 'manual') : 'manual',
             mercadopago_enabled:     s.respond_to?(:mercadopago_enabled) ? s.mercadopago_enabled : false,
             mercadopago_public_key:  s.respond_to?(:mercadopago_public_key) ? s.mercadopago_public_key : nil,
+            feature_access:          public_feature_access,
             updated_at:              s.updated_at
+          }
+        end
+
+        def public_feature_access
+          motoboy_gate = FeatureGate.check(current_company, "motoboy_panel")
+
+          {
+            motoboy_panel: {
+              enabled: motoboy_gate.enabled?,
+              feature: motoboy_gate.feature,
+              required_plan: motoboy_gate.required_plan,
+              required_plan_label: FeatureCatalog.required_plan_label(motoboy_gate.required_plan),
+              source: motoboy_gate.source,
+              message: "Este recurso nao esta incluso no plano atual da sua loja. Fale com o suporte Replymesh para liberar ou testar este recurso."
+            }
           }
         end
 
