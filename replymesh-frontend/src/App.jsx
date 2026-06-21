@@ -63,7 +63,25 @@ export default function App() {
 
   const element = useRoutes(routes(showToast, { onLogin: handleLogin }));
 
-  const PUBLIC_PATHS = ["/", "/login", "/home", "/termos-de-uso", "/politica-de-privacidade"];
+  const PUBLIC_PATHS = [
+    "/",
+    "/login",
+    "/home",
+    "/termos-de-uso",
+    "/politica-de-privacidade",
+    "/recursos",
+    "/funcionalidades",
+    "/integracoes",
+    "/aplicativo",
+    "/sobre-nos",
+    "/clientes",
+    "/blog",
+    "/contato",
+    "/central-de-ajuda",
+    "/tutoriais",
+    "/status",
+    "/fale-conosco",
+  ];
   if (PUBLIC_PATHS.includes(location.pathname)) {
     return (
       <>

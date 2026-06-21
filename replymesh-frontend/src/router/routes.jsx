@@ -30,6 +30,7 @@ const AndroidApps = lazy(() => import("../pages/AndroidApps.jsx").then((module) 
 const LandingPage = lazy(() => import("../pages/LandingPage.jsx").then((module) => ({ default: module.LandingPage })));
 const TermosDeUso = lazy(() => import("../pages/TermosDeUso.jsx").then((module) => ({ default: module.TermosDeUso })));
 const PoliticaDePrivacidade = lazy(() => import("../pages/PoliticaDePrivacidade.jsx").then((module) => ({ default: module.PoliticaDePrivacidade })));
+const InstitutionalPage = lazy(() => import("../pages/InstitutionalPage.jsx").then((module) => ({ default: module.InstitutionalPage })));
 
 const page = (element) => (
   <Suspense fallback={<div className="route-loader" role="status">Carregando pagina...</div>}>
@@ -45,6 +46,18 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/home", element: page(<LandingPage />) },
   { path: "/termos-de-uso", element: page(<TermosDeUso />) },
   { path: "/politica-de-privacidade", element: page(<PoliticaDePrivacidade />) },
+  { path: "/recursos", element: page(<InstitutionalPage page="recursos" />) },
+  { path: "/funcionalidades", element: page(<InstitutionalPage page="funcionalidades" />) },
+  { path: "/integracoes", element: page(<InstitutionalPage page="integracoes" />) },
+  { path: "/aplicativo", element: page(<InstitutionalPage page="aplicativo" />) },
+  { path: "/sobre-nos", element: page(<InstitutionalPage page="sobre-nos" />) },
+  { path: "/clientes", element: page(<InstitutionalPage page="clientes" />) },
+  { path: "/blog", element: page(<InstitutionalPage page="blog" />) },
+  { path: "/contato", element: page(<InstitutionalPage page="contato" />) },
+  { path: "/central-de-ajuda", element: page(<InstitutionalPage page="ajuda" />) },
+  { path: "/tutoriais", element: page(<InstitutionalPage page="tutoriais" />) },
+  { path: "/status", element: page(<InstitutionalPage page="status" />) },
+  { path: "/fale-conosco", element: page(<InstitutionalPage page="suporte" />) },
   { path: "/dashboard", element: protectedPage(<Dashboard />) },
   { path: "/empresas", element: protectedPage(<EmpresasList onToast={onToast} />) },
   { path: "/empresas/nova", element: protectedPage(<NovaEmpresa onToast={onToast} />) },
