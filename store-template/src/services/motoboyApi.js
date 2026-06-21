@@ -62,7 +62,7 @@ export const motoboyLogin = async ({ phone, password, companySlug }) => {
 
   const payload = await response.json()
   if (!response.ok || payload?.success === false) {
-    throw new ReplymeshApiError(payload?.error || 'Telefone ou senha invalidos', {
+    throw new ReplymeshApiError(payload?.message || payload?.error || 'Telefone ou senha invalidos', {
       status: response.status,
       payload,
     })

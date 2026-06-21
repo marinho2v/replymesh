@@ -52,4 +52,46 @@ RSpec.describe "Motoboy flow", type: :request do
     expect(response).to have_http_status(:ok)
     expect(json["orders"].first["id"]).to eq(newer_order.id)
   end
+
+  it "blocks motoboy login when the web panel feature is manually blocked" do
+    assign_plan(company, slug: "start")
+    admin = create_user(email: "feature-owner@example.com")
+    CompanyFeatureOverride.create!(
+      company: company,
+      feature_key: "motoboy_panel",
+      mode: "block",
+      created_by: admin
+    )
+
+    post "/api/v1/motoboy/auth/login", params: {
+      phone: motoboy.phone, password: "senha123456", company_slug: company.slug
+    }
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("feature_not_available")
+    expect(json["feature"]).to eq("motoboy_panel")
+    expect(json["message"]).to include("Plano START")
+  end
+
+  it "blocks motoboy API access when the panel is blocked after a token was issued" do
+    assign_plan(company, slug: "start")
+
+    post "/api/v1/motoboy/auth/login", params: {
+      phone: motoboy.phone, password: "senha123456", company_slug: company.slug
+    }
+    token = json["token"]
+
+    admin = create_user(email: "late-feature-owner@example.com")
+    CompanyFeatureOverride.create!(
+      company: company,
+      feature_key: "motoboy_panel",
+      mode: "block",
+      created_by: admin
+    )
+
+    get "/api/v1/motoboy/orders", headers: { "Authorization" => "Bearer #{token}" }
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json["error"]).to eq("feature_not_available")
+  end
 end

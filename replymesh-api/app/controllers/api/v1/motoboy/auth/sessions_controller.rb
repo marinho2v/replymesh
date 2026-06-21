@@ -6,6 +6,7 @@ module Api
           def create
             company = resolve_company_for_login
             return render json: { success: false, error: "Empresa nao encontrada" }, status: :not_found unless company
+            return render_feature_blocked(company) unless motoboy_panel_enabled?(company)
 
             motoboy = company.motoboys.active.find do |record|
               PhoneNormalizer.equivalent?(record.phone, login_params[:phone])
@@ -84,6 +85,22 @@ module Api
 
           def unauthorized
             render json: { success: false, error: "Telefone ou senha invalidos" }, status: :unauthorized
+          end
+
+          def motoboy_panel_enabled?(company)
+            FeatureGate.enabled?(company, "motoboy_panel")
+          end
+
+          def render_feature_blocked(company)
+            gate = FeatureGate.check(company, "motoboy_panel")
+
+            render json: {
+              success: false,
+              error: "feature_not_available",
+              feature: gate.feature,
+              required_plan: gate.required_plan,
+              message: "Portal do motoboy indisponivel para esta loja. Recurso disponivel no Plano #{FeatureCatalog.required_plan_label(gate.required_plan)}."
+            }, status: :forbidden
           end
 
           def serialize_motoboy(motoboy)

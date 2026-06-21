@@ -17,18 +17,26 @@ const MotoboyLogin = () => {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [accessMessage, setAccessMessage] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!phone.trim() || !password) return
 
     setLoading(true)
+    setAccessMessage('')
     try {
       await motoboyLogin({ phone: phone.trim(), password, companySlug: resolvedCompanySlug })
       navigate(`${basePath}/motoboy/dashboard`, { replace: true })
     } catch (error) {
       console.error('Erro ao fazer login do motoboy:', error)
-      toast.error('Telefone ou senha incorretos')
+      const blockedMessage = error?.payload?.message || error?.message
+      if (error?.payload?.error === 'feature_not_available' && blockedMessage) {
+        setAccessMessage(blockedMessage)
+        toast.error(blockedMessage)
+      } else {
+        toast.error('Telefone ou senha incorretos')
+      }
     } finally {
       setLoading(false)
     }
@@ -48,6 +56,12 @@ const MotoboyLogin = () => {
             <Bike size={20} />
             <span className="font-semibold text-white">Entrar</span>
           </div>
+
+          {accessMessage && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-100">
+              {accessMessage}
+            </div>
+          )}
 
           <div>
             <label className="mb-1 block text-sm text-gray-400">Telefone</label>

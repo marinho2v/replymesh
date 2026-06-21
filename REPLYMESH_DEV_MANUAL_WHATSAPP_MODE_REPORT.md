@@ -1,6 +1,6 @@
 # REPLYMESH DEV — Modo WhatsApp Manual por Empresa
 
-Data: 2026-06-21  
+Data: 2026-06-21
 Branch: `dev`
 
 ## Resultado

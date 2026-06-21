@@ -24,6 +24,7 @@ module Api
 
           company = Company.find_by(id: company_id, status: "active")
           return unauthorized! unless company
+          return feature_blocked!(company) unless FeatureGate.enabled?(company, "motoboy_panel")
 
           membership = CompanyMember.active.find_by(user_id: user.id, company_id: company.id, role: "motoboy")
           return unauthorized! unless membership
@@ -38,6 +39,18 @@ module Api
 
         def unauthorized!
           render json: { success: false, error: "Nao autorizado" }, status: :unauthorized
+        end
+
+        def feature_blocked!(company)
+          gate = FeatureGate.check(company, "motoboy_panel")
+
+          render json: {
+            success: false,
+            error: "feature_not_available",
+            feature: gate.feature,
+            required_plan: gate.required_plan,
+            message: "Portal do motoboy indisponivel para esta loja. Recurso disponivel no Plano #{FeatureCatalog.required_plan_label(gate.required_plan)}."
+          }, status: :forbidden
         end
 
         def render_ok(data = {}, status: :ok, **kwargs)
