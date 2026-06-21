@@ -30,6 +30,7 @@ import { formatSelectedOptions } from '../../utils/productOptions'
 import { formatCurrency } from '../../utils/currency'
 import { formatDateTime } from '../../utils/formatDate'
 import { flowFromWhatsappTemplates, getNextStatuses } from '../../utils/orderStatus.jsx'
+import { getStoreSettings } from '../../services/settings'
 
 const centsToCurrency = (value) => formatCurrency(Number(value || 0) / 100)
 
@@ -85,6 +86,7 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState('')
   const [manualWhatsapp, setManualWhatsapp] = useState(null)
+  const [whatsappMode, setWhatsappMode] = useState('automatic')
 
   const loadOrder = useCallback(async () => {
     try {
@@ -110,8 +112,12 @@ const OrderDetails = () => {
 
   const loadStatusFlow = useCallback(async () => {
     try {
-      const templates = await railsGetWhatsappTemplates()
+      const [templates, settings] = await Promise.all([
+        railsGetWhatsappTemplates(),
+        getStoreSettings(),
+      ])
       setStatusFlow(flowFromWhatsappTemplates(templates))
+      setWhatsappMode(settings.whatsapp_mode || 'automatic')
     } catch (error) {
       console.error('Erro ao carregar templates WhatsApp:', error)
     }
@@ -157,14 +163,33 @@ const OrderDetails = () => {
       return
     }
 
+    const manualPopup = whatsappMode === 'manual' ? window.open('', '_blank') : null
+    if (manualPopup) {
+      manualPopup.opener = null
+      manualPopup.document.write('<p style="font-family:Arial,sans-serif;padding:16px">Preparando mensagem no WhatsApp...</p>')
+    }
+
     setActionLoading('status')
     try {
       const updatedOrder = await updateStoreOrderStatus(order.id, selectedStatus, { skipSideEffects: true })
       refreshWith(updatedOrder)
       setManualWhatsapp(updatedOrder.manual_whatsapp || null)
-      toast.success('Status atualizado')
+      if (whatsappMode === 'manual' && updatedOrder.manual_whatsapp?.available && updatedOrder.manual_whatsapp?.url) {
+        if (manualPopup && !manualPopup.closed) {
+          manualPopup.location.href = updatedOrder.manual_whatsapp.url
+        } else {
+          window.open(updatedOrder.manual_whatsapp.url, '_blank', 'noopener,noreferrer')
+        }
+        toast.success('Status atualizado. Confira e envie a mensagem no WhatsApp.')
+      } else if (whatsappMode === 'manual' && manualPopup && !manualPopup.closed) {
+        manualPopup.close()
+        toast.info(updatedOrder.manual_whatsapp?.error || 'Status atualizado, mas a mensagem manual nao foi preparada.')
+      } else {
+        toast.success('Status atualizado')
+      }
       await loadOrder()
     } catch (error) {
+      if (manualPopup && !manualPopup.closed) manualPopup.close()
       toast.error(error.message || 'Nao foi possivel atualizar status')
     } finally {
       setActionLoading('')

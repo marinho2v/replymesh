@@ -4,6 +4,7 @@ import { getNextStatuses } from '../../utils/orderStatus.jsx'
 import { ORDER_STATUSES } from '../../lib/constants'
 import { CheckCircle, X, ChefHat, Package, Truck, CircleCheck, Bike, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMotoboy, motoboys = [], statusFlow, whatsappMode = 'automatic' }) => {
   const { handleStatusChange } = useOrderActions()
@@ -78,6 +79,12 @@ const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMoto
   const handleAction = async (status) => {
     if (loadingStatus) return
 
+    const manualPopup = whatsappMode === 'manual' ? window.open('', '_blank') : null
+    if (manualPopup) {
+      manualPopup.opener = null
+      manualPopup.document.write('<p style="font-family:Arial,sans-serif;padding:16px">Preparando mensagem no WhatsApp...</p>')
+    }
+
     setLoadingStatus(status)
     const result = railsMode
       ? await onRailsStatusChange(order, status)
@@ -85,7 +92,21 @@ const OrderActions = ({ order, onStatusChange, onRailsStatusChange, onAssignMoto
     setLoadingStatus(null)
 
     if (result.success && whatsappMode === 'manual') {
-      setManualWhatsapp(result.order?.manual_whatsapp || null)
+      const preview = result.order?.manual_whatsapp || null
+      setManualWhatsapp(preview)
+      if (preview?.available && preview.url) {
+        if (manualPopup && !manualPopup.closed) {
+          manualPopup.location.href = preview.url
+        } else {
+          window.open(preview.url, '_blank', 'noopener,noreferrer')
+        }
+        toast.success('Pedido atualizado. Confira e envie a mensagem no WhatsApp.')
+      } else {
+        if (manualPopup && !manualPopup.closed) manualPopup.close()
+        toast.info(preview?.error || 'Pedido atualizado, mas a mensagem manual nao foi preparada.')
+      }
+    } else if (manualPopup && !manualPopup.closed) {
+      manualPopup.close()
     }
 
     if (result.success && onStatusChange) {
