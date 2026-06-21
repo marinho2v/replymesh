@@ -64,12 +64,38 @@ class WhatsappManualMessageBuilder
   end
 
   def sanitize_message(value)
-    value.to_s
-         .encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
-         .gsub(/[^\P{C}\n\t]/, "")
-         .gsub(/\r\n?/, "\n")
-         .gsub(/[ \t]+\n/, "\n")
-         .gsub(/\n{3,}/, "\n\n")
-         .strip
+    message = value.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+    message = repair_legacy_mojibake(message)
+
+    message.gsub("\uFFFD", "")
+           .gsub(/[^\P{C}\n\t]/, "")
+           .gsub(/\r\n?/, "\n")
+           .gsub(/[ \t]+\n/, "\n")
+           .gsub(/\n{3,}/, "\n\n")
+           .strip
+  end
+
+  def repair_legacy_mojibake(message)
+    return message unless legacy_mojibake?(message)
+
+    bytes = message.each_char.flat_map do |char|
+      codepoint = char.ord
+      next [codepoint] if codepoint <= 255
+
+      char.encode("Windows-1252").bytes
+    rescue EncodingError
+      char.bytes
+    end
+
+    repaired = bytes.pack("C*").force_encoding("UTF-8")
+    return message unless repaired.valid_encoding?
+
+    repaired.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+  rescue EncodingError
+    message
+  end
+
+  def legacy_mojibake?(message)
+    message.match?(/[ÃÂâð]/)
   end
 end

@@ -4,6 +4,14 @@ RSpec.describe WhatsappManualMessageBuilder do
   let!(:company) { create_company(slug: "manual-link") }
   let!(:order) { create_order(company: company) }
 
+  def legacy_mojibake(text)
+    text.each_byte.map do |byte|
+      byte.chr.force_encoding("Windows-1252").encode("UTF-8")
+    rescue EncodingError
+      byte.chr.force_encoding("ISO-8859-1").encode("UTF-8")
+    end.join
+  end
+
   before do
     create_store(company).update!(whatsapp_mode: "manual")
     WhatsappTemplate.create!(
@@ -33,5 +41,25 @@ RSpec.describe WhatsappManualMessageBuilder do
     expect(result).not_to be_available
     expect(result.error).to eq("Cliente sem telefone valido")
     expect(result.url).to be_nil
+  end
+
+  it "repairs legacy emoji mojibake and removes replacement characters" do
+    template = WhatsappTemplate.find_by!(company: company, template_key: "pedido_aceito")
+    template.update!(
+      message: legacy_mojibake(
+        "\u{1F6F5} Seu pedido saiu para entrega!\n\n" \
+          "Ol\u{00E1}, *{{nome_cliente}}* \u{1F44B}\n\n" \
+          "*{{nome_loja}}* \u{1F354}"
+      ) + " \uFFFD"
+    )
+
+    result = described_class.call(order: order, status: "accepted")
+
+    expect(result).to be_available
+    expect(result.message).to include("\u{1F6F5} Seu pedido saiu para entrega!")
+    expect(result.message).to include("Ol\u{00E1},")
+    expect(result.message).to include("\u{1F44B}")
+    expect(result.message).to include("\u{1F354}")
+    expect(result.message).not_to include("\uFFFD")
   end
 end
