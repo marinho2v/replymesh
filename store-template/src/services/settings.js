@@ -4,12 +4,25 @@ import { DEFAULT_TEMPLATE_ID } from '../templates'
 
 const currentCompanyId = () => localStorage.getItem('replymesh_store_company_id') || import.meta.env.VITE_REPLYMESH_COMPANY_ID || '4'
 const currentCompanySlug = () => localStorage.getItem('replymesh_store_company_slug') || COMPANY_SLUG
-const companyHeaders = () => ({ 'X-Company-Id': String(currentCompanyId()) })
+const currentTenantParams = () => {
+  const slug = currentCompanySlug()
+  if (slug) return { company_slug: slug }
+
+  const id = currentCompanyId()
+  return id ? { company_id: id } : {}
+}
+const companyHeaders = () => {
+  const slug = currentCompanySlug()
+  if (slug) return { 'X-Company-Slug': String(slug) }
+
+  const id = currentCompanyId()
+  return id ? { 'X-Company-Id': String(id) } : {}
+}
 
 export const getStoreSettings = async () => {
   try {
     const payload = await request('/company/settings', {
-      params: { company_id: currentCompanyId() },
+      params: currentTenantParams(),
       headers: companyHeaders(),
     })
     const settings = payload.settings || {}
@@ -181,12 +194,12 @@ export const updateStoreSettings = async (settingsData) => {
     const payload = sanitizeStoreSettings(settingsData, true)
     const response = await request('/company/settings', {
       method: 'PUT',
-      params: { company_id: currentCompanyId() },
+      params: currentTenantParams(),
       headers: companyHeaders(),
       body: {
         settings: {
           ...payload,
-          company_id: currentCompanyId(),
+          ...currentTenantParams(),
           company_name: settingsData.company_name || settingsData.store_name,
           trade_name: settingsData.store_name || settingsData.trade_name,
           whatsapp: settingsData.whatsapp_number || settingsData.whatsapp,

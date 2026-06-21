@@ -130,6 +130,11 @@ const Whatsapp = () => {
     setSendingTest(true)
     try {
       const result = await railsSendWhatsappTest({ orderId: testOrderId.trim(), status: 'accepted' })
+      if (result.manual_whatsapp?.url) {
+        window.open(result.manual_whatsapp.url, '_blank', 'noopener,noreferrer')
+        toast.success('Mensagem manual preparada. Confira e envie no WhatsApp.')
+        return
+      }
       toast[result.sent ? 'success' : 'info'](result.sent ? 'Mensagem teste enviada' : (result.message || 'Envio teste nao disparado'))
     } catch (error) {
       toast.error(error.message || 'Erro no envio teste')
@@ -202,6 +207,34 @@ const Whatsapp = () => {
                 </span>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-dark-700 bg-dark-900 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="font-semibold text-white">Teste manual de mensagem</h2>
+              <p className="mt-1 text-sm text-gray-400">
+                Informe um pedido desta empresa. O sistema monta a mensagem pelo template e abre o WhatsApp para envio manual.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={testOrderId}
+                onChange={(event) => setTestOrderId(event.target.value)}
+                placeholder="ID do pedido teste"
+                className="rounded-lg border border-dark-600 bg-dark-950 px-4 py-2 text-sm text-white outline-none focus:border-blue-400"
+              />
+              <button
+                type="button"
+                onClick={sendTest}
+                disabled={sendingTest}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-400 px-4 py-2 text-sm font-bold text-black hover:bg-blue-300 disabled:opacity-60"
+              >
+                <Send size={18} className="mr-2" />
+                {sendingTest ? 'Preparando...' : 'Preparar WhatsApp'}
+              </button>
+            </div>
           </div>
         </section>
       </div>

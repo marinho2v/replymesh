@@ -23,6 +23,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [saving, setSaving] = useState(false);
   const [featureAccess, setFeatureAccess] = useState(null);
   const [savingFeature, setSavingFeature] = useState("");
+  const [savingWhatsappMode, setSavingWhatsappMode] = useState(false);
   const [adminPasswordForm, setAdminPasswordForm] = useState({ email: "", password: "" });
   const [savingAdminPassword, setSavingAdminPassword] = useState(false);
 
@@ -44,7 +45,6 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   }, [id, onToast]);
 
   useEffect(() => {
-    if (!edit) return undefined;
     let alive = true;
     api.getMasterCompanyStoreSettings(id)
       .then((data) => {
@@ -53,7 +53,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       })
       .catch((error) => onToast?.(error.message, "err"));
     return () => { alive = false; };
-  }, [id, edit, onToast]);
+  }, [id, onToast]);
 
   useEffect(() => {
     if (edit) return undefined;
@@ -129,6 +129,25 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       onToast?.(error.message, "err");
     } finally {
       setSavingFeature("");
+    }
+  };
+
+  const changeWhatsappMode = async (mode) => {
+    if (!storeForm) return;
+    setSavingWhatsappMode(true);
+    try {
+      const data = await api.updateMasterCompanyStoreSettings(id, {
+        settings: {
+          ...storeForm,
+          whatsapp_mode: mode,
+        },
+      });
+      setStoreForm(data.settings);
+      onToast?.("Modo WhatsApp atualizado com sucesso", "ok");
+    } catch (error) {
+      onToast?.(error.message, "err");
+    } finally {
+      setSavingWhatsappMode(false);
     }
   };
 
@@ -214,11 +233,14 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
                 >
                   <option value="automatic">Automatico com Replymesh Connect</option>
                   <option value="manual">Manual pelo WhatsApp Web/App</option>
+                  <option value="disabled">WhatsApp desativado</option>
                 </select>
                 <span className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                   {(storeForm.whatsapp_mode || "automatic") === "manual"
                     ? "O atendente confere e envia as mensagens prontas manualmente."
-                    : "Mensagens, webhooks e conexao seguem pelo Replymesh Connect."}
+                    : (storeForm.whatsapp_mode || "automatic") === "disabled"
+                      ? "Nenhum envio WhatsApp sera preparado para esta empresa."
+                      : "Mensagens, webhooks e conexao seguem pelo Replymesh Connect."}
                 </span>
               </div>
               <Field label="Logo URL" value={storeForm.logo_url} onChange={(value) => setStoreForm({ ...storeForm, logo_url: value })} />
@@ -275,9 +297,47 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         <InfoCard icon="UserRound" title="Responsavel" items={[["Nome", company.responsible_name], ["Email", company.responsible_email], ["Telefone", company.responsible_phone], ["Usuarios", company.users_count]]} />
         <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Trial ate", formatDate(company.trial_ends_at)]]} />
         <InfoCard icon="Globe" title="Acesso" items={[["Dominio", company.primary_domain], ["Timezone", company.timezone], ["Idioma", company.default_locale], ["Atualizada", formatDate(company.updated_at)]]} />
+        <WhatsappModeCard storeForm={storeForm} saving={savingWhatsappMode} onChange={changeWhatsappMode} />
         <FeatureCard featureAccess={featureAccess} savingFeature={savingFeature} onChange={changeFeatureMode} />
       </div>}
     </div>
+  );
+}
+
+function WhatsappModeCard({ storeForm, saving, onChange }) {
+  const mode = storeForm?.whatsapp_mode || "automatic";
+  const modeText = mode === "manual"
+    ? "Manual pelo WhatsApp Web/App"
+    : mode === "disabled"
+      ? "WhatsApp desativado"
+      : "Automatico com Replymesh Connect";
+  const description = mode === "manual"
+    ? "A loja usa templates, mas o atendente confere e envia cada mensagem manualmente."
+    : mode === "disabled"
+      ? "A empresa nao prepara nem envia mensagens WhatsApp."
+      : "A loja usa instancia/QR Code e envios automaticos pelo Replymesh Connect.";
+
+  return (
+    <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}>
+      <div className="company-info-title"><Icon name="MessageCircle" size={18} />WhatsApp da empresa</div>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px,1fr) minmax(220px,320px)", gap: 12, alignItems: "end", marginTop: 10 }}>
+        <div>
+          <div className="company-info-row"><span>Modo atual</span><strong>{modeText}</strong></div>
+          <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>{description}</p>
+          <p className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+            O bloqueio em "WhatsApp basico" controla acesso ao modulo. Este seletor controla se a empresa usa automatico, manual ou desativado.
+          </p>
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label>Modo operacional</label>
+          <select value={mode} disabled={!storeForm || saving} onChange={(event) => onChange(event.target.value)}>
+            <option value="automatic">Automatico com Replymesh Connect</option>
+            <option value="manual">Manual pelo WhatsApp Web/App</option>
+            <option value="disabled">WhatsApp desativado</option>
+          </select>
+        </div>
+      </div>
+    </section>
   );
 }
 
