@@ -2,8 +2,8 @@
 
 Status: **CONFIGURACAO GLOBAL DA IA DAS LOJAS IMPLEMENTADA NA DEV**
 
-Data: 2026-06-22  
-Branch: `dev`  
+Data: 2026-06-22
+Branch: `dev`
 Producao/VPS/main: **nao alterados**
 
 ## Objetivo

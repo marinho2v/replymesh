@@ -2,8 +2,8 @@
 
 Status: **IA VENDEDORA COM GROQ COM PENDÊNCIAS**
 
-Data: 2026-06-22  
-Branch: `dev`  
+Data: 2026-06-22
+Branch: `dev`
 
 ## Validacao final em 2026-06-22
 
@@ -237,7 +237,7 @@ O webhook atual continua exigindo:
 - rate limit;
 - conversa não pausada.
 
-Não foi implementado envio real de botões/listas/mídia.  
+Não foi implementado envio real de botões/listas/mídia.
 Foi criada a abstração `WhatsappMessageBuilder` com fallback textual numerado.
 
 ## Mercado Pago / Pix
