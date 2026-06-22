@@ -23,6 +23,20 @@ rescue URI::InvalidURIError
   false
 end
 
+local_dev_origin = lambda do |source, _env|
+  return false unless Rails.env.development?
+
+  uri = URI.parse(source.to_s)
+  host = uri.host.to_s.downcase
+  port = uri.port
+
+  uri.scheme == "http" &&
+    (host == "localhost" || host == "127.0.0.1" || host.end_with?(".localhost")) &&
+    port.in?([5173, 5174])
+rescue URI::InvalidURIError
+  false
+end
+
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     origins "http://localhost:5173",
@@ -31,6 +45,7 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
             "http://127.0.0.1:5174",
             "https://replymesh.cloud",
             "https://app.replymesh.cloud",
+            local_dev_origin,
             custom_domain_origin
 
     resource "*",

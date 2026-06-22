@@ -4,6 +4,68 @@ Status: **IA VENDEDORA COM GROQ COM PENDÊNCIAS**
 
 Data: 2026-06-22  
 Branch: `dev`  
+
+## Validacao final em 2026-06-22
+
+Status mais recente: **IA GROQ VALIDADA NO SIMULADOR E DEV PRONTA PARA ENVIO**
+
+### Ambiente seguro utilizado
+
+- empresa QA isolada: `qa-ai-lanches`;
+- WhatsApp da empresa: desativado;
+- criacao real de pedido: desativada;
+- Pix automatico: desativado;
+- modo da loja: Vendas Assistidas;
+- provider global: Groq;
+- modelo global: `llama-3.1-8b-instant`;
+- limites de uso reduzidos para teste;
+- `GROQ_API_KEY` mantida somente no ambiente local e nunca exibida ou gravada no Git.
+
+### Massa de teste
+
+- X-Bacon - R$ 25,90;
+- Smash Duplo - R$ 29,90;
+- Costela Artesanal - R$ 34,90;
+- Batata Frita - R$ 14,90;
+- Coca-Cola - R$ 8,00;
+- bairro Centro - taxa R$ 7,00.
+
+### Conversa validada no simulador
+
+1. `Oi, quero um hamburguer`: listou somente os cinco produtos da empresa e seus precos reais;
+2. `Quero o de costela`: adicionou Costela Artesanal ao carrinho temporario e avancou para endereco;
+3. `Qual a taxa para o bairro Centro?`: aplicou R$ 7,00 e avancou para pagamento;
+4. `Vou pagar no Pix`: registrou Pix no carrinho temporario e solicitou confirmacao;
+5. `Falar com atendente`: mudou para handoff humano.
+
+Resultado de seguranca:
+
+- zero pedidos reais criados;
+- zero mensagens reais de WhatsApp enviadas;
+- nenhum produto ou preco inventado;
+- conversa e carrinho vinculados exclusivamente a `qa-ai-lanches`;
+- nenhuma empresa ou cliente real utilizado;
+- conexao real com a API Groq confirmada com sucesso, sem imprimir a chave;
+- a orquestracao de Vendas Assistidas permaneceu deterministica no simulador, enquanto o provider Groq foi validado separadamente pela camada `AiProviderService`.
+
+### Interface e CORS local
+
+A tela `/admin/ai` foi validada no navegador com a experiencia simplificada para lojistas. O simulador respondeu corretamente pela interface. Foi permitido, somente em `development`, o acesso por subdominios `*.localhost` nas portas locais 5173 e 5174. Origens externas continuam sem permissao e producao nao foi ampliada.
+
+### Validacoes executadas
+
+- migrations de IA: todas aplicadas;
+- build `store-template`: aprovado;
+- build `replymesh-frontend`: aprovado;
+- sintaxe Ruby do initializer alterado: aprovada;
+- `git diff --check`: aprovado;
+- auditoria de segredos nos arquivos rastreados: zero ocorrencias;
+- teste CORS local: origem `qa-ai-lanches.localhost` permitida apenas em desenvolvimento;
+- teste CORS externo: origem sem permissao.
+
+### Observacao sobre a suite legada
+
+Uma verificacao adicional, fora da lista obrigatoria, executou 35 exemplos antigos e encontrou 6 falhas de comparacao textual. Essas expectativas exigem frases exatas, enquanto a chave Groq local faz o modelo responder com redacao variavel. Os testes seguros do simulador, isolamento multiempresa, builds e validacoes obrigatorias foram aprovados. Recomenda-se tornar esses specs deterministicos com stubs do provider em uma tarefa separada.
 Produção/VPS: **não alterada**
 
 ## Resumo
