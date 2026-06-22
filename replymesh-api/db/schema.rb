@@ -1023,6 +1023,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.index ["stock_item_id"], name: "index_products_on_stock_item_id"
   end
 
+  create_table "store_ai_carts", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.datetime "created_at", null: false
+    t.string "customer_phone", null: false
+    t.jsonb "delivery_address", default: {}, null: false
+    t.integer "delivery_fee_cents", default: 0, null: false
+    t.integer "discount_cents", default: 0, null: false
+    t.datetime "expires_at", null: false
+    t.jsonb "items", default: [], null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "payment_method"
+    t.jsonb "selected_options", default: {}, null: false
+    t.string "stage", default: "greeting", null: false
+    t.bigint "store_ai_conversation_id", null: false
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "customer_phone", "stage"], name: "index_store_ai_carts_lookup"
+    t.index ["company_id"], name: "index_store_ai_carts_on_company_id"
+    t.index ["expires_at"], name: "index_store_ai_carts_on_expires_at"
+    t.index ["store_ai_conversation_id"], name: "index_store_ai_carts_on_store_ai_conversation_id"
+  end
+
   create_table "store_ai_conversations", force: :cascade do |t|
     t.string "channel", default: "simulator", null: false
     t.bigint "company_id", null: false
@@ -1054,29 +1077,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.index ["store_ai_conversation_id"], name: "index_store_ai_messages_on_store_ai_conversation_id"
   end
 
-  create_table "store_ai_carts", force: :cascade do |t|
-    t.bigint "company_id", null: false
-    t.bigint "store_ai_conversation_id", null: false
-    t.string "customer_phone", null: false
-    t.string "stage", default: "greeting", null: false
-    t.jsonb "items", default: [], null: false
-    t.jsonb "selected_options", default: {}, null: false
-    t.jsonb "delivery_address", default: {}, null: false
-    t.integer "delivery_fee_cents", default: 0, null: false
-    t.string "payment_method"
-    t.integer "subtotal_cents", default: 0, null: false
-    t.integer "discount_cents", default: 0, null: false
-    t.integer "total_cents", default: 0, null: false
-    t.datetime "expires_at", null: false
-    t.jsonb "metadata_json", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["company_id", "customer_phone", "stage"], name: "index_store_ai_carts_lookup"
-    t.index ["company_id"], name: "index_store_ai_carts_on_company_id"
-    t.index ["expires_at"], name: "index_store_ai_carts_on_expires_at"
-    t.index ["store_ai_conversation_id"], name: "index_store_ai_carts_on_store_ai_conversation_id"
-  end
-
   create_table "store_ai_settings", force: :cascade do |t|
     t.boolean "ai_auto_reply_enabled", default: false, null: false
     t.integer "ai_daily_message_limit", default: 100, null: false
@@ -1086,6 +1086,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.integer "ai_monthly_token_limit", default: 300000, null: false
     t.string "ai_provider", default: "anthropic", null: false
     t.boolean "ai_sales_mode_enabled", default: false, null: false
+    t.boolean "allow_address_update", default: true, null: false
     t.boolean "allow_delivery", default: true, null: false
     t.boolean "allow_hours", default: true, null: false
     t.boolean "allow_order_status", default: true, null: false
@@ -1093,12 +1094,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.boolean "allow_payments", default: true, null: false
     t.boolean "allow_products", default: true, null: false
     t.boolean "allow_promotions", default: true, null: false
-    t.boolean "allow_address_update", default: true, null: false
     t.boolean "apply_coupon_enabled", default: true, null: false
     t.string "assistant_name", default: "Assistente da Loja", null: false
     t.boolean "auto_cart_enabled", default: false, null: false
-    t.boolean "auto_reply_whatsapp", default: false, null: false
     t.boolean "auto_generate_mercadopago_pix", default: false, null: false
+    t.boolean "auto_reply_whatsapp", default: false, null: false
     t.boolean "calculate_delivery_fee", default: true, null: false
     t.bigint "company_id", null: false
     t.boolean "confirm_saved_address", default: true, null: false

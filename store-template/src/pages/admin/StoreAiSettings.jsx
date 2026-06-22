@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, ChevronLeft, Lock, PlayCircle, Save } from 'lucide-react'
+import { Bot, ChevronLeft, CheckCircle2, Clock3, Lock, MessageCircle, PlayCircle, Save, ShoppingBag, Zap } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { Textarea } from '../../components/ui/Textarea'
 import {
   railsGetFeatureAccess,
   railsGetStoreAiSettings,
@@ -57,9 +56,12 @@ const defaultStoreAiSettings = {
   handoff_on_request: true,
 }
 
-const compactCheckboxClass = 'flex items-center gap-3 rounded-lg border border-dark-700 bg-dark-900 px-3 py-2 text-sm text-gray-200'
-const sectionClass = 'rounded-xl border border-dark-700 bg-dark-950/70 p-4'
-const sectionTitleClass = 'mb-3 text-sm font-bold uppercase tracking-wide text-yellow-300'
+const defaultMetrics = {
+  conversations_today: 0,
+  helped_orders: 0,
+  answered_messages: 0,
+  estimated_saving_label: '0 min',
+}
 
 const isStoreAiEnabled = (featureAccess) => {
   const features = Array.isArray(featureAccess?.features) ? featureAccess.features : []
@@ -77,7 +79,7 @@ const StoreAiUnavailable = ({ basePath }) => (
         <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-900 text-yellow-300">
           <Lock size={26} />
         </span>
-        <h2 className="mt-4 text-2xl font-bold text-white">Atendimento automatico indisponivel no momento.</h2>
+        <h2 className="mt-4 text-2xl font-bold text-white">Assistente virtual indisponivel no momento.</h2>
         <p className="mt-2 text-sm text-gray-400">Entre em contato com o suporte para habilitar este recurso.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link to={`${basePath}/admin/support`} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-gray-200">
@@ -92,14 +94,44 @@ const StoreAiUnavailable = ({ basePath }) => (
   </Card>
 )
 
-const CheckboxGroup = ({ options, settings, update }) => (
-  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-    {options.map(([field, label]) => (
-      <label className={compactCheckboxClass} key={field}>
-        <input type="checkbox" checked={Boolean(settings[field])} onChange={(event) => update(field, event.target.checked)} />
-        {label}
-      </label>
-    ))}
+const statusFor = (settings) => {
+  if (!settings.enabled) {
+    return { label: 'Offline', detail: 'O assistente esta desligado.', color: 'bg-gray-500', tone: 'border-dark-700 bg-dark-900 text-gray-300' }
+  }
+  if (!settings.auto_reply_whatsapp) {
+    return { label: 'Configuracao pendente', detail: 'Ative a resposta automatica para atender pelo WhatsApp.', color: 'bg-yellow-400', tone: 'border-yellow-400/40 bg-yellow-400/10 text-yellow-100' }
+  }
+  return { label: 'Online', detail: 'Pronto para responder clientes no WhatsApp.', color: 'bg-emerald-400', tone: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-100' }
+}
+
+const automationModes = [
+  {
+    value: 'answers',
+    title: 'Informações',
+    description: 'Responde dúvidas sobre produtos, horários, promoções, entrega e pagamentos.',
+    badge: null,
+  },
+  {
+    value: 'sales_assistant',
+    title: 'Vendas Assistidas',
+    description: 'Ajuda o cliente a escolher produtos, monta o pedido e coleta informações antes da confirmação.',
+    badge: 'Recomendado',
+  },
+  {
+    value: 'auto_seller',
+    title: 'Vendas Automáticas',
+    description: 'Pode criar pedidos automaticamente e gerar cobrança Pix quando configurado.',
+    badge: 'Beta',
+  },
+]
+
+const MetricCard = ({ icon: Icon, label, value }) => (
+  <div className="rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
+    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-dark-800 text-yellow-300">
+      <Icon size={19} />
+    </div>
+    <p className="text-2xl font-bold text-white">{value}</p>
+    <p className="mt-1 text-sm text-gray-400">{label}</p>
   </div>
 )
 
@@ -108,6 +140,7 @@ const StoreAiSettings = () => {
   const [featureLoading, setFeatureLoading] = useState(true)
   const [featureAllowed, setFeatureAllowed] = useState(false)
   const [settings, setSettings] = useState(defaultStoreAiSettings)
+  const [metrics, setMetrics] = useState(defaultMetrics)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -148,13 +181,14 @@ const StoreAiSettings = () => {
       .then((payload) => {
         if (!alive) return
         setSettings({ ...defaultStoreAiSettings, ...(payload.settings || {}) })
+        setMetrics({ ...defaultMetrics, ...(payload.metrics || {}) })
       })
       .catch((error) => {
         if (!alive) return
         if (error?.status === 403 || error?.code === 'feature_not_available') {
           setFeatureAllowed(false)
         } else {
-          setMessage(error.message || 'Nao foi possivel carregar a IA da loja.')
+          setMessage(error.message || 'Nao foi possivel carregar o assistente virtual.')
         }
       })
       .finally(() => {
@@ -171,51 +205,20 @@ const StoreAiSettings = () => {
       const next = { ...current, [field]: value }
       if (field === 'auto_reply_whatsapp') next.ai_auto_reply_enabled = value
       if (field === 'ai_auto_reply_enabled') next.auto_reply_whatsapp = value
-      if (field === 'ai_mode') next.ai_sales_mode_enabled = value !== 'answers'
       return next
     })
   }
 
-  const permissionOptions = useMemo(() => ([
-    ['allow_orders', 'Responder sobre pedidos'],
-    ['allow_products', 'Responder sobre produtos'],
-    ['allow_hours', 'Responder sobre horarios'],
-    ['allow_delivery', 'Responder sobre entrega'],
-    ['allow_payments', 'Responder sobre pagamentos'],
-    ['allow_promotions', 'Responder sobre promocoes'],
-    ['allow_order_status', 'Consultar status do pedido'],
-  ]), [])
-
-  const clientOptions = useMemo(() => ([
-    ['identify_customer_by_phone', 'Identificar cliente existente pelo telefone'],
-    ['confirm_saved_address', 'Confirmar endereco salvo'],
-    ['create_customer', 'Cadastrar novo cliente'],
-    ['allow_address_update', 'Permitir atualizar endereco'],
-  ]), [])
-
-  const orderOptions = useMemo(() => ([
-    ['auto_cart_enabled', 'Montar carrinho automaticamente'],
-    ['create_order_after_confirmation', 'Criar pedido apos confirmacao'],
-    ['calculate_delivery_fee', 'Calcular taxa de entrega'],
-    ['verify_store_hours', 'Verificar horario da loja'],
-    ['verify_delivery_area', 'Verificar area de entrega'],
-    ['apply_coupon_enabled', 'Aplicar cupom se informado'],
-  ]), [])
-
-  const paymentOptions = useMemo(() => ([
-    ['offer_cash', 'Oferecer dinheiro'],
-    ['offer_pix', 'Oferecer Pix'],
-    ['auto_generate_mercadopago_pix', 'Gerar Pix Mercado Pago automaticamente'],
-    ['send_pix_copy_paste', 'Enviar Pix copia e cola'],
-    ['wait_payment_confirmation', 'Aguardar confirmacao de pagamento'],
-  ]), [])
-
-  const handoffOptions = useMemo(() => ([
-    ['pause_on_attendant_reply', 'Pausar IA quando atendente responder'],
-    ['pause_after_order_confirmation', 'Pausar IA apos pedido confirmado'],
-    ['handoff_on_unknown', 'Transferir para humano quando nao entender'],
-    ['handoff_on_request', 'Transferir para humano se cliente pedir atendente'],
-  ]), [])
+  const selectAutomationMode = (value) => {
+    setSettings((current) => ({
+      ...current,
+      ai_mode: value,
+      ai_sales_mode_enabled: value !== 'answers',
+      auto_cart_enabled: value !== 'answers',
+      create_order_after_confirmation: value === 'auto_seller',
+      auto_generate_mercadopago_pix: value === 'auto_seller',
+    }))
+  }
 
   const save = async () => {
     setSaving(true)
@@ -224,13 +227,14 @@ const StoreAiSettings = () => {
     try {
       const payload = await railsUpdateStoreAiSettings(settings)
       setSettings({ ...defaultStoreAiSettings, ...(payload.settings || {}) })
-      setMessage('Configuracoes da IA salvas com sucesso.')
+      setMetrics({ ...defaultMetrics, ...(payload.metrics || metrics) })
+      setMessage('Assistente virtual salvo com sucesso.')
     } catch (error) {
       if (error?.status === 403 || error?.code === 'feature_not_available') {
         setFeatureAllowed(false)
         setMessage('')
       } else {
-        setMessage(error.message || 'Nao foi possivel salvar a IA da loja.')
+        setMessage(error.message || 'Nao foi possivel salvar o assistente virtual.')
       }
     } finally {
       setSaving(false)
@@ -244,11 +248,13 @@ const StoreAiSettings = () => {
       const result = await railsSimulateStoreAi({ phone: simPhone, message: simMessage })
       setSimResult(result)
     } catch (error) {
-      setSimResult({ success: false, error: error.message || 'Nao foi possivel simular a IA.' })
+      setSimResult({ success: false, error: error.message || 'Nao foi possivel simular a resposta.' })
     } finally {
       setSimLoading(false)
     }
   }
+
+  const status = statusFor(settings)
 
   return (
     <div>
@@ -259,160 +265,139 @@ const StoreAiSettings = () => {
             Voltar ao dashboard
           </Link>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Inteligencia Artificial</h1>
-          <p className="mt-1 text-sm text-gray-400">Configure atendimento, vendas e simulacao segura da IA da loja.</p>
+          <p className="mt-1 text-sm text-gray-400">Atendimento virtual para vender e responder clientes pelo WhatsApp.</p>
         </div>
         {featureAllowed && (
           <Button type="button" onClick={save} loading={saving}>
             <Save size={18} className="mr-2" />
-            Salvar IA
+            Salvar assistente
           </Button>
         )}
       </div>
 
       {featureLoading ? (
         <Card>
-          <CardContent className="p-6 text-sm text-gray-400">Verificando acesso ao modulo de IA...</CardContent>
+          <CardContent className="p-6 text-sm text-gray-400">Verificando acesso ao assistente virtual...</CardContent>
         </Card>
       ) : !featureAllowed ? (
         <StoreAiUnavailable basePath={basePath} />
       ) : (
-        <Card>
-          <CardContent className="space-y-5 p-5">
-            <div className="flex items-start gap-3 rounded-xl border border-dark-700 bg-dark-900 p-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-dark-800 text-yellow-300">
-                <Bot size={20} />
-              </span>
-              <div>
-                <h2 className="text-lg font-bold text-white">IA da loja</h2>
-                <p className="mt-1 text-sm text-gray-400">
-                  O modo vendedor fica desligado por padrao. Ative apenas em empresa QA ou ambiente controlado.
-                </p>
+        <div className="space-y-5">
+          <Card>
+            <CardContent className="space-y-5 p-5">
+              <div className="flex flex-col gap-4 rounded-2xl border border-dark-700 bg-gradient-to-br from-dark-900 to-dark-950 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-400 text-black">
+                    <Bot size={23} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-wide text-yellow-300">Assistente Virtual</p>
+                    <h2 className="mt-1 text-2xl font-bold text-white">Atendimento inteligente da loja</h2>
+                    <p className="mt-2 max-w-2xl text-sm text-gray-400">
+                      Responda clientes, ajude na escolha dos produtos e reduza o tempo do atendimento no WhatsApp.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`rounded-2xl border px-4 py-3 ${status.tone}`}>
+                  <div className="flex items-center gap-2 text-sm font-bold">
+                    <span className={`h-2.5 w-2.5 rounded-full ${status.color}`} />
+                    Status da IA: {status.label}
+                  </div>
+                  <p className="mt-1 text-xs opacity-80">{status.detail}</p>
+                </div>
               </div>
-            </div>
 
-            {loading ? (
-              <p className="text-sm text-gray-400">Carregando IA da loja...</p>
-            ) : (
-              <>
-                {message && <div className="rounded-lg border border-dark-600 bg-dark-900 p-3 text-sm text-gray-200">{message}</div>}
+              {loading ? (
+                <p className="text-sm text-gray-400">Carregando assistente virtual...</p>
+              ) : (
+                <>
+                  {message && <div className="rounded-lg border border-dark-600 bg-dark-900 p-3 text-sm text-gray-200">{message}</div>}
 
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>1. Status da IA</h2>
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                    <label className={compactCheckboxClass}>
-                      <input type="checkbox" checked={settings.enabled} onChange={(event) => update('enabled', event.target.checked)} />
-                      Ativar IA da loja
-                    </label>
-                    <label className={compactCheckboxClass}>
-                      <input type="checkbox" checked={settings.auto_reply_whatsapp} onChange={(event) => update('auto_reply_whatsapp', event.target.checked)} disabled={!settings.enabled} />
-                      Responder automaticamente no WhatsApp
-                    </label>
-                  </div>
-                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <label className="text-sm text-gray-300">
-                      Provedor de IA
-                      <select value={settings.ai_provider || 'anthropic'} onChange={(event) => update('ai_provider', event.target.value)} className="mt-1 w-full rounded-lg border border-dark-700 bg-dark-900 px-3 py-2 text-white">
-                        <option value="anthropic">Anthropic / Claude</option>
-                        <option value="groq">Groq</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="disabled">Desativado</option>
-                      </select>
-                    </label>
-                    <Input label="Modelo" value={settings.ai_model || ''} onChange={(event) => update('ai_model', event.target.value)} placeholder="ex: llama-3.1-8b-instant" />
-                    <Input label="Limite diario de mensagens" type="number" value={settings.ai_daily_message_limit} onChange={(event) => update('ai_daily_message_limit', Number(event.target.value))} />
-                    <Input label="Limite mensal de mensagens" type="number" value={settings.ai_monthly_message_limit} onChange={(event) => update('ai_monthly_message_limit', Number(event.target.value))} />
-                  </div>
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>2. Modo de atendimento</h2>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    {[
-                      ['answers', 'Somente respostas', 'Responde duvidas sem montar carrinho.'],
-                      ['sales_assistant', 'Assistente de vendas', 'Ajuda a vender, mas com confirmacao humana/segura.'],
-                      ['auto_seller', 'Vendedor automatico', 'Avanca carrinho e pedido quando liberado.'],
-                    ].map(([value, title, description]) => (
-                      <button
-                        type="button"
-                        key={value}
-                        onClick={() => update('ai_mode', value)}
-                        className={`rounded-xl border p-4 text-left transition ${settings.ai_mode === value ? 'border-yellow-400 bg-yellow-400/10 text-white' : 'border-dark-700 bg-dark-900 text-gray-300 hover:border-dark-500'}`}
-                      >
-                        <span className="font-bold">{title}</span>
-                        <span className="mt-1 block text-xs text-gray-400">{description}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>3. Identidade e escopo</h2>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <Input label="Nome da IA" value={settings.assistant_name} onChange={(event) => update('assistant_name', event.target.value)} />
-                    <Input label="Tom de voz" value={settings.tone} onChange={(event) => update('tone', event.target.value)} />
-                  </div>
-                  <div className="mt-4">
-                    <Textarea label="Mensagem inicial" rows={3} value={settings.initial_message} onChange={(event) => update('initial_message', event.target.value)} />
-                  </div>
-                  <div className="mt-4">
-                    <CheckboxGroup options={permissionOptions} settings={settings} update={update} />
-                  </div>
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>4. Cliente</h2>
-                  <CheckboxGroup options={clientOptions} settings={settings} update={update} />
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>5. Pedido</h2>
-                  <CheckboxGroup options={orderOptions} settings={settings} update={update} />
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>6. Pagamento</h2>
-                  <CheckboxGroup options={paymentOptions} settings={settings} update={update} />
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>7. Atendimento humano</h2>
-                  <CheckboxGroup options={handoffOptions} settings={settings} update={update} />
-                </section>
-
-                <section className={sectionClass}>
-                  <h2 className={sectionTitleClass}>8. Testar IA sem WhatsApp real</h2>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr_auto] md:items-end">
-                    <Input label="Telefone de teste" value={simPhone} onChange={(event) => setSimPhone(event.target.value)} />
-                    <Input label="Mensagem do cliente" value={simMessage} onChange={(event) => setSimMessage(event.target.value)} />
-                    <Button type="button" onClick={simulate} loading={simLoading}>
-                      <PlayCircle size={18} className="mr-2" />
-                      Simular resposta
-                    </Button>
-                  </div>
-                  {simResult && (
-                    <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                      <div className="rounded-lg border border-dark-700 bg-dark-900 p-4 text-sm text-gray-200">
-                        <p className="mb-2 font-bold text-white">Resposta</p>
-                        <p className="whitespace-pre-wrap">{simResult.answer || simResult.error || 'Sem resposta.'}</p>
-                      </div>
-                      <div className="rounded-lg border border-dark-700 bg-dark-900 p-4 text-xs text-gray-300">
-                        <p className="mb-2 font-bold text-white">Diagnostico seguro</p>
-                        <pre className="max-h-80 overflow-auto whitespace-pre-wrap">{JSON.stringify({
-                          status: simResult.status,
-                          stage: simResult.stage,
-                          next_action: simResult.next_action,
-                          products: simResult.products,
-                          cart: simResult.cart,
-                          order: simResult.order,
-                        }, null, 2)}</pre>
-                      </div>
+                  <section className="rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
+                    <h3 className="text-lg font-bold text-white">Assistente Virtual</h3>
+                    <p className="mt-1 text-sm text-gray-400">Controle se a IA aparece e se responde automaticamente no WhatsApp.</p>
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="flex items-center gap-3 rounded-xl border border-dark-700 bg-dark-900 px-4 py-3 text-sm font-semibold text-gray-100">
+                        <input type="checkbox" checked={settings.enabled} onChange={(event) => update('enabled', event.target.checked)} />
+                        Ativar assistente virtual
+                      </label>
+                      <label className="flex items-center gap-3 rounded-xl border border-dark-700 bg-dark-900 px-4 py-3 text-sm font-semibold text-gray-100">
+                        <input type="checkbox" checked={settings.auto_reply_whatsapp} onChange={(event) => update('auto_reply_whatsapp', event.target.checked)} disabled={!settings.enabled} />
+                        Responder automaticamente no WhatsApp
+                      </label>
                     </div>
-                  )}
-                </section>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                  </section>
+
+                  <section className="rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-bold text-white">Nivel de Automacao</h3>
+                      <p className="mt-1 text-sm text-gray-400">Escolha o quanto o assistente pode ajudar no atendimento.</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                      {automationModes.map((mode) => {
+                        const active = settings.ai_mode === mode.value
+                        return (
+                          <button
+                            type="button"
+                            key={mode.value}
+                            onClick={() => selectAutomationMode(mode.value)}
+                            className={`min-h-[170px] rounded-2xl border p-5 text-left transition ${
+                              active
+                                ? 'border-yellow-400 bg-yellow-400/10 shadow-lg shadow-yellow-500/10'
+                                : 'border-dark-700 bg-dark-900 hover:border-dark-500'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-lg font-bold text-white">{mode.title}</span>
+                              {active && <CheckCircle2 size={20} className="text-yellow-300" />}
+                            </div>
+                            {mode.badge && (
+                              <span className="mt-3 inline-flex rounded-full bg-yellow-400 px-2.5 py-1 text-xs font-bold text-black">
+                                {mode.badge}
+                              </span>
+                            )}
+                            <p className="mt-4 text-sm leading-6 text-gray-400">{mode.description}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard icon={MessageCircle} label="Conversas hoje" value={metrics.conversations_today} />
+                    <MetricCard icon={ShoppingBag} label="Pedidos ajudados pela IA" value={metrics.helped_orders} />
+                    <MetricCard icon={Zap} label="Mensagens respondidas" value={metrics.answered_messages} />
+                    <MetricCard icon={Clock3} label="Economia estimada de atendimento" value={metrics.estimated_saving_label} />
+                  </section>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-4 p-5">
+              <div>
+                <h3 className="text-lg font-bold text-white">Teste rapido</h3>
+                <p className="mt-1 text-sm text-gray-400">Simule uma conversa sem enviar mensagem real pelo WhatsApp.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr_auto] md:items-end">
+                <Input label="Telefone de teste" value={simPhone} onChange={(event) => setSimPhone(event.target.value)} />
+                <Input label="Mensagem do cliente" value={simMessage} onChange={(event) => setSimMessage(event.target.value)} />
+                <Button type="button" onClick={simulate} loading={simLoading}>
+                  <PlayCircle size={18} className="mr-2" />
+                  Simular
+                </Button>
+              </div>
+              {simResult && (
+                <div className="rounded-xl border border-dark-700 bg-dark-900 p-4 text-sm text-gray-200">
+                  <p className="mb-2 font-bold text-white">Resposta do assistente</p>
+                  <p className="whitespace-pre-wrap">{simResult.answer || simResult.error || 'Sem resposta.'}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

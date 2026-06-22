@@ -5,7 +5,7 @@ module Api
         before_action -> { require_feature!("store_ai") }
 
         def settings
-          render_ok(settings: setting.as_json_safe)
+          render_ok(settings: setting.as_json_safe, metrics: ai_metrics)
         end
 
         def update_settings
@@ -47,6 +47,26 @@ module Api
             :wait_payment_confirmation, :pause_on_attendant_reply, :pause_after_order_confirmation,
             :handoff_on_unknown, :handoff_on_request
           )
+        end
+
+        def ai_metrics
+          today = Time.current.all_day
+          conversations_today = current_company.store_ai_conversations.where(created_at: today).count
+          messages_answered = StoreAiMessage
+            .joins(:store_ai_conversation)
+            .where(store_ai_conversations: { company_id: current_company.id })
+            .where(role: "assistant", created_at: today)
+            .count
+          helped_orders = current_company.orders.where(legacy_source: "whatsapp_ai", created_at: today).count
+          saved_minutes = messages_answered * 2
+
+          {
+            conversations_today: conversations_today,
+            helped_orders: helped_orders,
+            answered_messages: messages_answered,
+            estimated_saving_minutes: saved_minutes,
+            estimated_saving_label: saved_minutes.positive? ? "#{saved_minutes} min" : "0 min"
+          }
         end
 
       end
