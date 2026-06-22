@@ -24,8 +24,10 @@
   end
 
   def call
+    return response("A IA das lojas esta desativada globalmente.", "disabled", [], error_code: "store_ai_global_disabled") unless store_ai_globally_enabled?
     return response("A IA da loja esta desativada.", "disabled", []) unless @settings.enabled? || @simulate
     return response("Escreva uma pergunta para testar a IA da loja.", "blocked", []) if @question.blank?
+    return response("A IA das lojas esta sem provider configurado no Master.", "blocked", [], error_code: "ai_provider_not_configured") if store_provider.blank? || store_provider == "disabled" || !store_provider_configured?(store_provider)
     return sales_response if @settings.respond_to?(:sales_mode?) && @settings.sales_mode?
 
     @intent = StoreAiIntentClassifier.call(@question)
@@ -74,12 +76,12 @@
   def call_provider(chunks, conversation)
     provider = store_provider
     return nil if provider == "disabled"
-    return nil if provider == "anthropic" && !@global.api_key_configured?
+    return nil unless store_provider_configured?(provider)
 
     AiProviderService.build(
       provider: provider,
       api_key: api_key_for(provider),
-      model: @settings.effective_model(@global.model)
+      model: store_model
     ).chat(
       system_prompt: system_prompt(chunks),
       user_message: prompt_for(chunks, conversation),
@@ -364,17 +366,17 @@
   end
 
   def limit_reached?
-    AiUsageLog.today_for_company(@company.id).where(assistant_type: "store_ai").count >= @settings.daily_limit
+    AiUsageLog.today_for_company(@company.id).where(assistant_type: "store_ai").count >= daily_message_limit
   end
 
-  def response(answer, status, chunks, tokens: nil, provider_called: false, fallback: false)
+  def response(answer, status, chunks, tokens: nil, provider_called: false, fallback: false, error_code: nil)
     total_tokens = tokens || estimate_tokens(@question + answer.to_s)
     AiUsageLog.create!(
       company: @company,
       user: @user,
       assistant_type: "store_ai",
       provider: store_provider,
-      model: @settings.effective_model(@global.model),
+      model: store_model,
       total_tokens: total_tokens,
       estimated_cost_usd: estimate_cost(total_tokens),
       response_time_ms: elapsed_ms,
@@ -390,25 +392,45 @@
       chunks: chunks.map { |chunk| chunk.slice(:id, :module, :title, :score) },
       response_time_ms: elapsed_ms,
       tokens_estimated: total_tokens
-    }
+    }.tap do |payload|
+      payload[:error_code] = error_code if error_code.present?
+    end
   end
 
   def store_provider
-    provider = @settings.respond_to?(:effective_provider) ? @settings.effective_provider : @global.provider
+    provider = @settings.respond_to?(:effective_provider) ? @settings.effective_provider : nil
+    provider = @global.store_ai_provider if provider.blank? && @global.respond_to?(:store_ai_provider)
+    provider = @global.provider if provider.blank?
     provider == "claude" ? "anthropic" : provider
   end
 
+  def store_model
+    global_model = @global.respond_to?(:store_ai_model) ? @global.store_ai_model : @global.model
+    @settings.effective_model(global_model)
+  end
+
   def api_key_for(provider)
-    case provider
-    when "groq"
-      ENV["GROQ_API_KEY"]
-    when "openai"
-      ENV["OPENAI_API_KEY"]
-    when "anthropic", "claude"
-      @global.api_key
-    else
-      nil
-    end
+    return @global.store_ai_api_key_for(provider) if @global.respond_to?(:store_ai_api_key_for)
+
+    provider.to_s == "anthropic" ? @global.api_key : nil
+  end
+
+  def store_ai_globally_enabled?
+    return true unless @global.respond_to?(:store_ai_enabled)
+
+    @global.store_ai_enabled?
+  end
+
+  def store_provider_configured?(provider)
+    return false if provider.blank? || provider == "disabled"
+
+    api_key_for(provider).present?
+  end
+
+  def daily_message_limit
+    @settings.ai_daily_message_limit.presence ||
+      (@global.respond_to?(:store_ai_daily_message_limit) ? @global.store_ai_daily_message_limit : nil) ||
+      @settings.daily_limit
   end
 
   def ignored_response

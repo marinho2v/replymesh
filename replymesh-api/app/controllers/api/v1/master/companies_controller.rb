@@ -6,7 +6,7 @@ module Api
         before_action :require_super_admin!
         before_action :set_company, only: %i[
           show update activate deactivate impersonate features update_features update_plan
-          admin_password store_settings update_store_settings
+          admin_password store_settings update_store_settings store_ai_settings update_store_ai_settings
         ]
 
         def index
@@ -289,6 +289,31 @@ module Api
           render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
         end
 
+        def store_ai_settings
+          setting = StoreAiSetting.for_company(@company)
+          render json: { success: true, settings: master_store_ai_settings_json(setting) }
+        end
+
+        def update_store_ai_settings
+          setting = StoreAiSetting.for_company(@company)
+          previous = master_store_ai_settings_json(setting)
+          setting.update!(master_store_ai_settings_params)
+
+          audit!(
+            "master_store_ai_settings_updated",
+            company: @company,
+            resource: setting,
+            metadata: {
+              previous: previous.slice(:enabled, :ai_provider, :ai_model, :ai_mode, :ai_daily_message_limit, :ai_monthly_message_limit),
+              current: master_store_ai_settings_json(setting).slice(:enabled, :ai_provider, :ai_model, :ai_mode, :ai_daily_message_limit, :ai_monthly_message_limit)
+            }
+          )
+
+          render json: { success: true, settings: master_store_ai_settings_json(setting) }
+        rescue ActiveRecord::RecordInvalid => e
+          render json: { success: false, errors: e.record.errors.full_messages }, status: :unprocessable_entity
+        end
+
         private
 
         def set_company
@@ -377,6 +402,40 @@ module Api
             :visual_template_id,
             accepted_payment_methods: [],
             opening_hours: {}
+          )
+        end
+
+        def master_store_ai_settings_params
+          attrs = params.fetch(:settings, params).permit(
+            :enabled,
+            :auto_reply_whatsapp,
+            :ai_auto_reply_enabled,
+            :ai_provider,
+            :ai_model,
+            :ai_mode,
+            :ai_sales_mode_enabled,
+            :ai_daily_message_limit,
+            :ai_monthly_message_limit,
+            :ai_monthly_token_limit
+          ).to_h
+
+          attrs["ai_provider"] = nil if attrs.key?("ai_provider") && attrs["ai_provider"].blank?
+          attrs["ai_model"] = nil if attrs.key?("ai_model") && attrs["ai_model"].blank?
+          if attrs["ai_mode"].present?
+            attrs["ai_sales_mode_enabled"] = attrs["ai_mode"].in?(%w[sales_assistant auto_seller])
+          end
+          if attrs.key?("ai_auto_reply_enabled")
+            attrs["auto_reply_whatsapp"] = ActiveModel::Type::Boolean.new.cast(attrs["ai_auto_reply_enabled"])
+          end
+          attrs
+        end
+
+        def master_store_ai_settings_json(setting)
+          json = setting.as_json_safe
+          json.merge(
+            inherits_global_provider: setting.ai_provider.blank?,
+            inherits_global_model: setting.ai_model.blank?,
+            global: AiGlobalSetting.current.store_ai_as_json_safe
           )
         end
 

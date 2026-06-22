@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -65,6 +65,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.string "model", default: "claude-haiku-4-5-20251001", null: false
     t.integer "per_minute_user_limit", default: 8, null: false
     t.string "provider", default: "claude", null: false
+    t.text "store_ai_claude_api_key_encrypted"
+    t.integer "store_ai_daily_message_limit", default: 100, null: false
+    t.boolean "store_ai_enabled", default: true, null: false
+    t.text "store_ai_groq_api_key_encrypted"
+    t.integer "store_ai_handoff_attempts", default: 2, null: false
+    t.integer "store_ai_max_context_products", default: 8, null: false
+    t.string "store_ai_model", default: "llama-3.1-8b-instant", null: false
+    t.integer "store_ai_monthly_message_limit", default: 3000, null: false
+    t.integer "store_ai_monthly_token_limit", default: 300000, null: false
+    t.text "store_ai_openai_api_key_encrypted"
+    t.string "store_ai_provider", default: "groq", null: false
+    t.integer "store_ai_timeout_seconds", default: 30, null: false
     t.datetime "updated_at", null: false
   end
 
@@ -1084,7 +1096,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
     t.string "ai_model"
     t.integer "ai_monthly_message_limit", default: 3000, null: false
     t.integer "ai_monthly_token_limit", default: 300000, null: false
-    t.string "ai_provider", default: "anthropic", null: false
+    t.string "ai_provider"
     t.boolean "ai_sales_mode_enabled", default: false, null: false
     t.boolean "allow_address_update", default: true, null: false
     t.boolean "allow_delivery", default: true, null: false

@@ -22,8 +22,9 @@ module Api
 
         def test
           setting = AiGlobalSetting.current
-          message = params[:message].presence || "Responda apenas: conexao Claude OK."
+          return test_store_ai_provider(setting) if params[:scope].to_s == "store_ai" || params[:provider].present?
 
+          message = params[:message].presence || "Responda apenas: conexao Claude OK."
           unless setting.api_key_configured?
             return render json: {
               success: false,
@@ -140,8 +141,76 @@ module Api
             :base_prompt,
             :assistant_tone,
             :daily_company_limit,
-            :per_minute_user_limit
+            :per_minute_user_limit,
+            :store_ai_enabled,
+            :store_ai_provider,
+            :store_ai_model,
+            :store_ai_groq_api_key,
+            :store_ai_claude_api_key,
+            :store_ai_openai_api_key,
+            :store_ai_daily_message_limit,
+            :store_ai_monthly_message_limit,
+            :store_ai_monthly_token_limit,
+            :store_ai_timeout_seconds,
+            :store_ai_max_context_products,
+            :store_ai_handoff_attempts
           )
+        end
+
+        def test_store_ai_provider(setting)
+          provider = params[:provider].presence || setting.store_ai_provider
+          provider = "anthropic" if provider == "claude"
+          model = params[:model].presence || setting.store_ai_model
+          message = params[:message].presence || "Responda apenas: conexao IA das lojas OK."
+
+          if provider.blank? || provider == "disabled"
+            return render json: {
+              success: false,
+              error: "ai_provider_not_configured",
+              message: "Provider da IA das lojas desativado ou nao configurado."
+            }, status: :unprocessable_entity
+          end
+
+          api_key = setting.store_ai_api_key_for(provider)
+          if api_key.blank?
+            return render json: {
+              success: false,
+              error: "ai_provider_not_configured",
+              provider: provider,
+              model: model,
+              message: "Chave da IA das lojas nao configurada para este provider."
+            }, status: :unprocessable_entity
+          end
+
+          started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          result = AiProviderService.build(provider: provider, api_key: api_key, model: model).chat(
+            system_prompt: "Voce e um teste seguro de conectividade da IA das lojas Replymesh. Responda curto.",
+            user_message: message,
+            max_tokens: 80
+          )
+          latency_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+
+          if result.success?
+            render json: {
+              success: true,
+              provider: provider,
+              model: model,
+              latency_ms: latency_ms,
+              answer: result.content,
+              tokens: result.tokens,
+              settings: setting.as_json_safe
+            }
+          else
+            render json: {
+              success: false,
+              error: result.error,
+              provider: provider,
+              model: model,
+              latency_ms: latency_ms
+            }, status: :bad_gateway
+          end
+        rescue ArgumentError => e
+          render json: { success: false, error: e.message }, status: :unprocessable_entity
         end
       end
     end

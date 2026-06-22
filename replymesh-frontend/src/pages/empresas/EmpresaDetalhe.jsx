@@ -20,6 +20,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [company, setCompany] = useState(null);
   const [form, setForm] = useState(null);
   const [storeForm, setStoreForm] = useState(null);
+  const [storeAiForm, setStoreAiForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [featureAccess, setFeatureAccess] = useState(null);
@@ -28,6 +29,7 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [savingModules, setSavingModules] = useState(false);
   const [savingFeature, setSavingFeature] = useState("");
   const [savingWhatsappMode, setSavingWhatsappMode] = useState(false);
+  const [savingStoreAi, setSavingStoreAi] = useState(false);
   const [adminPasswordForm, setAdminPasswordForm] = useState({ email: "", password: "" });
   const [savingAdminPassword, setSavingAdminPassword] = useState(false);
 
@@ -54,6 +56,17 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       .then((data) => {
         if (!alive) return;
         setStoreForm(data.settings);
+      })
+      .catch((error) => onToast?.(error.message, "err"));
+    return () => { alive = false; };
+  }, [id, onToast]);
+
+  useEffect(() => {
+    let alive = true;
+    api.getMasterCompanyStoreAiSettings(id)
+      .then((data) => {
+        if (!alive) return;
+        setStoreAiForm(data.settings);
       })
       .catch((error) => onToast?.(error.message, "err"));
     return () => { alive = false; };
@@ -197,6 +210,32 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
     }
   };
 
+  const saveStoreAiSettings = async () => {
+    if (!storeAiForm) return;
+
+    setSavingStoreAi(true);
+    try {
+      const data = await api.updateMasterCompanyStoreAiSettings(id, {
+        settings: {
+          enabled: storeAiForm.enabled,
+          ai_auto_reply_enabled: storeAiForm.ai_auto_reply_enabled,
+          ai_provider: storeAiForm.ai_provider || "",
+          ai_model: storeAiForm.ai_model || "",
+          ai_mode: storeAiForm.ai_mode || "answers",
+          ai_daily_message_limit: storeAiForm.ai_daily_message_limit,
+          ai_monthly_message_limit: storeAiForm.ai_monthly_message_limit,
+          ai_monthly_token_limit: storeAiForm.ai_monthly_token_limit,
+        },
+      });
+      setStoreAiForm(data.settings);
+      onToast?.("IA da loja atualizada com sucesso", "ok");
+    } catch (error) {
+      onToast?.(error.message || "Nao foi possivel salvar IA da loja", "err");
+    } finally {
+      setSavingStoreAi(false);
+    }
+  };
+
   if (loading) return <div className="page"><div className="empty"><Icon name="LoaderCircle" className="spin" /> Carregando empresa...</div></div>;
   if (!company || !form) return <div className="page"><div className="empty"><div className="et">Empresa nao encontrada</div></div></div>;
 
@@ -319,6 +358,67 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
               {savingAdminPassword ? "Atualizando..." : "Atualizar senha"}
             </button>
           </div>
+        </div>
+        <div className="card card-pad">
+          <div className="company-info-title"><Icon name="Bot" size={18} />IA da loja</div>
+          {!storeAiForm ? (
+            <p className="muted" style={{ marginTop: 12 }}>Carregando IA da loja...</p>
+          ) : (
+            <>
+              <div className="form-grid" style={{ marginTop: 14 }}>
+                <div className="field">
+                  <label>IA ativa nesta empresa</label>
+                  <select value={storeAiForm.enabled ? "true" : "false"} onChange={(event) => setStoreAiForm({ ...storeAiForm, enabled: event.target.value === "true" })}>
+                    <option value="true">Ativa</option>
+                    <option value="false">Desativada</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Responder automaticamente no WhatsApp</label>
+                  <select value={storeAiForm.ai_auto_reply_enabled ? "true" : "false"} onChange={(event) => setStoreAiForm({ ...storeAiForm, ai_auto_reply_enabled: event.target.value === "true" })}>
+                    <option value="true">Sim</option>
+                    <option value="false">Nao</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Provider desta empresa</label>
+                  <select value={storeAiForm.ai_provider || ""} onChange={(event) => setStoreAiForm({ ...storeAiForm, ai_provider: event.target.value })}>
+                    <option value="">Usar padrao global ({providerLabel(storeAiForm.global?.provider)})</option>
+                    <option value="groq">Groq</option>
+                    <option value="anthropic">Claude</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                  <span className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                    {storeAiForm.inherits_global_provider ? "Herdando provider global." : "Override ativo somente nesta empresa."}
+                  </span>
+                </div>
+                <Field
+                  label={`Modelo desta empresa${storeAiForm.inherits_global_model ? ` (global: ${storeAiForm.global?.model || "-"})` : ""}`}
+                  value={storeAiForm.ai_model}
+                  onChange={(value) => setStoreAiForm({ ...storeAiForm, ai_model: value })}
+                />
+                <div className="field">
+                  <label>Nivel de automacao</label>
+                  <select value={storeAiForm.ai_mode || "answers"} onChange={(event) => setStoreAiForm({ ...storeAiForm, ai_mode: event.target.value })}>
+                    <option value="answers">Informacoes</option>
+                    <option value="sales_assistant">Vendas Assistidas</option>
+                    <option value="auto_seller">Vendas Automaticas (Beta)</option>
+                  </select>
+                </div>
+                <Field label="Mensagens por dia" type="number" value={storeAiForm.ai_daily_message_limit} onChange={(value) => setStoreAiForm({ ...storeAiForm, ai_daily_message_limit: Number(value || 1) })} />
+                <Field label="Mensagens por mes" type="number" value={storeAiForm.ai_monthly_message_limit} onChange={(value) => setStoreAiForm({ ...storeAiForm, ai_monthly_message_limit: Number(value || 1) })} />
+                <Field label="Tokens por mes" type="number" value={storeAiForm.ai_monthly_token_limit} onChange={(value) => setStoreAiForm({ ...storeAiForm, ai_monthly_token_limit: Number(value || 1) })} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, gap: 12, flexWrap: "wrap" }}>
+                <p className="muted" style={{ margin: 0, fontSize: 12 }}>Chaves de API continuam somente em Configuracoes &gt; IA. A loja nunca visualiza provider/modelo.</p>
+                <button className="btn btn-primary" type="button" onClick={saveStoreAiSettings} disabled={savingStoreAi}>
+                  <Icon name={savingStoreAi ? "LoaderCircle" : "Save"} size={16} className={savingStoreAi ? "spin" : ""} />
+                  {savingStoreAi ? "Salvando..." : "Salvar IA da loja"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </> : <div className="company-detail-grid">
         <InfoCard icon="Building2" title="Empresa" items={[["Razao social", company.legal_name], ["Documento", company.document_number], ["Slug", company.slug], ["Cadastro", formatDate(company.created_at)]]} />
@@ -506,6 +606,16 @@ function statusLabel(source) {
 function toInputDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
+}
+
+function providerLabel(value) {
+  return {
+    groq: "Groq",
+    anthropic: "Claude",
+    claude: "Claude",
+    openai: "OpenAI",
+    disabled: "Disabled",
+  }[value] || "-";
 }
 
 function formatDate(value) {

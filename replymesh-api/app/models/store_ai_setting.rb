@@ -5,7 +5,7 @@ class StoreAiSetting < ApplicationRecord
   belongs_to :company
 
   validates :assistant_name, :initial_message, :tone, presence: true
-  validates :ai_provider, inclusion: { in: PROVIDERS }, if: -> { has_attribute?(:ai_provider) }
+  validates :ai_provider, inclusion: { in: PROVIDERS }, allow_blank: true, if: -> { has_attribute?(:ai_provider) }
   validates :ai_mode, inclusion: { in: MODES }, if: -> { has_attribute?(:ai_mode) }
   validates :daily_limit, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 10_000 }
   validates :ai_daily_message_limit, :ai_monthly_message_limit, :ai_monthly_token_limit,
@@ -66,7 +66,7 @@ class StoreAiSetting < ApplicationRecord
   end
 
   def effective_provider
-    ai_provider.presence || "anthropic"
+    ai_provider.presence
   end
 
   def effective_model(global_model = nil)

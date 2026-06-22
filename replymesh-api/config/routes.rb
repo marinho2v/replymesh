@@ -40,6 +40,8 @@ Rails.application.routes.draw do
             patch :admin_password
             get :store_settings
             patch :store_settings, action: :update_store_settings
+            get :store_ai_settings
+            patch :store_ai_settings, action: :update_store_ai_settings
           end
           post "backup_import/dry_run", to: "companies/backup_imports#dry_run"
           post "backup_import", to: "companies/backup_imports#create"
