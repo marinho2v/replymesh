@@ -7,6 +7,9 @@ module Api
         before_action :set_public_cache_headers, only: %i[
           menu banners business_hours delivery_zones
         ]
+        before_action -> { require_public_feature!("products") }, only: %i[menu product]
+        before_action -> { require_public_feature!("banners") }, only: %i[banners]
+        before_action -> { require_public_feature!("delivery_zones") }, only: %i[delivery_zones]
 
         # GET /api/v1/public/:company_slug/store
         def show
@@ -14,10 +17,10 @@ module Api
           render_ok(
             store: serialize_store(settings),
             store_settings: serialize_store_settings(settings),
-            app_banners: serialize_banners(current_company.app_banners.active.ordered),
+            app_banners: FeatureGate.enabled?(current_company, "banners") ? serialize_banners(current_company.app_banners.active.ordered) : [],
             business_hours: serialize_business_hours(current_company.business_hours.ordered),
             business_hour_exceptions: serialize_business_hour_exceptions(current_company.business_hour_exceptions.upcoming),
-            delivery_zones: serialize_delivery_zones(current_company.delivery_zones.active.by_priority)
+            delivery_zones: FeatureGate.enabled?(current_company, "delivery_zones") ? serialize_delivery_zones(current_company.delivery_zones.active.by_priority) : []
           )
         end
 

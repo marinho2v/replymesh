@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_22_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -239,6 +239,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
   end
 
   create_table "companies", force: :cascade do |t|
+    t.string "contract_type", default: "monthly", null: false
     t.datetime "created_at", null: false
     t.string "custom_domain"
     t.string "custom_domain_status", default: "pending", null: false
@@ -246,7 +247,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_000000) do
     t.datetime "dns_verified_at"
     t.text "document_number"
     t.string "domain_status", default: "pending", null: false
+    t.integer "free_period_days", default: 0, null: false
+    t.text "internal_note"
     t.text "legal_name"
+    t.integer "monthly_price_cents"
     t.text "name", null: false
     t.text "plan_status", default: "trial", null: false
     t.string "primary_domain", null: false

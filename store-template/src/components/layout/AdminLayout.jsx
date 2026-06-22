@@ -169,35 +169,35 @@ export const AdminLayout = () => {
     {
       title: null,
       items: [
-        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'cashier'] },
-        { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'cashier'] },
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'cashier'], feature: 'pos_counter' },
+        { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'cashier'], feature: 'dashboard' },
       ],
     },
     {
       title: 'Operacao',
       items: [
-        { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant', 'cashier'] },
-        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter', 'cashier'] },
+        { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant', 'cashier'], feature: 'orders' },
+        { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter', 'cashier'], feature: 'tables' },
       ],
     },
     {
       title: 'Cardapio',
       items: [
-        { path: '/admin/products', icon: Package, label: 'Produtos', roles: ['admin'] },
-        { path: '/admin/categories', icon: Package, label: 'Categorias', roles: ['admin'] },
+        { path: '/admin/products', icon: Package, label: 'Produtos', roles: ['admin'], feature: 'products' },
+        { path: '/admin/categories', icon: Package, label: 'Categorias', roles: ['admin'], feature: 'categories' },
       ],
     },
     {
       title: 'Entrega',
       items: [
-        { path: '/admin/delivery-zones', icon: MapPin, label: 'Areas de Entrega', roles: ['admin'] },
-        { path: '/admin/motoboys', icon: Bike, label: 'Motoboys', roles: ['admin', 'attendant'] },
+        { path: '/admin/delivery-zones', icon: MapPin, label: 'Areas de Entrega', roles: ['admin'], feature: 'delivery_zones' },
+        { path: '/admin/motoboys', icon: Bike, label: 'Motoboys', roles: ['admin', 'attendant'], feature: 'motoboys' },
       ],
     },
     {
       title: 'Clientes & Promocoes',
       items: [
-        { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin', 'attendant'] },
+        { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin', 'attendant'], feature: 'customers' },
         { path: '/admin/coupons', icon: Ticket, label: 'Cupons', roles: ['admin'], feature: 'coupons' },
         { path: '/admin/wheel', icon: Trophy, label: 'Roleta', roles: ['admin'], feature: 'roulette' },
       ],
@@ -212,18 +212,18 @@ export const AdminLayout = () => {
     {
       title: 'Financeiro',
       items: [
-        { path: '/admin/cash-register', icon: Wallet, label: 'Caixa', roles: ['admin', 'cashier'] },
+        { path: '/admin/cash-register', icon: Wallet, label: 'Caixa', roles: ['admin', 'cashier'], feature: 'cashier' },
         { path: '/admin/reports', icon: BarChart3, label: 'Relatorios', roles: ['admin', 'cashier'], feature: 'advanced_reports' },
       ],
     },
     {
       title: 'Comunicacao',
       items: [
-        { path: '/admin/whatsapp', icon: MessageSquare, label: 'WhatsApp', roles: ['admin'], exact: true },
+        { path: '/admin/whatsapp', icon: MessageSquare, label: 'WhatsApp', roles: ['admin'], exact: true, featureAny: ['whatsapp_manual', 'whatsapp_basic'] },
         { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'], feature: 'whatsapp_templates' },
         { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Recuperador de Vendas', roles: ['admin'], feature: 'sales_recovery' },
-        { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'] },
+        { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
       ],
     },
@@ -307,28 +307,16 @@ export const AdminLayout = () => {
                     {section.items.map((item) => {
                       const Icon = item.icon
                       const itemPath = adminPath(item.path)
-                      const locked = isFeatureLocked(item.feature)
-                      const featureInfo = lockedFeatureInfo(item.feature)
+                      const locked = item.featureAny
+                        ? item.featureAny.every((featureKey) => isFeatureLocked(featureKey))
+                        : isFeatureLocked(item.feature)
                       const isActive = location.pathname === itemPath || (!item.exact &&
                         itemPath !== adminPath('/admin/dashboard') && location.pathname.startsWith(`${itemPath}/`)
                       )
 
+                      if (locked) return null
+
                       return (
-                        locked ? (
-                        <button
-                          key={item.path}
-                          type="button"
-                          onClick={() => setUpgradeFeature(featureInfo)}
-                          title={sidebarCollapsed ? `${item.label} - Plano ${featureInfo.required_plan_label}` : undefined}
-                          className={`flex items-center rounded-lg transition-colors ${
-                            sidebarCollapsed ? 'lg:justify-center lg:px-0 px-3' : 'px-3'
-                          } py-2.5 w-full text-left text-gray-500 hover:bg-dark-800 hover:text-gray-300`}
-                        >
-                          <Icon size={19} className={sidebarCollapsed ? 'lg:mr-0 mr-3' : 'mr-3'} />
-                          <span className={`flex-1 truncate ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
-                          <Lock size={14} className={sidebarCollapsed ? 'lg:hidden' : ''} />
-                        </button>
-                        ) : (
                           <Link
                             key={item.path}
                             to={itemPath}
@@ -351,7 +339,6 @@ export const AdminLayout = () => {
                               </span>
                             )}
                           </Link>
-                        )
                       )
                     })}
                   </div>

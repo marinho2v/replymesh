@@ -117,12 +117,37 @@ module Api
             success: true,
             company: serialize_company(@company),
             feature_access: FeatureGate.access_map(@company),
+            module_access: CompanyModuleCatalog.access_map(@company),
+            module_catalog: CompanyModuleCatalog.serialize,
+            module_presets: CompanyModuleCatalog::PRESETS,
             catalog: FeatureCatalog.serialize,
             plan_copy: FeatureCatalog::PLAN_COPY
           }
         end
 
         def update_features
+          if params[:module_keys].present? || params[:module_preset].present?
+            selected_modules = params[:module_keys].presence || CompanyModuleCatalog.preset(params[:module_preset])
+            applied = CompanyModuleAssignment.apply!(
+              company: @company,
+              module_keys: selected_modules,
+              actor: current_user,
+              internal_note: params[:internal_note]
+            )
+            audit!(
+              "company_modules_updated",
+              company: @company,
+              resource: @company,
+              metadata: { module_keys: applied, preset: params[:module_preset] }
+            )
+            return render json: {
+              success: true,
+              feature_access: FeatureGate.access_map(@company),
+              module_access: CompanyModuleCatalog.access_map(@company),
+              module_keys: applied
+            }
+          end
+
           overrides = Array(params[:overrides])
           changed = []
 
@@ -297,7 +322,8 @@ module Api
             :name, :slug, :legal_name, :document_number, :responsible_name,
             :responsible_phone, :responsible_email, :plan_slug, :status,
             :plan_status, :admin_password, :timezone, :default_locale,
-            :custom_domain, :whatsapp_mode
+            :custom_domain, :whatsapp_mode, :monthly_price_cents,
+            :free_period_days, :internal_note, :contract_type
           )
         end
 
@@ -305,7 +331,8 @@ module Api
           params.require(:company).permit(
             :name, :slug, :legal_name, :document_number, :responsible_name,
             :responsible_phone, :responsible_email, :status, :plan_status,
-            :timezone, :default_locale, :custom_domain, :custom_domain_status, :ssl_status
+            :timezone, :default_locale, :custom_domain, :custom_domain_status, :ssl_status,
+            :monthly_price_cents, :free_period_days, :internal_note, :contract_type
           )
         end
 
@@ -358,7 +385,8 @@ module Api
             :create_whatsapp_instance, :create_default_settings,
             :create_default_templates, :create_default_payment_methods,
             :enable_public_site, :enable_admin_panel, :enable_motoboy_area,
-            :enable_customer_app, :enable_motoboy_app
+            :enable_customer_app, :enable_motoboy_app, :module_preset,
+            module_keys: []
           )
         end
 
@@ -390,6 +418,10 @@ module Api
             status:                  company.status,
             plan_status:             company.plan_status,
             trial_ends_at:           company.trial_ends_at,
+            monthly_price_cents:     company.monthly_price_cents,
+            free_period_days:        company.free_period_days,
+            internal_note:           company.internal_note,
+            contract_type:           company.contract_type,
             timezone:                company.timezone,
             default_locale:          company.default_locale,
             created_at:              company.created_at,
@@ -412,7 +444,8 @@ module Api
               banner_url: banner_url,
               cover_url: cover_url
             },
-            feature_summary:         FeatureGate.access_map(company).slice(:allowed, :blocked)
+            feature_summary:         FeatureGate.access_map(company).slice(:allowed, :blocked),
+            module_summary:          CompanyModuleCatalog.access_map(company).slice(:enabled, :disabled)
           }.merge(admin_users: serialize_admin_users(company))
         rescue StandardError => e
           Rails.logger.error("[CompaniesController] serialize_company error for #{company.id}: #{e.message}")

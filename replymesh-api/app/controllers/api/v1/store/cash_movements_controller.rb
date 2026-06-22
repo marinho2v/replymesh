@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class CashMovementsController < BaseController
+        before_action -> { require_feature!("cashier") }
         def index
           scope = company_scope(CashMovement)
                     .includes(order: [:dining_table, :customer])

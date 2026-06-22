@@ -134,7 +134,7 @@ export const request = async (path, options = {}) => {
     } else if (response.status === 403 && payload?.error === 'Sessao master vinculada a outra empresa') {
       clearImpersonationSession()
       window.dispatchEvent(new Event('replymesh-auth-changed'))
-    } else if (response.status === 403 && payload?.error === 'feature_not_available') {
+    } else if (response.status === 403 && ['feature_not_available', 'feature_disabled'].includes(payload?.error)) {
       window.dispatchEvent(new CustomEvent('replymesh:feature-unavailable', {
         detail: {
           feature: payload?.feature,

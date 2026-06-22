@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { CoAvatar } from "../../components/ui/CoAvatar.jsx";
 import { Icon } from "../../components/ui/Icon.jsx";
+import { COMPANY_MODULE_PRESETS } from "../../config/companyModules.js";
 import { api } from "../../services/api.js";
 
 const STATUS_LABELS = {
@@ -22,6 +23,9 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [featureAccess, setFeatureAccess] = useState(null);
+  const [moduleAccess, setModuleAccess] = useState(null);
+  const [moduleCatalog, setModuleCatalog] = useState([]);
+  const [savingModules, setSavingModules] = useState(false);
   const [savingFeature, setSavingFeature] = useState("");
   const [savingWhatsappMode, setSavingWhatsappMode] = useState(false);
   const [adminPasswordForm, setAdminPasswordForm] = useState({ email: "", password: "" });
@@ -62,6 +66,8 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       .then((data) => {
         if (!alive) return;
         setFeatureAccess(data.feature_access);
+        setModuleAccess(data.module_access);
+        setModuleCatalog(data.module_catalog || []);
       })
       .catch(() => {
         if (alive) setFeatureAccess(null);
@@ -84,6 +90,10 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         plan_status: form.plan_status,
         timezone: form.timezone,
         default_locale: form.default_locale,
+        monthly_price_cents: form.monthly_price_cents,
+        free_period_days: form.free_period_days,
+        internal_note: form.internal_note,
+        contract_type: form.contract_type,
       };
       const data = await api.updateCompany(id, { company: payload });
       if (storeForm) {
@@ -129,6 +139,20 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       onToast?.(error.message, "err");
     } finally {
       setSavingFeature("");
+    }
+  };
+
+  const saveModules = async (moduleKeys) => {
+    setSavingModules(true);
+    try {
+      const data = await api.updateCompanyModules(id, { module_keys: moduleKeys, internal_note: form.internal_note });
+      setFeatureAccess(data.feature_access);
+      setModuleAccess(data.module_access);
+      onToast?.("Módulos da empresa atualizados", "ok");
+    } catch (error) {
+      onToast?.(error.message, "err");
+    } finally {
+      setSavingModules(false);
     }
   };
 
@@ -213,6 +237,10 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
             <div className="field"><label>Status do plano</label><select value={form.plan_status} onChange={(event) => setForm({ ...form, plan_status: event.target.value })}><option value="trial">Trial</option><option value="active">Ativo</option><option value="overdue">Em atraso</option><option value="canceled">Cancelado</option><option value="suspended">Suspenso</option></select></div>
             <Field label="Fuso horario" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
             <Field label="Idioma padrao" value={form.default_locale} onChange={(value) => setForm({ ...form, default_locale: value })} />
+            <Field label="Valor mensal em centavos" type="number" value={form.monthly_price_cents} onChange={(value) => setForm({ ...form, monthly_price_cents: value === "" ? null : Number(value) })} />
+            <Field label="Período gratuito (dias)" type="number" value={form.free_period_days} onChange={(value) => setForm({ ...form, free_period_days: Number(value || 0) })} />
+            <div className="field"><label>Tipo de contrato</label><select value={form.contract_type || "monthly"} onChange={(event) => setForm({ ...form, contract_type: event.target.value })}><option value="monthly">Mensal</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option><option value="custom">Personalizado</option></select></div>
+            <div className="field full"><label>Observação interna</label><textarea value={form.internal_note || ""} onChange={(event) => setForm({ ...form, internal_note: event.target.value })} /></div>
           </div>
         </div>
         <div className="card card-pad">
@@ -295,12 +323,60 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
       </> : <div className="company-detail-grid">
         <InfoCard icon="Building2" title="Empresa" items={[["Razao social", company.legal_name], ["Documento", company.document_number], ["Slug", company.slug], ["Cadastro", formatDate(company.created_at)]]} />
         <InfoCard icon="UserRound" title="Responsavel" items={[["Nome", company.responsible_name], ["Email", company.responsible_email], ["Telefone", company.responsible_phone], ["Usuarios", company.users_count]]} />
-        <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Trial ate", formatDate(company.trial_ends_at)]]} />
+        <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.monthly_price_cents != null ? `R$ ${(company.monthly_price_cents / 100).toFixed(2).replace(".", ",")}` : company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Contrato", company.contract_type], ["Gratuidade", `${company.free_period_days || 0} dias`], ["Trial ate", formatDate(company.trial_ends_at)]]} />
         <InfoCard icon="Globe" title="Acesso" items={[["Dominio", company.primary_domain], ["Timezone", company.timezone], ["Idioma", company.default_locale], ["Atualizada", formatDate(company.updated_at)]]} />
         <WhatsappModeCard storeForm={storeForm} saving={savingWhatsappMode} onChange={changeWhatsappMode} />
+        <ModuleCard moduleAccess={moduleAccess} catalog={moduleCatalog} saving={savingModules} onSave={saveModules} />
         <FeatureCard featureAccess={featureAccess} savingFeature={savingFeature} onChange={changeFeatureMode} />
       </div>}
     </div>
+  );
+}
+
+function ModuleCard({ moduleAccess, catalog, saving, onSave }) {
+  if (!moduleAccess) {
+    return <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}><div className="company-info-title"><Icon name="Blocks" size={18} />Módulos</div><p className="muted">Carregando módulos...</p></section>;
+  }
+
+  const enabled = moduleAccess.enabled || [];
+  const groups = (catalog || []).reduce((result, item) => {
+    result[item.group] ||= [];
+    result[item.group].push(item);
+    return result;
+  }, {});
+  const toggle = (item) => {
+    if (item.essential && enabled.includes(item.key) && !window.confirm(`Desativar ${item.label} pode interromper funções básicas desta empresa. Continuar?`)) return;
+    onSave(enabled.includes(item.key) ? enabled.filter((key) => key !== item.key) : [...enabled, item.key]);
+  };
+  const presets = {
+    basic: COMPANY_MODULE_PRESETS.basic,
+    operation: COMPANY_MODULE_PRESETS.operation,
+    complete: (catalog || []).map((item) => item.key),
+  };
+
+  return (
+    <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}>
+      <div className="company-info-title"><Icon name="Blocks" size={18} />Módulos da Empresa</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.basic)}>Básico</button>
+        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.operation)}>Operação</button>
+        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.complete)}>Completo</button>
+        <span className="muted" style={{ alignSelf: "center" }}>{enabled.length} módulos liberados</span>
+      </div>
+      {Object.entries(groups).map(([group, items]) => (
+        <div key={group} style={{ marginTop: 16 }}>
+          <strong style={{ display: "block", marginBottom: 8, textTransform: "capitalize" }}>{group.replace("_", " ")}</strong>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 8 }}>
+            {items.map((item) => (
+              <label key={item.key} style={{ display: "flex", gap: 9, alignItems: "center", border: "1px solid var(--border)", borderRadius: 9, padding: 10, opacity: saving ? 0.6 : 1 }}>
+                <input type="checkbox" checked={enabled.includes(item.key)} disabled={saving} onChange={() => toggle(item)} />
+                <span><strong style={{ display: "block", fontSize: 13 }}>{item.label}{item.essential ? " *" : ""}</strong><small className="muted">{item.description}</small></span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }
 

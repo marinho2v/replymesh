@@ -5,6 +5,7 @@ import { CoAvatar } from "../../components/ui/CoAvatar.jsx";
 import { Icon } from "../../components/ui/Icon.jsx";
 import { Switch } from "../../components/ui/Switch.jsx";
 import { PLATFORM_URLS, RESERVED_SLUGS } from "../../config/platform.js";
+import { COMPANY_MODULE_PRESETS, groupedCompanyModules } from "../../config/companyModules.js";
 import { slugify } from "../../lib/utils.js";
 import { api } from "../../services/api.js";
 
@@ -41,6 +42,11 @@ export function NovaEmpresa({ onToast }) {
     customDomain: false,
     domain: "",
     notes: "",
+    modulePreset: "basic",
+    moduleKeys: COMPANY_MODULE_PRESETS.basic,
+    monthlyPrice: "",
+    freePeriodDays: "0",
+    contractType: "monthly",
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +54,18 @@ export function NovaEmpresa({ onToast }) {
   const currentPlan = PLANS.find((plan) => plan.id === form.plan) || PLANS[0];
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const setModulePreset = (preset) => setForm((current) => ({
+    ...current,
+    modulePreset: preset,
+    moduleKeys: preset === "custom" ? current.moduleKeys : COMPANY_MODULE_PRESETS[preset],
+  }));
+  const toggleModule = (key) => setForm((current) => ({
+    ...current,
+    modulePreset: "custom",
+    moduleKeys: current.moduleKeys.includes(key)
+      ? current.moduleKeys.filter((item) => item !== key)
+      : [...current.moduleKeys, key],
+  }));
 
   const validate = () => {
     const next = {};
@@ -87,12 +105,18 @@ export function NovaEmpresa({ onToast }) {
           plan_status: form.status === "active" ? "active" : "trial",
           admin_password: form.adminPassword,
           custom_domain: form.customDomain ? form.domain.trim() : "",
+          monthly_price_cents: form.monthlyPrice ? Math.round(Number(form.monthlyPrice.replace(",", ".")) * 100) : null,
+          free_period_days: Number(form.freePeriodDays || 0),
+          internal_note: form.notes.trim(),
+          contract_type: form.contractType,
         },
         options: {
           create_whatsapp_instance: form.whatsapp,
           create_default_settings: true,
           create_default_templates: true,
           create_default_payment_methods: true,
+          module_preset: form.modulePreset,
+          module_keys: form.moduleKeys,
         },
       });
 
@@ -120,6 +144,60 @@ export function NovaEmpresa({ onToast }) {
 
       <div className="nova-empresa-layout" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="card card-pad">
+            <div style={{ marginBottom: 16 }}>
+              <div className="form-section-t">Módulos da Empresa</div>
+              <div className="form-section-s">Monte o acesso desta empresa sem depender de um plano fixo.</div>
+            </div>
+            <div className="seg" style={{ marginBottom: 16 }}>
+              {[
+                ["basic", "Básico"],
+                ["operation", "Operação"],
+                ["complete", "Completo"],
+                ["custom", "Personalizado"],
+              ].map(([key, label]) => (
+                <button type="button" key={key} className={`seg-opt${form.modulePreset === key ? " sel" : ""}`} onClick={() => setModulePreset(key)}>
+                  <div className="so-t">{label}{form.modulePreset === key && <Icon name="Check" size={16} />}</div>
+                </button>
+              ))}
+            </div>
+            {Object.entries(groupedCompanyModules).map(([group, modules]) => (
+              <div key={group} style={{ marginTop: 14 }}>
+                <div className="form-section-s" style={{ fontWeight: 700, marginBottom: 8 }}>{group}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 8 }}>
+                  {modules.map((module) => (
+                    <label key={module.key} style={{ display: "flex", gap: 9, alignItems: "center", border: "1px solid var(--border)", borderRadius: 9, padding: 10, cursor: "pointer" }}>
+                      <input type="checkbox" checked={form.moduleKeys.includes(module.key)} onChange={() => toggleModule(module.key)} />
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{module.label}{module.essential ? " *" : ""}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="hint" style={{ marginTop: 12 }}>* Módulo essencial. Ao remover, a empresa poderá perder funções básicas.</div>
+          </div>
+
+          <div className="card card-pad">
+            <div style={{ marginBottom: 16 }}>
+              <div className="form-section-t">Condições comerciais</div>
+              <div className="form-section-s">Informações visíveis somente no Painel Master.</div>
+            </div>
+            <div className="form-grid">
+              <FieldInput label="Valor mensal combinado" placeholder="499,00" value={form.monthlyPrice} onChange={(value) => set("monthlyPrice", value)} />
+              <FieldInput label="Período gratuito (dias)" type="number" value={form.freePeriodDays} onChange={(value) => set("freePeriodDays", value)} />
+              <div className="field">
+                <label>Tipo de contrato</label>
+                <select value={form.contractType} onChange={(event) => set("contractType", event.target.value)}>
+                  <option value="monthly">Mensal</option>
+                  <option value="quarterly">Trimestral</option>
+                  <option value="semiannual">Semestral</option>
+                  <option value="annual">Anual</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="card card-pad">
             <div style={{ marginBottom: 18 }}>
               <div className="form-section-t">Dados da empresa</div>
@@ -237,6 +315,7 @@ export function NovaEmpresa({ onToast }) {
           <SummaryRow label="Plano" value={<Badge tone={PLAN_BADGE[form.plan]} dot={false}>{currentPlan.label}</Badge>} />
           <SummaryRow label="Status inicial" value={<Badge tone={STATUS_BADGE[form.status][0]}>{STATUS_BADGE[form.status][1]}</Badge>} />
           <SummaryRow label="WhatsApp" value={form.whatsapp ? "1 instancia" : "-"} />
+          <SummaryRow label="Módulos" value={form.moduleKeys.length} />
           <SummaryRow label="Dominio" value={form.customDomain ? "Personalizado" : "Subdominio"} />
           <div className="field" style={{ marginTop: 12 }}>
             <label>Status inicial</label>
@@ -261,6 +340,15 @@ function SummaryRow({ label, value }) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", fontSize: 13 }}>
       <span className="muted">{label}</span>
       <span style={{ fontWeight: 550 }}>{value}</span>
+    </div>
+  );
+}
+
+function FieldInput({ label, value, onChange, type = "text", placeholder = "" }) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <input type={type} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} />
     </div>
   );
 }

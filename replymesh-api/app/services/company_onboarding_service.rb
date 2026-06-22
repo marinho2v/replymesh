@@ -53,6 +53,7 @@ class CompanyOnboardingService
       create_subscription!
       create_domain!
       create_store_settings! if option_enabled?(:create_default_settings, true)
+      configure_company_modules!
       create_business_hours! if option_enabled?(:create_default_settings, true)
       create_default_delivery_zone! if option_enabled?(:create_default_settings, true)
       create_payment_methods! if option_enabled?(:create_default_payment_methods, true)
@@ -92,6 +93,10 @@ class CompanyOnboardingService
       status: company_params[:status].presence || "trial",
       plan_status: company_params[:plan_status].presence || company_params[:status].presence || "trial",
       trial_ends_at: 14.days.from_now,
+      monthly_price_cents: company_params[:monthly_price_cents],
+      free_period_days: company_params[:free_period_days].presence || 0,
+      internal_note: company_params[:internal_note],
+      contract_type: company_params[:contract_type].presence || "monthly",
       timezone: company_params[:timezone].presence || "America/Sao_Paulo",
       default_locale: company_params[:default_locale].presence || "pt-BR"
     )
@@ -119,13 +124,25 @@ class CompanyOnboardingService
       company: @company,
       plan: plan,
       status: @company.plan_status,
-      price_cents: plan.price_cents,
+      price_cents: company_params[:monthly_price_cents].presence || plan.price_cents,
       started_at: Time.current,
       trial_ends_at: @company.trial_ends_at,
       current_period_start: Time.current,
       current_period_end: 1.month.from_now
     )
     created_resources[:subscription] = true
+  end
+
+  def configure_company_modules!
+    selected = options[:module_keys].presence || CompanyModuleCatalog.preset(options[:module_preset])
+    return if selected.blank?
+
+    CompanyModuleAssignment.apply!(
+      company: @company,
+      module_keys: selected,
+      actor: actor,
+      internal_note: company_params[:internal_note]
+    )
   end
 
   def create_domain!

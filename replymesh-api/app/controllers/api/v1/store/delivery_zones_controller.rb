@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class DeliveryZonesController < BaseController
+        before_action -> { require_feature!("delivery_zones") }
         before_action :set_zone, only: %i[show update destroy]
 
         def index

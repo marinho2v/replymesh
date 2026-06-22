@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class DashboardController < BaseController
+        before_action -> { require_feature!("dashboard") }
         BUSINESS_TIME_ZONE = "America/Sao_Paulo".freeze
 
         # GET /api/v1/store/dashboard

@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class OrdersController < BaseController
+        before_action -> { require_feature!("orders") }
         before_action :set_order, only: %i[show status assign_motoboy delivery_status complete_delivery record_payment]
 
         # GET /api/v1/store/orders

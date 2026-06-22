@@ -82,6 +82,19 @@ module Api
         def render_not_found(message = "Recurso nao encontrado")
           render json: { success: false, error: message }, status: :not_found
         end
+
+        def require_public_feature!(feature_key)
+          gate = FeatureGate.check(current_company, feature_key)
+          return true if gate.enabled?
+
+          render json: {
+            success: false,
+            error: "feature_disabled",
+            feature: gate.feature,
+            message: "Este recurso nao esta disponivel para esta loja."
+          }, status: :forbidden
+          false
+        end
       end
     end
   end

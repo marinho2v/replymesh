@@ -4,6 +4,7 @@ RSpec.describe "Motoboy flow", type: :request do
   let!(:company) { create_company(slug: "motoboy-test") }
   let!(:plan) { assign_plan(company, slug: "start") }
   let!(:user) { create_user(email: "motoboy@example.com", role: "motoboy", password: "senha123456") }
+  let!(:member) { add_member(user, company, role: "motoboy") }
   let!(:motoboy) { Motoboy.create!(company: company, user: user, name: "Moto Teste", phone: "21988887777", active: true, is_available: true) }
   let!(:order) do
     create_order(company: company, status: "ready").tap do |record|

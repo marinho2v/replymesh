@@ -176,7 +176,8 @@ module Api
 
           render json: {
             success: false,
-            error: "feature_not_available",
+            error: "feature_disabled",
+            legacy_error: "feature_not_available",
             feature: gate.feature,
             required_plan: gate.required_plan,
             message: "Recurso disponivel no Plano #{FeatureCatalog.required_plan_label(gate.required_plan)}."

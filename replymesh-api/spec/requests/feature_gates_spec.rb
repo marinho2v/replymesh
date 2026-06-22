@@ -10,13 +10,14 @@ RSpec.describe "Store feature gates", type: :request do
     create_store(company)
   end
 
-  it "returns feature_not_available for a blocked Start feature" do
+  it "returns feature_disabled for a blocked Start feature" do
     assign_plan(company, slug: "start")
 
     get "/api/v1/store/marketing/campaigns", headers: headers
 
     expect(response).to have_http_status(:forbidden)
-    expect(json["error"]).to eq("feature_not_available")
+    expect(json["error"]).to eq("feature_disabled")
+    expect(json["legacy_error"]).to eq("feature_not_available")
     expect(json["feature"]).to eq("marketing_whatsapp")
     expect(json["required_plan"]).to eq("pro")
   end

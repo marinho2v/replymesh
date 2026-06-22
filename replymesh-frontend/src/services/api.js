@@ -126,6 +126,7 @@ export const api = {
   impersonateCompany: (id) => request(`/master/companies/${id}/impersonate`, { method: "POST" }),
   getCompanyFeatures: (id) => request(`/master/companies/${id}/features`),
   updateCompanyFeatures: (id, overrides) => request(`/master/companies/${id}/features`, { method: "PATCH", body: JSON.stringify({ overrides }) }),
+  updateCompanyModules: (id, payload) => request(`/master/companies/${id}/features`, { method: "PATCH", body: JSON.stringify(payload) }),
   updateCompanyPlan: (id, payload) => request(`/master/companies/${id}/plan`, { method: "PATCH", body: JSON.stringify(payload) }),
   dryRunCompanyBackupImport: (id, backup) => request(`/master/companies/${id}/backup_import/dry_run`, {
     method: "POST",

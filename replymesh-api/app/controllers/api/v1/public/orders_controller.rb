@@ -2,6 +2,7 @@ module Api
   module V1
     module Public
       class OrdersController < BaseController
+        before_action -> { require_public_feature!("orders") }, only: %i[create]
         # GET /api/v1/public/:company_slug/orders/:id
         def show
           order = find_public_order(params[:id])
@@ -73,6 +74,9 @@ module Api
         end
 
         def maybe_create_mp_pix(order, company)
+          return {} unless FeatureGate.enabled?(company, "pix")
+          return {} unless FeatureGate.enabled?(company, "mercado_pago")
+
           settings = company&.store_setting
           return {} unless settings&.mercadopago_enabled? &&
                            settings.pix_provider == 'mercadopago' &&

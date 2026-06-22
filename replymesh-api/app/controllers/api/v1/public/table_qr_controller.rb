@@ -2,6 +2,7 @@ module Api
   module V1
     module Public
       class TableQrController < BaseController
+        before_action -> { require_public_feature!("tables") }
         before_action :set_table
 
         def show

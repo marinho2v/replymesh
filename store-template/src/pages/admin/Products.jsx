@@ -5,7 +5,7 @@ import { useInventory } from '../../hooks/useInventory'
 import {
   railsCreateProduct, railsUpdateProduct, railsDeleteProduct,
   railsUpdateProductsStatus, railsUpdateProductsSortOrder,
-  railsGetOptionGroups, railsSaveOptionGroups,
+  railsGetOptionGroups, railsSaveOptionGroups, railsGetFeatureAccess,
 } from '../../services/storeApi'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -69,6 +69,7 @@ const Products = () => {
   const [optionGroups, setOptionGroups] = useState([])
   const [pizzaConfig, setPizzaConfig] = useState(emptyPizzaConfig())
   const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [advancedPizzaEnabled, setAdvancedPizzaEnabled] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -98,6 +99,17 @@ const Products = () => {
       // Cache is only a speed aid.
     }
   }
+
+  useEffect(() => {
+    let active = true
+    railsGetFeatureAccess()
+      .then((payload) => {
+        const access = payload?.feature_access || payload
+        if (active) setAdvancedPizzaEnabled((access?.allowed || []).includes('advanced_pizza'))
+      })
+      .catch(() => active && setAdvancedPizzaEnabled(false))
+    return () => { active = false }
+  }, [])
 
   const pastelOptionGroups = [
     {
@@ -1124,7 +1136,7 @@ const Products = () => {
                 options={[
                   { value: 'simple', label: 'Simples' },
                   { value: 'customizable', label: 'Customizavel' },
-                  { value: 'pizza', label: 'Pizza' },
+                  ...(advancedPizzaEnabled ? [{ value: 'pizza', label: 'Pizza Avancada' }] : []),
                 ]}
               />
               <div className="rounded-lg border border-dark-700 bg-dark-900 p-3 text-sm text-gray-300">

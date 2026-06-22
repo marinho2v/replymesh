@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class MotoboysController < BaseController
+        before_action -> { require_feature!("motoboys") }
         before_action :set_motoboy, only: %i[show update destroy]
 
         def index

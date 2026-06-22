@@ -3,6 +3,7 @@ module Api
     module Store
       module Whatsapp
         class InstancesController < Api::V1::Store::BaseController
+          before_action -> { require_feature!("whatsapp_basic") }, except: %i[index]
           before_action :reject_non_automatic_mode!, only: %i[ensure status qrcode]
           before_action :set_instance, only: %i[status qrcode]
 

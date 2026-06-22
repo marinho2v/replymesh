@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class AppBannersController < BaseController
+        before_action -> { require_feature!("banners") }
         before_action :set_banner, only: %i[show update destroy]
 
         def index

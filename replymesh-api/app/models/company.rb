@@ -74,6 +74,9 @@ class Company < ApplicationRecord
   validates :ssl_status, inclusion: { in: SSL_STATUSES }, if: -> { has_attribute?(:ssl_status) }
   validates :status, inclusion: { in: STATUSES }
   validates :plan_status, inclusion: { in: PLAN_STATUSES }
+  validates :monthly_price_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :free_period_days, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :contract_type, inclusion: { in: %w[monthly quarterly semiannual annual custom] }
   validate :slug_is_not_reserved
   validate :custom_domain_has_valid_format
 

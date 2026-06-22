@@ -3,6 +3,10 @@ module Api
     module Public
       class WheelController < BaseController
         def promotions
+          unless FeatureGate.enabled?(current_company, "roulette")
+            return render_ok(roulette_active: false, promotions: [])
+          end
+
           service = WheelService.new(company: current_company)
           roulette_active = service.promotion_active?
 
@@ -13,15 +17,18 @@ module Api
         end
 
         def profile
+          return unless require_public_feature!("roulette")
           render_ok(WheelService.new(company: current_company).profile(phone: params[:phone]))
         end
 
         def prizes
+          return unless require_public_feature!("roulette")
           service = WheelService.new(company: current_company)
           render_ok(prizes: service.promotion_active? ? service.public_prizes : [])
         end
 
         def spin
+          return unless require_public_feature!("roulette")
           unless WheelService.new(company: current_company).promotion_active?
             return render_ok(success: false, message: "Nenhuma promocao ativa no momento")
           end

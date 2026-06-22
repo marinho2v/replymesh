@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class CashSessionsController < BaseController
+        before_action -> { require_feature!("cashier") }
         before_action :set_session, only: %i[show close]
 
         # GET /store/cash_sessions

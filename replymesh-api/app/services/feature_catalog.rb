@@ -48,7 +48,14 @@ class FeatureCatalog
     ["waiter_commands", "Comandas", "pro", "restaurante_salao", "Comandas e consumo de mesa."],
     ["advanced_reports", "Relatorios avancados", "pro", "gestao_avancada", "Relatorios detalhados."],
     ["priority_support", "Suporte prioritario", "pro", "gestao_avancada", "Atendimento priorizado."],
-    ["pos_counter", "PDV / Balcao", "start", "vendas", "Venda presencial rapida no balcao."]
+    ["pos_counter", "PDV / Balcao", "start", "vendas", "Venda presencial rapida no balcao."],
+    ["promotions", "Promocoes", "pro", "fidelizacao", "Campanhas promocionais da loja."],
+    ["banners", "Banners", "pro", "fidelizacao", "Banners promocionais."],
+    ["whatsapp_manual", "WhatsApp Manual", "start", "whatsapp", "Envio manual de mensagens preparadas."],
+    ["mercado_pago", "Mercado Pago", "pro", "pagamentos", "Integracao com Mercado Pago."],
+    ["pix", "PIX", "pro", "pagamentos", "Pagamento PIX no checkout."],
+    ["advanced_pizza", "Pizzaria Avancada", "pro", "segmentos", "Produtos e pedidos de pizza avancada."],
+    ["custom_domain", "Dominio Proprio", "pro", "dominio", "Dominio personalizado da empresa."]
   ].map { |key, label, minimum_plan, group, description| Feature.new(key:, label:, group:, minimum_plan:, description:) }.freeze
 
   PLAN_COPY = {

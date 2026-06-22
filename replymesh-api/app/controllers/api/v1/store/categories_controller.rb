@@ -2,6 +2,7 @@ module Api
   module V1
     module Store
       class CategoriesController < BaseController
+        before_action -> { require_feature!("categories") }
         before_action :set_category, only: %i[show update destroy]
 
         def index
