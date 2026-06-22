@@ -126,10 +126,6 @@ export function LandingPage() {
             <a href="#clientes">Clientes</a>
             <Link to="/central-de-ajuda">Suporte</Link>
           </nav>
-          <div className="nav-right">
-            <Link to="/login" className="enter">Entrar</Link>
-            <Link to="/login" className="btn btn-white">Testar grátis</Link>
-          </div>
           <button className="menu-btn" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18"/>
@@ -149,10 +145,6 @@ export function LandingPage() {
               Cardápio digital, pedidos online, WhatsApp automático, estoque, motoboy, impressão automática e relatórios em uma única plataforma.
             </p>
             <div className="hero-cta">
-              <Link to="/login" className="btn btn-white">
-                Testar grátis
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </Link>
               <a href="#recursos" className="btn btn-ghost">
                 Ver demonstração
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/></svg>
@@ -313,7 +305,6 @@ export function LandingPage() {
               <h2>Seu delivery <span className="g">merece</span><br/>uma plataforma profissional.</h2>
               <p>Controle pedidos, entregas, estoque, atendimento e aumente suas vendas com a {platformName}.</p>
               <div className="cta-actions">
-                <Link to="/login" className="btn btn-white">Testar grátis agora</Link>
                 <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" className="btn btn-ghost">Plano empresarial</a>
               </div>
             </div>

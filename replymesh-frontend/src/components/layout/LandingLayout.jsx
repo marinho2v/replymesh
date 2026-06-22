@@ -64,10 +64,6 @@ export function LandingLayout({ children }) {
             <Link to="/clientes" onClick={() => setMenuOpen(false)}>Clientes</Link>
             <Link to="/central-de-ajuda" onClick={() => setMenuOpen(false)}>Suporte</Link>
           </nav>
-          <div className="nav-right">
-            <Link to="/login" className="enter">Entrar</Link>
-            <Link to="/login" className="btn btn-white">Testar grátis</Link>
-          </div>
           <button className="menu-btn" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18"/>

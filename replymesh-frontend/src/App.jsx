@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useRoutes } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout.jsx";
 import { Toast } from "./components/shared/Toast.jsx";
+import { productionDomainRedirect } from "./lib/productionDomains.js";
 import { routes } from "./router/routes.jsx";
 import { api, clearSession, getAuthToken, getStoredUser } from "./services/api.js";
 
@@ -13,6 +14,15 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(() => getStoredUser());
   const [token, setToken] = useState(() => (getStoredUser() ? getAuthToken() : null));
+  const domainRedirect = productionDomainRedirect({
+    hostname: window.location.hostname,
+    pathname: location.pathname,
+    hasSession: Boolean(token && user),
+  });
+
+  useEffect(() => {
+    if (domainRedirect) window.location.replace(domainRedirect);
+  }, [domainRedirect]);
 
   const showToast = useCallback((msg, kind = "info") => {
     setToast({ msg, kind });
@@ -62,6 +72,8 @@ export default function App() {
   };
 
   const element = useRoutes(routes(showToast, { onLogin: handleLogin }));
+
+  if (domainRedirect) return null;
 
   const PUBLIC_PATHS = [
     "/",
