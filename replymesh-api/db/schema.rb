@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_22_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_22_023100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1054,7 +1054,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_010000) do
     t.index ["store_ai_conversation_id"], name: "index_store_ai_messages_on_store_ai_conversation_id"
   end
 
+  create_table "store_ai_carts", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "store_ai_conversation_id", null: false
+    t.string "customer_phone", null: false
+    t.string "stage", default: "greeting", null: false
+    t.jsonb "items", default: [], null: false
+    t.jsonb "selected_options", default: {}, null: false
+    t.jsonb "delivery_address", default: {}, null: false
+    t.integer "delivery_fee_cents", default: 0, null: false
+    t.string "payment_method"
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "discount_cents", default: 0, null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "expires_at", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "customer_phone", "stage"], name: "index_store_ai_carts_lookup"
+    t.index ["company_id"], name: "index_store_ai_carts_on_company_id"
+    t.index ["expires_at"], name: "index_store_ai_carts_on_expires_at"
+    t.index ["store_ai_conversation_id"], name: "index_store_ai_carts_on_store_ai_conversation_id"
+  end
+
   create_table "store_ai_settings", force: :cascade do |t|
+    t.boolean "ai_auto_reply_enabled", default: false, null: false
+    t.integer "ai_daily_message_limit", default: 100, null: false
+    t.string "ai_mode", default: "answers", null: false
+    t.string "ai_model"
+    t.integer "ai_monthly_message_limit", default: 3000, null: false
+    t.integer "ai_monthly_token_limit", default: 300000, null: false
+    t.string "ai_provider", default: "anthropic", null: false
+    t.boolean "ai_sales_mode_enabled", default: false, null: false
     t.boolean "allow_delivery", default: true, null: false
     t.boolean "allow_hours", default: true, null: false
     t.boolean "allow_order_status", default: true, null: false
@@ -1062,16 +1093,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_010000) do
     t.boolean "allow_payments", default: true, null: false
     t.boolean "allow_products", default: true, null: false
     t.boolean "allow_promotions", default: true, null: false
+    t.boolean "allow_address_update", default: true, null: false
+    t.boolean "apply_coupon_enabled", default: true, null: false
     t.string "assistant_name", default: "Assistente da Loja", null: false
+    t.boolean "auto_cart_enabled", default: false, null: false
     t.boolean "auto_reply_whatsapp", default: false, null: false
+    t.boolean "auto_generate_mercadopago_pix", default: false, null: false
+    t.boolean "calculate_delivery_fee", default: true, null: false
     t.bigint "company_id", null: false
+    t.boolean "confirm_saved_address", default: true, null: false
+    t.boolean "create_customer", default: true, null: false
+    t.boolean "create_order_after_confirmation", default: false, null: false
     t.datetime "created_at", null: false
     t.integer "daily_limit", default: 100, null: false
     t.boolean "enabled", default: false, null: false
+    t.boolean "handoff_on_request", default: true, null: false
+    t.boolean "handoff_on_unknown", default: true, null: false
+    t.boolean "identify_customer_by_phone", default: true, null: false
     t.text "initial_message", default: "Ola! Como posso ajudar?", null: false
     t.string "model"
+    t.boolean "offer_cash", default: true, null: false
+    t.boolean "offer_pix", default: true, null: false
+    t.boolean "pause_after_order_confirmation", default: true, null: false
+    t.boolean "pause_on_attendant_reply", default: true, null: false
+    t.boolean "send_pix_copy_paste", default: true, null: false
     t.string "tone", default: "simpatico, objetivo e natural", null: false
     t.datetime "updated_at", null: false
+    t.boolean "verify_delivery_area", default: true, null: false
+    t.boolean "verify_store_hours", default: true, null: false
+    t.boolean "wait_payment_confirmation", default: true, null: false
+    t.index ["ai_mode"], name: "index_store_ai_settings_on_ai_mode"
+    t.index ["ai_provider"], name: "index_store_ai_settings_on_ai_provider"
     t.index ["company_id"], name: "index_store_ai_settings_on_company_id", unique: true
     t.index ["enabled", "auto_reply_whatsapp"], name: "index_store_ai_settings_on_enabled_and_auto_reply_whatsapp"
   end
@@ -1522,6 +1574,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_010000) do
   add_foreign_key "products", "categories", on_delete: :restrict
   add_foreign_key "products", "companies", on_delete: :cascade
   add_foreign_key "products", "inventory_items", column: "stock_item_id", on_delete: :nullify
+  add_foreign_key "store_ai_carts", "companies"
+  add_foreign_key "store_ai_carts", "store_ai_conversations"
   add_foreign_key "store_ai_conversations", "companies"
   add_foreign_key "store_ai_conversations", "customers"
   add_foreign_key "store_ai_messages", "store_ai_conversations"

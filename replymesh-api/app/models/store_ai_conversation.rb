@@ -2,6 +2,7 @@ class StoreAiConversation < ApplicationRecord
   belongs_to :company
   belongs_to :customer, optional: true
   has_many :store_ai_messages, dependent: :destroy
+  has_one :store_ai_cart, dependent: :destroy
 
   validates :channel, inclusion: { in: %w[simulator whatsapp web] }
   validates :status, inclusion: { in: %w[open closed handed_off] }

@@ -26,6 +26,8 @@
   def call
     return response("A IA da loja esta desativada.", "disabled", []) unless @settings.enabled? || @simulate
     return response("Escreva uma pergunta para testar a IA da loja.", "blocked", []) if @question.blank?
+    return sales_response if @settings.respond_to?(:sales_mode?) && @settings.sales_mode?
+
     @intent = StoreAiIntentClassifier.call(@question)
     return ignored_response if @intent == :trivial
     return response(human_handoff_answer, "handoff", []) if @intent == :human_request
@@ -70,17 +72,40 @@
   private
 
   def call_provider(chunks, conversation)
-    return nil unless @global.api_key_configured?
+    provider = store_provider
+    return nil if provider == "disabled"
+    return nil if provider == "anthropic" && !@global.api_key_configured?
 
     AiProviderService.build(
-      provider: @global.provider,
-      api_key: @global.api_key,
-      model: @settings.model.presence || @global.model
+      provider: provider,
+      api_key: api_key_for(provider),
+      model: @settings.effective_model(@global.model)
     ).chat(
       system_prompt: system_prompt(chunks),
       user_message: prompt_for(chunks, conversation),
       max_tokens: 450
     )
+  end
+
+  def sales_response
+    result = StoreAiSalesService.call(
+      company: @company,
+      user: @user,
+      question: @question,
+      phone: @phone,
+      settings: @settings,
+      global: @global,
+      simulate: @simulate
+    ).to_h
+
+    response(
+      result[:answer],
+      result[:status],
+      [],
+      tokens: estimate_tokens(@question + result[:answer].to_s),
+      provider_called: result[:provider_called],
+      fallback: result[:fallback]
+    ).merge(result)
   end
 
   def system_prompt(chunks)
@@ -348,8 +373,8 @@
       company: @company,
       user: @user,
       assistant_type: "store_ai",
-      provider: @global.provider,
-      model: @settings.model.presence || @global.model,
+      provider: store_provider,
+      model: @settings.effective_model(@global.model),
       total_tokens: total_tokens,
       estimated_cost_usd: estimate_cost(total_tokens),
       response_time_ms: elapsed_ms,
@@ -366,6 +391,24 @@
       response_time_ms: elapsed_ms,
       tokens_estimated: total_tokens
     }
+  end
+
+  def store_provider
+    provider = @settings.respond_to?(:effective_provider) ? @settings.effective_provider : @global.provider
+    provider == "claude" ? "anthropic" : provider
+  end
+
+  def api_key_for(provider)
+    case provider
+    when "groq"
+      ENV["GROQ_API_KEY"]
+    when "openai"
+      ENV["OPENAI_API_KEY"]
+    when "anthropic", "claude"
+      @global.api_key
+    else
+      nil
+    end
   end
 
   def ignored_response

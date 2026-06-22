@@ -1,6 +1,10 @@
 class AiProviderService
   PROVIDERS = {
-    "claude" => ClaudeAiService
+    "claude" => ClaudeAiService,
+    "anthropic" => ClaudeAiService,
+    "groq" => GroqAiService,
+    "openai" => OpenaiAiService,
+    "disabled" => DisabledAiService
   }.freeze
 
   def self.build(provider:, api_key:, model:)

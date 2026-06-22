@@ -56,6 +56,7 @@ class Company < ApplicationRecord
   has_many :ai_assistant_logs,         dependent: :nullify
   has_one  :store_ai_setting,          dependent: :destroy
   has_many :store_ai_conversations,    dependent: :destroy
+  has_many :store_ai_carts,            dependent: :destroy
   has_many :ai_usage_logs,             dependent: :nullify
   has_many :system_updates,            dependent: :nullify
   has_many :system_update_reads,       dependent: :destroy
