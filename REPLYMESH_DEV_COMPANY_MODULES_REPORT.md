@@ -185,4 +185,4 @@ Observação: o container local tem `RAILS_ENV=development` por padrão; por iss
 
 ## Commit DEV
 
-Hash do commit dev: 6617412
+Hash do commit dev da implementação: c8d21b4
