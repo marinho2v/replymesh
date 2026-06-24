@@ -192,6 +192,7 @@ module Api
             order_type:     o.order_type,
             payment_method: o.payment_method,
             payment_status: o.payment_status,
+            payment_mode: payment_mode_for(o),
             delivery_status: o.delivery_status,
             subtotal_cents: o.subtotal_cents,
             subtotal:       o.subtotal_brl,
@@ -202,6 +203,7 @@ module Api
             total_cents:    o.total_cents,
             total:          o.total_brl,
             total_brl:      o.total_brl,
+            payment_mode:   payment_mode_for(o),
             needs_change:   o.needs_change,
             change_for_cents: o.change_for_cents,
             change_for:     cents_to_brl(o.change_for_cents),
@@ -289,6 +291,13 @@ module Api
             state: order.state,
             reference: order.reference
           }
+        end
+
+        def payment_mode_for(order)
+          return nil unless order.payment_method == "pix"
+          return "mercadopago" if order.external_payment_id.present? || order.payment_status == "pending_payment"
+
+          "manual"
         end
 
         def cents_to_brl(value)

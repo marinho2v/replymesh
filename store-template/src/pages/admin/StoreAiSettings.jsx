@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, ChevronLeft, CheckCircle2, Clock3, Lock, MessageCircle, PlayCircle, Save, ShoppingBag, Zap } from 'lucide-react'
+import { Activity, Bot, ChevronLeft, CheckCircle2, Clock3, Lock, MessageCircle, PlayCircle, Save, ShoppingBag, Zap } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -268,10 +268,19 @@ const StoreAiSettings = () => {
           <p className="mt-1 text-sm text-gray-400">Atendimento virtual para vender e responder clientes pelo WhatsApp.</p>
         </div>
         {featureAllowed && (
-          <Button type="button" onClick={save} loading={saving}>
-            <Save size={18} className="mr-2" />
-            Salvar assistente
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to={`${basePath}/admin/ai/logs`}
+              className="inline-flex items-center rounded-lg border border-dark-600 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:border-dark-400"
+            >
+              <Activity size={18} className="mr-2" />
+              Ver logs
+            </Link>
+            <Button type="button" onClick={save} loading={saving}>
+              <Save size={18} className="mr-2" />
+              Salvar assistente
+            </Button>
+          </div>
         )}
       </div>
 

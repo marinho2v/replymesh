@@ -12,6 +12,7 @@ RSpec.describe "Mercado Pago webhook", type: :request do
   end
 
   before do
+    host! "localhost"
     settings.update!(
       pix_provider: "mercadopago",
       mercadopago_enabled: true,

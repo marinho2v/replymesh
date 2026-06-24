@@ -265,9 +265,10 @@ Rails.application.routes.draw do
         get   "ai/settings", to: "ai#settings"
         post  "ai/chat",     to: "ai#chat"
 
-        get   "store_ai/settings", to: "store_ai#settings"
-        patch "store_ai/settings", to: "store_ai#update_settings"
-        post  "store_ai/simulate", to: "store_ai#simulate"
+          get   "store_ai/settings", to: "store_ai#settings"
+          patch "store_ai/settings", to: "store_ai#update_settings"
+          post  "store_ai/simulate", to: "store_ai#simulate"
+          get   "store_ai/logs", to: "store_ai#logs"
 
         get  "marketing/customers", to: "marketing#customers"
         get  "marketing/campaigns", to: "marketing#campaigns"

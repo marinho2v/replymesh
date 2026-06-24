@@ -33,7 +33,16 @@ const itemOptionsText = (item) => (
 
 const PaymentSummary = ({ order }) => (
   <div>
-    <p>{PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method || '-'}</p>
+    <p>
+      {order.payment_method === 'pix' && order.payment_mode === 'manual'
+        ? 'Pix manual'
+        : PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method || '-'}
+    </p>
+    {order.payment_method === 'pix' && order.payment_mode === 'manual' && order.payment_status !== 'paid' && (
+      <p className="mt-1 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300">
+        Aguardando confirmacao da loja
+      </p>
+    )}
     {order.payment_method === 'money' && (
       <p className="mt-1 text-xs text-gray-500">
         Troco: {order.needs_change ? `para ${formatCurrency(order.change_for)}` : 'nao precisa'}

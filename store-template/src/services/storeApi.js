@@ -421,3 +421,9 @@ export const railsSimulateStoreAi = ({ message, phone }) =>
     headers: h(),
     body: { message, phone },
   })
+
+export const railsGetStoreAiLogs = (period = 'today') =>
+  request('/store/store_ai/logs', {
+    headers: h(),
+    params: { period },
+  })

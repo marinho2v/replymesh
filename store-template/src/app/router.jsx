@@ -46,6 +46,7 @@ const CashRegister = lazy(() => import('../pages/admin/CashRegister'))
 const Tables = lazy(() => import('../pages/admin/Tables'))
 const Settings = lazy(() => import('../pages/admin/Settings'))
 const StoreAiSettings = lazy(() => import('../pages/admin/StoreAiSettings'))
+const StoreAiLogs = lazy(() => import('../pages/admin/StoreAiLogs'))
 const Whatsapp = lazy(() => import('../pages/admin/Whatsapp'))
 const WhatsappQrCode = lazy(() => import('../pages/admin/WhatsappQrCode'))
 const WhatsappTemplates = lazy(() => import('../pages/admin/WhatsappTemplates'))
@@ -234,6 +235,7 @@ const adminChildren = [
   { path: 'marketing-whatsapp', element: protectedPage(MarketingWhatsapp, ['admin']) },
   { path: 'sales-recovery', element: protectedPage(SalesRecovery, ['admin']) },
   { path: 'ai', element: protectedPage(StoreAiSettings, ['admin']) },
+  { path: 'ai/logs', element: protectedPage(StoreAiLogs, ['admin']) },
   { path: 'inteligencia-artificial', element: protectedPage(StoreAiSettings, ['admin']) },
   { path: 'motoboys', element: page(Motoboys) },
   { path: 'inventory', element: protectedPage(Inventory, ['admin']) },

@@ -27,6 +27,32 @@ module Api
           render_ok(result)
         end
 
+        def logs
+          range = logs_range(params[:period])
+          conversations = current_company.store_ai_conversations
+            .includes(:customer, :store_ai_messages)
+            .where(created_at: range)
+            .order(created_at: :desc)
+            .limit(100)
+
+          usage_logs = current_company.ai_usage_logs
+            .where(assistant_type: "store_ai", created_at: range)
+            .order(:created_at)
+            .to_a
+          orders = current_company.orders
+            .where(legacy_source: "whatsapp_ai", created_at: range)
+            .order(:created_at)
+            .to_a
+
+          render_ok(
+            logs: conversations.flat_map { |conversation|
+              serialize_conversation_logs(conversation, usage_logs, orders)
+            }.sort_by { |item| item[:created_at] }.reverse.first(200),
+            company: current_company.slice(:id, :name, :slug),
+            period: params[:period].presence || "today"
+          )
+        end
+
         private
 
         def setting
@@ -67,6 +93,71 @@ module Api
             estimated_saving_minutes: saved_minutes,
             estimated_saving_label: saved_minutes.positive? ? "#{saved_minutes} min" : "0 min"
           }
+        end
+
+        def logs_range(period)
+          case period.to_s
+          when "yesterday"
+            1.day.ago.all_day
+          when "7days"
+            6.days.ago.beginning_of_day..Time.current.end_of_day
+          else
+            Time.current.all_day
+          end
+        end
+
+        def serialize_conversation_logs(conversation, usage_logs, orders)
+          messages = conversation.store_ai_messages.sort_by(&:created_at)
+          messages.each_with_index.filter_map do |message, index|
+            next unless message.role == "assistant"
+
+            question = messages[0...index].reverse.find { |item| item.role == "user" }
+            usage = nearest_record(usage_logs, message.created_at)
+            order = orders.find do |item|
+              same_phone?(item.customer_phone, conversation.phone) &&
+                (item.created_at - message.created_at).abs <= 30.seconds
+            end
+            status = usage&.status || (conversation.status == "handed_off" ? "handoff" : "success")
+
+            {
+              id: message.id,
+              conversation_id: conversation.id,
+              customer: conversation.customer&.full_name,
+              phone: masked_phone(conversation.phone),
+              question: question&.content,
+              answer: message.content,
+              response_time_ms: message.response_time_ms.to_i.nonzero? || usage&.response_time_ms.to_i,
+              tokens: message.tokens_used.to_i.nonzero? || usage&.total_tokens.to_i,
+              provider: usage&.provider.presence || "sales_flow",
+              status: status,
+              order_created: order.present?,
+              order_number: order&.order_number,
+              error: status.in?(%w[error fallback blocked]) ? message.content : nil,
+              reason: conversation.handoff_reason,
+              channel: conversation.channel,
+              created_at: message.created_at
+            }
+          end
+        end
+
+        def nearest_record(records, timestamp)
+          records
+            .select { |item| (item.created_at - timestamp).abs <= 10.seconds }
+            .min_by { |item| (item.created_at - timestamp).abs }
+        end
+
+        def same_phone?(left, right)
+          left_digits = left.to_s.gsub(/\D/, "")
+          right_digits = right.to_s.gsub(/\D/, "")
+          left_digits.present? && right_digits.present? &&
+            (left_digits == right_digits || left_digits.last(11) == right_digits.last(11))
+        end
+
+        def masked_phone(value)
+          digits = value.to_s.gsub(/\D/, "")
+          return "-" if digits.blank?
+
+          "••••#{digits.last(4)}"
         end
 
       end

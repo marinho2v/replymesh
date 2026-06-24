@@ -5,6 +5,99 @@ Status: **IA VENDEDORA COM GROQ COM PENDÊNCIAS**
 Data: 2026-06-22
 Branch: `dev`
 
+## Fase 2 da IA vendedora em 2026-06-24
+
+Status: **IA VENDEDORA DE DELIVERY VALIDADA NA DEV**
+
+### Experiencia comercial
+
+- saudacoes agora identificam cliente existente ou solicitam o nome do cliente novo;
+- clientes recebem de 3 a 5 recomendacoes reais com nome e preco;
+- recomendacoes priorizam quantidade vendida, destaque, promocao e produtos recentes;
+- selecao numerada continua vinculada somente aos produtos da empresa atual;
+- apos o primeiro item, a IA oferece no maximo um adicional relevante, priorizando bebida, acompanhamento, sobremesa ou combo;
+- recusa do adicional segue imediatamente para identificacao/endereco, sem insistencia.
+
+### Busca e fotos
+
+- busca ampliada para nome, descricao, categoria, ingredientes descritos e palavras relacionadas;
+- termos como coca, refri, batata, lanche, hamburguer, costela, bacon, cheddar, doce e combo recebem expansao segura;
+- links publicos com `produto=slug` selecionam somente produto ativo da empresa atual;
+- foto sempre usa URL publica da pagina do produto, com descricao e preco atualizado;
+- caminhos internos de imagem nunca sao enviados ao cliente.
+
+### Logs por empresa
+
+- nova pagina: `Admin > Inteligencia Artificial > Ver logs`;
+- nova rota: `/admin/ai/logs`;
+- filtros: Hoje, Ontem e 7 dias;
+- exibe cliente, telefone mascarado, pergunta, resposta, tempo, tokens, provider, status, pedido criado, erro e motivo de handoff;
+- endpoint e consulta permanecem isolados pela empresa autenticada;
+- nenhum token, chave ou telefone completo e exibido.
+
+### Validacao
+
+- 24 exemplos do fluxo vendedor, checkout e pagamentos aprovados;
+- 1 exemplo da API multiempresa de logs aprovado;
+- build completo do Store aprovado com a nova tela;
+- sintaxe Ruby e `git diff --check` aprovados;
+- Carina, WhatsApp manual, Evolution, Mercado Pago, Painel Master, main e VPS nao foram alterados.
+
+## Correcao do fechamento de pedido real e pagamentos em 2026-06-23
+
+Status: **IA VENDEDORA CRIANDO PEDIDOS NA DEV**
+
+Foi concluida a integracao dos dois requisitos complementares:
+
+1. fechamento seguro de pedido real pela IA vendedora;
+2. separacao entre Pix automatico Mercado Pago e Pix manual da loja.
+
+### Pedido real
+
+- o pedido somente e criado depois da resposta final `CONFIRMAR`, incluindo variacoes seguras como `confirma`, `confirmo`, `finalizar` e `pode confirmar`;
+- a criacao reutiliza `CheckoutService`, o mesmo servico seguro do checkout publico;
+- produtos, precos, taxa, cliente e endereco sao recalculados/validados no backend;
+- a origem e registrada como `whatsapp_ai`;
+- o pedido entra na tabela normal de pedidos e passa a ser visto pelo polling do painel, contador, dashboard e aviso sonoro;
+- a conversa e encerrada por 30 minutos depois da criacao, permitindo que o fluxo normal de status assuma;
+- falhas tecnicas recebem log seguro e mensagem amigavel, sem stacktrace para o cliente.
+
+### Cliente
+
+- cliente existente e localizado pelo telefone e pode reutilizar endereco salvo;
+- cliente novo informa o nome antes do endereco;
+- o cadastro do novo cliente ocorre somente dentro da confirmacao final do checkout;
+- o telefone continua com unicidade por empresa, evitando duplicacao.
+
+### Pagamentos
+
+- dinheiro pergunta sobre troco e grava `needs_change`/`change_for_cents`;
+- cartao pergunta credito ou debito e grava o tipo na observacao do pedido;
+- Pix automatico somente e usado quando Mercado Pago esta ativo, configurado e liberado para a empresa;
+- Pix automatico reutiliza `MercadoPagoPixService`, grava o pedido como `pending_payment` e envia copia e cola/link;
+- webhook existente confirma pagamento e nao cria um segundo pedido;
+- Pix manual usa a chave/payload e beneficiario configurados na loja, permanece `pending` e exige confirmacao humana;
+- o painel identifica `Pix manual` com o alerta `Aguardando confirmacao da loja`;
+- sem qualquer Pix configurado, a IA oferece dinheiro ou cartao.
+
+### Produtos e foto
+
+- busca considera nome, descricao, categoria, nome parcial e link publico do produto;
+- recomendacoes priorizam quantidade vendida, destaque, promocao e ordenacao real da loja;
+- respostas sempre usam produtos ativos e precos atuais;
+- pedido de foto usa link publico completo do produto e nunca expoe caminho interno da imagem.
+
+### Validacoes desta correcao
+
+- 21 exemplos deterministas aprovados;
+- cenarios cobertos: Pix Mercado Pago, Pix manual, Pix indisponivel, webhook, dinheiro sem troco, dinheiro com troco, cartao credito/debito, cliente novo, recomendacao, link/foto e checkout normal;
+- `ruby -c` aprovado nos Ruby alterados;
+- build do Store aprovado;
+- `git diff --check` aprovado;
+- producao, VPS e branch `main` nao foram alteradas.
+
+Observacao: a suite antiga baseada em resposta textual livre do provider apresentou 7 comparacoes literais variaveis. Elas sao a mesma pendencia de determinismo ja registrada neste relatorio e nao afetaram os 21 testes de estado, pedido e pagamento.
+
 ## Validacao final em 2026-06-22
 
 Status mais recente: **IA GROQ VALIDADA NO SIMULADOR E DEV PRONTA PARA ENVIO**
