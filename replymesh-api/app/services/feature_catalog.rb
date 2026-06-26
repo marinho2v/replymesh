@@ -2,7 +2,7 @@ class FeatureCatalog
   Feature = Struct.new(:key, :label, :group, :minimum_plan, :description, keyword_init: true)
 
   START = %w[
-    dashboard orders products categories customers delivery_zones motoboys
+    dashboard orders checkout products categories customers delivery_zones motoboys
     motoboy_panel cashier basic_reports users whatsapp_basic support updates
     pos_counter
   ].freeze
@@ -17,6 +17,7 @@ class FeatureCatalog
   DEFINITIONS = [
     ["dashboard", "Dashboard", "start", "core", "Visao geral da operacao."],
     ["orders", "Pedidos", "start", "vendas", "Pedidos online e pedidos de balcao."],
+    ["checkout", "Checkout", "start", "vendas", "Finalizacao segura de pedidos."],
     ["products", "Produtos", "start", "vendas", "Cadastro de produtos."],
     ["categories", "Categorias", "start", "vendas", "Cadastro de categorias."],
     ["customers", "Clientes", "start", "vendas", "Base de clientes."],

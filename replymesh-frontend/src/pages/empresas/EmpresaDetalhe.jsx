@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { CoAvatar } from "../../components/ui/CoAvatar.jsx";
 import { Icon } from "../../components/ui/Icon.jsx";
-import { COMPANY_MODULE_PRESETS } from "../../config/companyModules.js";
+import {
+  COMPANY_MODULE_PRESETS,
+  CORE_MODULE_KEYS,
+  MODULE_GROUP_LABELS,
+  MODULE_PRESET_LABELS,
+} from "../../config/companyModules.js";
 import { api } from "../../services/api.js";
 
 const STATUS_LABELS = {
@@ -155,10 +160,26 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
     }
   };
 
-  const saveModules = async (moduleKeys) => {
+  const saveModules = async (moduleKeys, planBase, monthlyPriceCents, internalNote) => {
     setSavingModules(true);
     try {
-      const data = await api.updateCompanyModules(id, { module_keys: moduleKeys, internal_note: form.internal_note });
+      const updatedCompany = await api.updateCompany(id, {
+        company: {
+          monthly_price_cents: monthlyPriceCents,
+          internal_note: internalNote,
+        },
+      });
+      const data = await api.updateCompanyModules(id, {
+        module_keys: moduleKeys,
+        module_preset: planBase === "custom" ? null : planBase,
+        internal_note: internalNote,
+      });
+      setCompany(updatedCompany.company);
+      setForm((current) => ({
+        ...current,
+        monthly_price_cents: monthlyPriceCents,
+        internal_note: internalNote,
+      }));
       setFeatureAccess(data.feature_access);
       setModuleAccess(data.module_access);
       onToast?.("Módulos da empresa atualizados", "ok");
@@ -426,56 +447,108 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         <InfoCard icon="CreditCard" title="Assinatura" items={[["Plano", company.plan], ["Status", company.subscription_status || company.plan_status], ["Valor", company.monthly_price_cents != null ? `R$ ${(company.monthly_price_cents / 100).toFixed(2).replace(".", ",")}` : company.subscription_price_cents != null ? `R$ ${(company.subscription_price_cents / 100).toFixed(2).replace(".", ",")}` : "-"], ["Contrato", company.contract_type], ["Gratuidade", `${company.free_period_days || 0} dias`], ["Trial ate", formatDate(company.trial_ends_at)]]} />
         <InfoCard icon="Globe" title="Acesso" items={[["Dominio", company.primary_domain], ["Timezone", company.timezone], ["Idioma", company.default_locale], ["Atualizada", formatDate(company.updated_at)]]} />
         <WhatsappModeCard storeForm={storeForm} saving={savingWhatsappMode} onChange={changeWhatsappMode} />
-        <ModuleCard moduleAccess={moduleAccess} catalog={moduleCatalog} saving={savingModules} onSave={saveModules} />
+        <ModuleCard
+          moduleAccess={moduleAccess}
+          catalog={moduleCatalog}
+          saving={savingModules}
+          monthlyPriceCents={form.monthly_price_cents}
+          internalNote={form.internal_note}
+          onSave={saveModules}
+        />
         <FeatureCard featureAccess={featureAccess} savingFeature={savingFeature} onChange={changeFeatureMode} />
       </div>}
     </div>
   );
 }
 
-function ModuleCard({ moduleAccess, catalog, saving, onSave }) {
+function ModuleCard({ moduleAccess, catalog, saving, monthlyPriceCents, internalNote, onSave }) {
+  const [draft, setDraft] = useState(moduleAccess?.enabled || []);
+  const [planBase, setPlanBase] = useState(moduleAccess?.preset || "custom");
+  const [price, setPrice] = useState(monthlyPriceCents || 0);
+  const [note, setNote] = useState(internalNote || "");
+
+  useEffect(() => {
+    setDraft(moduleAccess?.enabled || []);
+    setPlanBase(moduleAccess?.preset || "custom");
+  }, [moduleAccess]);
+  useEffect(() => setPrice(monthlyPriceCents || 0), [monthlyPriceCents]);
+  useEffect(() => setNote(internalNote || ""), [internalNote]);
+
   if (!moduleAccess) {
-    return <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}><div className="company-info-title"><Icon name="Blocks" size={18} />Módulos</div><p className="muted">Carregando módulos...</p></section>;
+    return <section className="card card-pad company-info-card modules-panel"><div className="company-info-title"><Icon name="Blocks" size={18} />Plano e módulos</div><p className="muted">Carregando módulos...</p></section>;
   }
 
-  const enabled = moduleAccess.enabled || [];
+  const byKey = Object.fromEntries((catalog || []).map((item) => [item.key, item]));
   const groups = (catalog || []).reduce((result, item) => {
     result[item.group] ||= [];
     result[item.group].push(item);
     return result;
   }, {});
-  const toggle = (item) => {
-    if (item.essential && enabled.includes(item.key) && !window.confirm(`Desativar ${item.label} pode interromper funções básicas desta empresa. Continuar?`)) return;
-    onSave(enabled.includes(item.key) ? enabled.filter((key) => key !== item.key) : [...enabled, item.key]);
+  const addWithDependencies = (key, current) => {
+    const result = new Set(current);
+    const visit = (moduleKey) => {
+      result.add(moduleKey);
+      (byKey[moduleKey]?.dependencies || []).forEach(visit);
+    };
+    visit(key);
+    CORE_MODULE_KEYS.forEach((core) => result.add(core));
+    return [...result];
   };
-  const presets = {
-    basic: COMPANY_MODULE_PRESETS.basic,
-    operation: COMPANY_MODULE_PRESETS.operation,
-    complete: (catalog || []).map((item) => item.key),
+  const toggle = (item) => {
+    if (item.core || item.essential) return;
+    if (!draft.includes(item.key)) {
+      setDraft(addWithDependencies(item.key, draft));
+      setPlanBase("custom");
+      return;
+    }
+    const dependents = (item.dependents || []).filter((key) => draft.includes(key));
+    if (dependents.length) {
+      const names = dependents.map((key) => byKey[key]?.label || key).join(", ");
+      if (!window.confirm(`Este módulo é usado por: ${names}. Deseja desativar também esses recursos?`)) return;
+    }
+    setDraft(draft.filter((key) => key !== item.key && !dependents.includes(key)));
+    setPlanBase("custom");
+  };
+  const applyPreset = (preset) => {
+    setDraft(preset === "complete" ? (catalog || []).map((item) => item.key) : COMPANY_MODULE_PRESETS[preset]);
+    setPlanBase(preset);
   };
 
   return (
-    <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}>
-      <div className="company-info-title"><Icon name="Blocks" size={18} />Módulos da Empresa</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.basic)}>Básico</button>
-        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.operation)}>Operação</button>
-        <button className="btn btn-ghost" disabled={saving} onClick={() => onSave(presets.complete)}>Completo</button>
-        <span className="muted" style={{ alignSelf: "center" }}>{enabled.length} módulos liberados</span>
+    <section className="card card-pad company-info-card modules-panel">
+      <div className="modules-head">
+        <div><div className="company-info-title"><Icon name="Blocks" size={18} />Plano e módulos da empresa</div><p className="muted">Escolha uma base e personalize os recursos contratados por este cliente.</p></div>
+        <span className={`module-plan-badge ${planBase}`}>{MODULE_PRESET_LABELS[planBase] || "Personalizado"}</span>
       </div>
-      {Object.entries(groups).map(([group, items]) => (
-        <div key={group} style={{ marginTop: 16 }}>
-          <strong style={{ display: "block", marginBottom: 8, textTransform: "capitalize" }}>{group.replace("_", " ")}</strong>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 8 }}>
-            {items.map((item) => (
-              <label key={item.key} style={{ display: "flex", gap: 9, alignItems: "center", border: "1px solid var(--border)", borderRadius: 9, padding: 10, opacity: saving ? 0.6 : 1 }}>
-                <input type="checkbox" checked={enabled.includes(item.key)} disabled={saving} onChange={() => toggle(item)} />
-                <span><strong style={{ display: "block", fontSize: 13 }}>{item.label}{item.essential ? " *" : ""}</strong><small className="muted">{item.description}</small></span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
+      <div className="module-commercial-grid">
+        <div className="field"><label>Plano base</label><select value={planBase} onChange={(event) => event.target.value === "custom" ? setPlanBase("custom") : applyPreset(event.target.value)}><option value="basic">Básico</option><option value="operation">Operação</option><option value="complete">Completo</option><option value="custom">Personalizado</option></select></div>
+        <div className="field"><label>Valor mensal combinado</label><div className="money-input"><span>R$</span><input type="number" min="0" step="0.01" value={(Number(price || 0) / 100).toFixed(2)} onChange={(event) => setPrice(Math.round(Number(event.target.value || 0) * 100))} /></div></div>
+        <div className="field module-note"><label>Observação interna</label><textarea rows="2" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Condições comerciais ou observações deste cliente." /></div>
+      </div>
+      <div className="module-quick-actions">
+        <button className="btn btn-ghost" type="button" onClick={() => applyPreset("basic")}>Aplicar Básico</button>
+        <button className="btn btn-ghost" type="button" onClick={() => applyPreset("operation")}>Aplicar Operação</button>
+        <button className="btn btn-ghost" type="button" onClick={() => applyPreset("complete")}>Aplicar Completo</button>
+        <button className="btn btn-ghost" type="button" onClick={() => { setDraft([...CORE_MODULE_KEYS]); setPlanBase("custom"); }}>Limpar opcionais</button>
+        <span className="muted">{draft.length} módulos selecionados</span>
+      </div>
+      <div className="core-explanation"><Icon name="ShieldCheck" size={17} /><span>Dashboard, Produtos, Categorias, Pedidos e Checkout são obrigatórios para o funcionamento básico da loja.</span></div>
+      <div className="module-groups">
+        {Object.entries(groups).map(([group, items]) => <div className="module-group" key={group}>
+          <h4>{MODULE_GROUP_LABELS[group] || group}</h4>
+          <div className="module-grid">{items.map((item) => {
+            const checked = draft.includes(item.key) || item.core;
+            const dependencies = (item.dependencies || []).map((key) => byKey[key]?.label).filter(Boolean);
+            return <label className={`module-option ${checked ? "active" : ""} ${item.core ? "core" : ""}`} key={item.key}>
+              <input type="checkbox" checked={checked} disabled={saving || item.core} onChange={() => toggle(item)} />
+              <span className="module-check"><Icon name={checked ? "Check" : "Plus"} size={14} /></span>
+              <span className="module-copy"><strong>{item.label}</strong><small>{item.description}</small>{dependencies.length > 0 && <em>Depende de: {dependencies.join(", ")}</em>}</span>
+              {item.core && <span className="module-core-badge">Obrigatório</span>}
+            </label>;
+          })}</div>
+        </div>)}
+      </div>
+      <div className="module-save-row"><span className="muted">Alterações só entram em vigor ao salvar.</span><button className="btn btn-primary" type="button" disabled={saving} onClick={() => onSave(draft, planBase, price, note)}><Icon name={saving ? "LoaderCircle" : "Save"} size={16} className={saving ? "spin" : ""} />{saving ? "Salvando..." : "Salvar plano e módulos"}</button></div>
     </section>
   );
 }
@@ -526,6 +599,7 @@ function InfoCard({ icon, title, items }) {
 }
 
 function FeatureCard({ featureAccess, savingFeature, onChange }) {
+  const [open, setOpen] = useState(false);
   if (!featureAccess) {
     return <section className="card card-pad company-info-card"><div className="company-info-title"><Icon name="Lock" size={18} />Recursos</div><p className="muted">Carregando recursos...</p></section>;
   }
@@ -537,26 +611,22 @@ function FeatureCard({ featureAccess, savingFeature, onChange }) {
   const manualBlocked = featureAccess.manual_blocked?.length || 0;
 
   return (
-    <section className="card card-pad company-info-card" style={{ gridColumn: "1 / -1" }}>
-      <div className="company-info-title"><Icon name="Lock" size={18} />Plano e Recursos</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10, marginTop: 8 }}>
-        <div className="company-info-row"><span>Plano atual</span><strong>{featureAccess.plan?.name || "-"}</strong></div>
-        <div className="company-info-row"><span>Status</span><strong>{featureAccess.subscription_status || "-"}</strong></div>
-        <div className="company-info-row"><span>Herdados do plano</span><strong>{inherited}</strong></div>
-        <div className="company-info-row"><span>Extras liberados</span><strong>{manualAllowed}</strong></div>
-        <div className="company-info-row"><span>Bloqueados</span><strong>{manualBlocked}</strong></div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(310px,1fr))", gap: 10, marginTop: 14 }}>
-        {features.map((feature) => (
-          <FeatureToggle
-            key={feature.key}
-            feature={feature}
-            override={overrides[feature.key]}
-            saving={savingFeature === feature.key}
-            onChange={onChange}
-          />
-        ))}
-      </div>
+    <section className="card card-pad company-info-card advanced-access">
+      <button className="advanced-access-trigger" type="button" onClick={() => setOpen((current) => !current)}>
+        <span><span className="company-info-title"><Icon name="SlidersHorizontal" size={18} />Configurações avançadas de acesso</span><small>Ajustes finos para liberar, bloquear ou herdar recursos específicos. Use apenas quando precisar sobrescrever o plano da empresa.</small></span>
+        <Icon name={open ? "ChevronUp" : "ChevronDown"} size={20} />
+      </button>
+      {open && <>
+        <div className="advanced-summary">
+          <span>Plano <strong>{featureAccess.plan?.name || "-"}</strong></span>
+          <span>Herdados <strong>{inherited}</strong></span>
+          <span>Liberados manualmente <strong>{manualAllowed}</strong></span>
+          <span>Bloqueados manualmente <strong>{manualBlocked}</strong></span>
+        </div>
+        <div className="advanced-feature-grid">
+          {features.map((feature) => <FeatureToggle key={feature.key} feature={feature} override={overrides[feature.key]} saving={savingFeature === feature.key} onChange={onChange} />)}
+        </div>
+      </>}
     </section>
   );
 }
@@ -564,23 +634,24 @@ function FeatureCard({ featureAccess, savingFeature, onChange }) {
 function FeatureToggle({ feature, override, saving, onChange }) {
   const mode = feature.source === "manual_allow" ? "allow" : feature.source === "manual_block" ? "block" : "default";
   const expiresAt = toInputDate(override?.expires_at);
+  const core = CORE_MODULE_KEYS.includes(feature.key);
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 9, padding: 11, display: "grid", gap: 9 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
         <div>
-              <strong style={{ display: "block", fontSize: 13 }}>{feature.label}</strong>
+          <strong style={{ display: "block", fontSize: 13 }}>{feature.label} {core && <span className="module-core-badge">Obrigatório</span>}</strong>
           <span className="muted" style={{ fontSize: 12 }}>{feature.enabled ? statusLabel(feature.source) : `Exige plano ${feature.required_plan_label}`}</span>
         </div>
         <select
           value={mode}
-          disabled={saving}
+          disabled={saving || core}
           onChange={(event) => onChange(feature.key, event.target.value, expiresAt)}
           style={{ height: 32, border: "1px solid var(--border)", borderRadius: 8, padding: "0 8px", background: "#fff" }}
         >
           <option value="default">Herdar plano</option>
           <option value="allow">Liberar manual</option>
-          <option value="block">Bloquear manual</option>
+          {!core && <option value="block">Bloquear manual</option>}
         </select>
       </div>
       <div className="field" style={{ margin: 0 }}>

@@ -1,12 +1,14 @@
 class CompanyModuleAssignment
   def self.apply!(company:, module_keys:, actor:, internal_note: nil)
-    selected = Array(module_keys).map(&:to_s) & CompanyModuleCatalog.keys
+    selected = CompanyModuleCatalog.normalize_selection(module_keys)
     selected_features = CompanyModuleCatalog.all
                                             .select { |company_module| selected.include?(company_module.key) }
                                             .flat_map(&:features)
                                             .uniq
     all_features = CompanyModuleCatalog.all.flat_map(&:features).uniq
-    feature_modes = all_features.index_with { |feature_key| selected_features.include?(feature_key) ? "allow" : "block" }
+    feature_modes = all_features.index_with do |feature_key|
+      selected_features.include?(feature_key) || CompanyModuleCatalog.core_feature?(feature_key) ? "allow" : "block"
+    end
 
     CompanyFeatureOverride.transaction do
       feature_modes.each do |feature_key, mode|

@@ -15,10 +15,13 @@ class FeatureGate
       return result(false, feature_key, "pro", "unknown_feature", company) unless company && feature
 
       override = company.company_feature_overrides.find_by(feature_key: feature.key)
-      return result(false, feature.key, feature.minimum_plan, "manual_block", company) if override&.mode == "block"
+      if override&.mode == "block" && !CompanyModuleCatalog.core_feature?(feature.key)
+        return result(false, feature.key, feature.minimum_plan, "manual_block", company)
+      end
 
       subscription = current_subscription(company)
       return result(false, feature.key, feature.minimum_plan, "subscription_inactive", company, subscription) unless subscription_active?(company, subscription)
+      return result(true, feature.key, feature.minimum_plan, "core", company, subscription) if CompanyModuleCatalog.core_feature?(feature.key)
       return result(true, feature.key, feature.minimum_plan, "manual_allow", company, subscription) if override&.mode == "allow" && !override.expired?
 
       plan = subscription&.plan

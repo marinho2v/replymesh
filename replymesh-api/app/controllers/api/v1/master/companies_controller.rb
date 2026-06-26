@@ -160,6 +160,14 @@ module Api
               expires_at = attrs[:expires_at] || attrs["expires_at"]
               next unless FeatureCatalog.find(feature_key)
 
+              if mode == "block" && CompanyModuleCatalog.core_feature?(feature_key)
+                raise ActiveRecord::RecordInvalid.new(
+                  @company.company_feature_overrides.build(feature_key:, mode: "block").tap do |record|
+                    record.errors.add(:base, "Este recurso e obrigatorio para funcionamento da loja.")
+                  end
+                )
+              end
+
               if mode.blank? || mode == "default"
                 @company.company_feature_overrides.where(feature_key: feature_key).destroy_all
                 changed << { feature_key: feature_key, mode: "default" }
