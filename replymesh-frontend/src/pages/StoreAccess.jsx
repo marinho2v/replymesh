@@ -42,8 +42,7 @@ export function StoreAccess() {
   return (
     <main className="store-access-page">
       <header className="store-access-nav">
-        <Link to="/" className="store-access-brand"><img src="/mark.png" alt="" /> Replymesh</Link>
-        <Link to="/login" className="store-access-master">Painel Master</Link>
+        <a href="https://replymesh.cloud/" className="store-access-brand"><img src="/mark.png" alt="" /> Replymesh</a>
       </header>
 
       <section className="store-access-shell">

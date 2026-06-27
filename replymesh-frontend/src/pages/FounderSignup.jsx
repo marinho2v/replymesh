@@ -67,8 +67,8 @@ export function FounderSignup() {
   return (
     <main className="founder-page">
       <header className="founder-nav">
-        <Link to="/" className="founder-brand"><img src="/mark.png" alt="" /> Replymesh</Link>
-        <Link to="/entrar">Já tenho acesso</Link>
+        <a href="https://replymesh.cloud/" className="founder-brand"><img src="/mark.png" alt="" /> Replymesh</a>
+        <Link to="/entrar">Ja tenho acesso</Link>
       </header>
       <section className="founder-shell">
         <aside className="founder-intro">
