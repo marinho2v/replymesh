@@ -114,3 +114,47 @@ Foram adicionadas dependências compatíveis com React 18:
 - `npm run build` em `store-template`.
 - `git diff --check`.
 - Auditoria de segredos nos arquivos alterados.
+
+## Atualização — correção do mapa e simplificação do fluxo
+
+Status: implementado na branch `dev`.
+
+### Correções aplicadas
+
+- O mapa não abre mais com marcador falso quando a área não tem coordenada.
+- O centro inicial agora segue fallback seguro:
+  1. coordenada já salva da área;
+  2. cidade conhecida da loja/área quando disponível;
+  3. São Gonçalo/RJ como fallback final.
+- Foi removido o marcador visual que parecia indicar uma localização válida sem coordenada salva.
+- Foi adicionado aviso claro quando a área ainda não tem ponto:
+  - “Busque um ponto de referência para posicionar esta região no mapa.”
+- O lojista pode clicar no mapa para criar o ponto da região.
+- O marcador continua arrastável depois de criado.
+- A busca de ponto agora monta a consulta com ponto de referência, nome da área, cidade e UF.
+- A mensagem de sucesso da busca orienta o usuário a arrastar o marcador se precisar.
+- A mensagem de erro da busca ficou mais simples e útil para o lojista.
+
+### Modal reorganizado
+
+O cadastro ficou dividido em etapas:
+
+1. Dados da região
+2. Logística para o motoboy
+3. Ponto no mapa
+4. Variações de nome
+5. Avançado
+
+### Fluxo simplificado
+
+- Latitude e longitude seguem existindo somente no avançado.
+- Observação interna e slug foram movidos para o avançado.
+- Foi adicionado o botão “Testar esta região” dentro do modal.
+- O teste mostra como a região entraria na rota: grupo, distância e prioridade.
+
+### Compatibilidade preservada
+
+- Checkout público não foi alterado.
+- Área sem coordenada continua funcionando.
+- Rota do motoboy continua usando distância/prioridade disponíveis.
+- Pedidos antigos não são afetados.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useDeliveryZones } from '../../hooks/useDeliveryZones'
@@ -17,7 +17,6 @@ import { Modal } from '../../components/ui/Modal'
 import { Badge } from '../../components/ui/Badge'
 import {
   ChevronDown,
-  Clock,
   Edit,
   ExternalLink,
   LocateFixed,
@@ -28,6 +27,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { formatCurrency } from '../../utils/currency'
+import { getStoreSettings } from '../../services/settings'
 import { toast } from 'sonner'
 
 const initialFormData = {
@@ -49,19 +49,13 @@ const initialFormData = {
 }
 
 const defaultMapCenter = [-22.8268, -43.0634]
+const defaultMapLabel = 'Sao Goncalo/RJ'
 
 const areaIcon = L.divIcon({
   className: '',
   html: '<div style="width:28px;height:28px;border-radius:999px;background:#22c55e;border:3px solid #fff;box-shadow:0 12px 30px rgba(34,197,94,.35);"></div>',
   iconSize: [28, 28],
   iconAnchor: [14, 14],
-})
-
-const storeIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:22px;height:22px;border-radius:999px;background:#facc15;border:3px solid #111827;box-shadow:0 10px 25px rgba(250,204,21,.35);"></div>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
 })
 
 const normalizeSlug = (value) => (
@@ -88,6 +82,23 @@ const buildMapsSearchUrl = (query) => (
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || '')}`
 )
 
+const knownCityCenter = (value = '') => {
+  const city = String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (city.includes('sao goncalo')) return { center: [-22.8268, -43.0634], label: 'Sao Goncalo/RJ' }
+  if (city.includes('rio de janeiro')) return { center: [-22.9068, -43.1729], label: 'Rio de Janeiro/RJ' }
+  if (city.includes('niteroi')) return { center: [-22.8832, -43.1034], label: 'Niteroi/RJ' }
+  if (city.includes('itaborai')) return { center: [-22.7448, -42.8598], label: 'Itaborai/RJ' }
+  if (city.includes('marica')) return { center: [-22.9196, -42.8186], label: 'Marica/RJ' }
+  return null
+}
+
+const geocodeAddress = async (query) => {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
+  const response = await fetch(url, { headers: { Accept: 'application/json' } })
+  const payload = await response.json()
+  return payload?.[0] || null
+}
+
 const MapFocus = ({ center }) => {
   const map = useMap()
 
@@ -98,9 +109,16 @@ const MapFocus = ({ center }) => {
   return null
 }
 
-const DeliveryAreaMap = ({ formData, onPositionChange }) => {
+const MapClickHandler = ({ onPositionChange }) => {
+  useMapEvents({
+    click: (event) => onPositionChange(event.latlng.lat, event.latlng.lng),
+  })
+  return null
+}
+
+const DeliveryAreaMap = ({ formData, mapCenter, mapLabel, onPositionChange, onSearchReference }) => {
   const position = getPosition(formData)
-  const center = position || defaultMapCenter
+  const center = position || mapCenter || defaultMapCenter
 
   return (
     <div className="overflow-hidden rounded-2xl border border-dark-600 bg-dark-900">
@@ -110,20 +128,18 @@ const DeliveryAreaMap = ({ formData, onPositionChange }) => {
           Mapa da regiao
         </div>
         <p className="text-xs text-gray-400">
-          Ponto usado apenas para organizar rotas. O cliente nao vera isso.
+          Clique no mapa para marcar o ponto aproximado da regiao. O cliente nao vera isso.
         </p>
       </div>
 
       <div className="h-72">
         <MapContainer center={center} zoom={13} scrollWheelZoom className="h-full w-full">
           <MapFocus center={center} />
+          <MapClickHandler onPositionChange={onPositionChange} />
           <TileLayer
             attribution="&copy; OpenStreetMap"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={defaultMapCenter} icon={storeIcon}>
-            <Popup>Referencia da loja/cidade</Popup>
-          </Marker>
           {position && (
             <Marker
               position={position}
@@ -144,8 +160,15 @@ const DeliveryAreaMap = ({ formData, onPositionChange }) => {
       </div>
 
       {!position && (
-        <div className="border-t border-dark-600 px-4 py-3 text-sm text-gray-300">
-          Busque um ponto de referencia ou informe coordenadas nas configuracoes avancadas.
+        <div className="flex flex-col gap-3 border-t border-dark-600 px-4 py-3 text-sm text-gray-300 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-white">Busque um ponto de referencia para posicionar esta regiao no mapa.</p>
+            <p className="mt-1 text-xs text-gray-400">Centro atual: {mapLabel || defaultMapLabel}. Nenhum marcador sera salvo ate voce buscar ou clicar no mapa.</p>
+          </div>
+          <Button type="button" variant="secondary" onClick={onSearchReference}>
+            <LocateFixed size={16} className="mr-2" />
+            Buscar ponto
+          </Button>
         </div>
       )}
     </div>
@@ -163,10 +186,47 @@ const DeliveryZones = () => {
   const [testing, setTesting] = useState(false)
   const [locating, setLocating] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [storeSettings, setStoreSettings] = useState(null)
+  const [mapCenter, setMapCenter] = useState(defaultMapCenter)
+  const [mapLabel, setMapLabel] = useState(defaultMapLabel)
+  const [regionPreview, setRegionPreview] = useState(null)
 
   const referenceQuery = useMemo(() => (
-    [formData.reference_point, formData.city].filter(Boolean).join(', ')
-  ), [formData.reference_point, formData.city])
+    [
+      formData.reference_point,
+      formData.name,
+      formData.city || storeSettings?.city,
+      storeSettings?.state || storeSettings?.uf || 'RJ',
+    ].filter(Boolean).join(', ')
+  ), [formData.reference_point, formData.name, formData.city, storeSettings])
+
+  useEffect(() => {
+    getStoreSettings()
+      .then(settings => {
+        setStoreSettings(settings)
+        const known = knownCityCenter([settings.city, settings.state || settings.uf].filter(Boolean).join(', '))
+        if (known) {
+          setMapCenter(known.center)
+          setMapLabel(known.label)
+        }
+      })
+      .catch(() => {
+        // Configuracao da loja nao deve bloquear a tela de areas.
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!modalOpen || getPosition(formData)) return
+
+    const known = knownCityCenter(formData.city || storeSettings?.city)
+    if (known) {
+      setMapCenter(known.center)
+      setMapLabel(known.label)
+    } else {
+      setMapCenter(defaultMapCenter)
+      setMapLabel(defaultMapLabel)
+    }
+  }, [formData.city, formData.latitude, formData.longitude, modalOpen, storeSettings])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -226,6 +286,11 @@ const DeliveryZones = () => {
       internal_note: zone.internal_note || zone.notes || '',
       is_active: zone.is_active !== false,
     })
+    const position = getPosition({ latitude: zone.latitude, longitude: zone.longitude })
+    if (position) {
+      setMapCenter(position)
+      setMapLabel(zone.name || 'Ponto salvo da regiao')
+    }
     setAdvancedOpen(Boolean(zone.latitude && zone.longitude))
     setModalOpen(true)
   }
@@ -269,22 +334,22 @@ const DeliveryZones = () => {
 
     try {
       setLocating(true)
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(referenceQuery)}`
-      const response = await fetch(url, { headers: { Accept: 'application/json' } })
-      const payload = await response.json()
-      const result = payload?.[0]
+      const result = await geocodeAddress(referenceQuery)
 
       if (!result) {
-        toast.error('Nao encontrei esse ponto. Voce pode abrir no Google Maps ou informar coordenadas avancadas.')
+        toast.error('Nao encontramos esse ponto. Tente informar bairro, cidade ou um local conhecido.')
         return
       }
 
+      const nextCenter = [Number(result.lat), Number(result.lon)]
       setFormData(prev => ({
         ...prev,
-        latitude: Number(result.lat).toFixed(7),
-        longitude: Number(result.lon).toFixed(7),
+        latitude: nextCenter[0].toFixed(7),
+        longitude: nextCenter[1].toFixed(7),
       }))
-      toast.success('Ponto encontrado e coordenadas preenchidas.')
+      setMapCenter(nextCenter)
+      setMapLabel(result.display_name || formData.name || 'Ponto encontrado')
+      toast.success('Ponto encontrado. Voce pode arrastar o marcador se precisar.')
     } catch (error) {
       console.error('Error geocoding delivery point:', error)
       toast.error('Mapa/geocoding indisponivel agora. A area pode ser salva sem coordenadas.')
@@ -297,14 +362,28 @@ const DeliveryZones = () => {
     setEditingZone(null)
     setFormData(initialFormData)
     setAdvancedOpen(false)
+    setRegionPreview(null)
+    const known = knownCityCenter(storeSettings?.city)
+    setMapCenter(known?.center || defaultMapCenter)
+    setMapLabel(known?.label || defaultMapLabel)
   }
 
   const updatePosition = (lat, lng) => {
+    const nextCenter = [Number(lat), Number(lng)]
     setFormData(prev => ({
       ...prev,
-      latitude: Number(lat).toFixed(7),
-      longitude: Number(lng).toFixed(7),
+      latitude: nextCenter[0].toFixed(7),
+      longitude: nextCenter[1].toFixed(7),
     }))
+    setMapCenter(nextCenter)
+    setMapLabel(formData.name || 'Ponto marcado no mapa')
+  }
+
+  const handlePreviewRegion = () => {
+    const group = formData.logistics_group || formData.name || 'Sem grupo'
+    const distance = formatKm(formData.estimated_distance_km) || 'sem distancia'
+    const priority = formData.match_priority || 100
+    setRegionPreview(`Essa regiao entraria na rota como: ${group} / ${distance} / prioridade ${priority}.`)
   }
 
   return (
@@ -457,30 +536,111 @@ const DeliveryZones = () => {
         title={editingZone ? 'Editar Area de Entrega' : 'Nova Area de Entrega'}
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input
-              label="Nome da area"
-              required
-              value={formData.name}
-              onChange={(event) => {
-                const name = event.target.value
-                setFormData(prev => ({
-                  ...prev,
-                  name,
-                  slug: normalizeSlug(name),
-                }))
-              }}
-            />
+          <section className="rounded-2xl border border-dark-600 bg-dark-900/60 p-4">
+            <p className="mb-4 text-sm font-bold uppercase tracking-wide text-green-300">1. Dados da regiao</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Input
+                label="Nome da area"
+                required
+                value={formData.name}
+                onChange={(event) => {
+                  const name = event.target.value
+                  setFormData(prev => ({
+                    ...prev,
+                    name,
+                    slug: normalizeSlug(name),
+                  }))
+                }}
+              />
 
-            <Input
-              label="Cidade"
-              placeholder="Ex: Sao Goncalo, Itaborai"
-              value={formData.city}
-              onChange={(event) => setFormData(prev => ({ ...prev, city: event.target.value }))}
-            />
-          </div>
+              <Input
+                label="Cidade"
+                placeholder="Ex: Sao Goncalo, Itaborai"
+                value={formData.city}
+                onChange={(event) => setFormData(prev => ({ ...prev, city: event.target.value }))}
+              />
 
-          <div>
+              <Input
+                label="Taxa de entrega"
+                type="number"
+                step="0.01"
+                required
+                value={formData.delivery_fee}
+                onChange={(event) => setFormData(prev => ({ ...prev, delivery_fee: event.target.value }))}
+              />
+
+              <Input
+                label="Valor minimo do pedido"
+                type="number"
+                step="0.01"
+                value={formData.minimum_order_amount}
+                onChange={(event) => setFormData(prev => ({ ...prev, minimum_order_amount: event.target.value }))}
+              />
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-dark-600 bg-dark-900/60 p-4">
+            <p className="mb-4 text-sm font-bold uppercase tracking-wide text-green-300">2. Logistica para o motoboy</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <Input
+                  label="Distancia estimada ate a loja (km)"
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 4.5"
+                  value={formData.estimated_distance_km}
+                  onChange={(event) => setFormData(prev => ({ ...prev, estimated_distance_km: event.target.value }))}
+                />
+                <p className="mt-1 text-xs text-gray-400">Use um valor aproximado. Ex: 4.5</p>
+              </div>
+
+              <Input
+                label="Tempo medio de entrega (min)"
+                type="number"
+                placeholder="Ex: 35"
+                value={formData.estimated_time}
+                onChange={(event) => setFormData(prev => ({ ...prev, estimated_time: event.target.value }))}
+              />
+
+              <div>
+                <Input
+                  label="Grupo de rota / regiao proxima"
+                  placeholder="Ex: Apollo, Manilha, Centro"
+                  value={formData.logistics_group}
+                  onChange={(event) => setFormData(prev => ({ ...prev, logistics_group: event.target.value }))}
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Use para juntar bairros proximos. Ex: Apollo 1, Apollo 2 e Apollo 3 podem ficar no grupo Apollo.
+                </p>
+              </div>
+
+              <div>
+                <Input
+                  label="Prioridade da rota"
+                  type="number"
+                  value={formData.match_priority}
+                  onChange={(event) => setFormData(prev => ({ ...prev, match_priority: event.target.value }))}
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Numeros menores aparecem antes. Ex: 10 = perto, 50 = medio, 100 = longe. Se houver distancia em km, ela pesa mais.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Button type="button" variant="secondary" onClick={handlePreviewRegion}>
+                Testar esta regiao
+              </Button>
+              {regionPreview && (
+                <p className="mt-3 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+                  {regionPreview}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-dark-600 bg-dark-900/60 p-4">
+            <p className="mb-4 text-sm font-bold uppercase tracking-wide text-green-300">3. Ponto no mapa</p>
             <Input
               label="Ponto de referencia da regiao"
               placeholder="Ex: Praca do Apollo 2, Sao Goncalo"
@@ -504,98 +664,35 @@ const DeliveryZones = () => {
                 Abrir no Google Maps
               </Button>
             </div>
-          </div>
 
-          <DeliveryAreaMap formData={formData} onPositionChange={updatePosition} />
-
-          <Textarea
-            label="Aliases / variacoes"
-            placeholder={'Um por linha. Ex:\nApolo 2\nConjunto Apollo 2\nRegiao de Manilha'}
-            value={formData.aliases}
-            onChange={(event) => setFormData(prev => ({ ...prev, aliases: event.target.value }))}
-            rows={4}
-          />
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Input
-                label="Taxa de entrega"
-                type="number"
-                step="0.01"
-                required
-                value={formData.delivery_fee}
-                onChange={(event) => setFormData(prev => ({ ...prev, delivery_fee: event.target.value }))}
+            <div className="mt-4">
+              <DeliveryAreaMap
+                formData={formData}
+                mapCenter={mapCenter}
+                mapLabel={mapLabel}
+                onPositionChange={updatePosition}
+                onSearchReference={handleSearchReference}
               />
             </div>
+          </section>
 
-            <div>
-              <Input
-                label="Prioridade da rota"
-                type="number"
-                value={formData.match_priority}
-                onChange={(event) => setFormData(prev => ({ ...prev, match_priority: event.target.value }))}
-              />
-              <p className="mt-1 text-xs text-gray-400">Numeros menores aparecem primeiro na rota sugerida.</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Input
-                label="Tempo medio de entrega (min)"
-                type="number"
-                placeholder="Ex: 35"
-                value={formData.estimated_time}
-                onChange={(event) => setFormData(prev => ({ ...prev, estimated_time: event.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Input
-                label="Distancia estimada ate a loja (km)"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 4.5"
-                value={formData.estimated_distance_km}
-                onChange={(event) => setFormData(prev => ({ ...prev, estimated_distance_km: event.target.value }))}
-              />
-              <p className="mt-1 text-xs text-gray-400">Use um valor aproximado. Ex: 4.5</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Input
-                label="Grupo de rota / regiao proxima"
-                placeholder="Ex: Apollo, Manilha, Centro"
-                value={formData.logistics_group}
-                onChange={(event) => setFormData(prev => ({ ...prev, logistics_group: event.target.value }))}
-              />
-              <p className="mt-1 text-xs text-gray-400">Ex: Apollo, Manilha, Centro.</p>
-            </div>
-
-            <Input
-              label="Valor minimo do pedido"
-              type="number"
-              step="0.01"
-              value={formData.minimum_order_amount}
-              onChange={(event) => setFormData(prev => ({ ...prev, minimum_order_amount: event.target.value }))}
+          <section className="rounded-2xl border border-dark-600 bg-dark-900/60 p-4">
+            <p className="mb-4 text-sm font-bold uppercase tracking-wide text-green-300">4. Variacoes de nome</p>
+            <Textarea
+              label="Aliases / variacoes"
+              placeholder={'Um por linha. Ex:\nApolo 2\nConjunto Apollo 2\nRegiao de Manilha'}
+              value={formData.aliases}
+              onChange={(event) => setFormData(prev => ({ ...prev, aliases: event.target.value }))}
+              rows={4}
             />
-          </div>
-
-          <Textarea
-            label="Observacao interna"
-            value={formData.internal_note}
-            onChange={(event) => setFormData(prev => ({ ...prev, internal_note: event.target.value }))}
-            rows={2}
-          />
+          </section>
 
           <button
             type="button"
             className="flex w-full items-center justify-between rounded-xl border border-dark-600 bg-dark-900 px-4 py-3 text-left text-sm font-semibold text-white"
             onClick={() => setAdvancedOpen(prev => !prev)}
           >
-            Configuracoes avancadas
+            5. Avancado
             <ChevronDown size={18} className={`transition ${advancedOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -621,15 +718,26 @@ const DeliveryZones = () => {
                   onChange={(event) => setFormData(prev => ({ ...prev, longitude: event.target.value }))}
                 />
               </div>
+
+              <div className="mt-4">
+                <Textarea
+                  label="Observacao interna"
+                  value={formData.internal_note}
+                  onChange={(event) => setFormData(prev => ({ ...prev, internal_note: event.target.value }))}
+                  rows={2}
+                />
+              </div>
+
+              <div className="mt-4">
+                <Input
+                  label="Slug"
+                  required
+                  value={formData.slug}
+                  onChange={(event) => setFormData(prev => ({ ...prev, slug: normalizeSlug(event.target.value) }))}
+                />
+              </div>
             </div>
           )}
-
-          <Input
-            label="Slug"
-            required
-            value={formData.slug}
-            onChange={(event) => setFormData(prev => ({ ...prev, slug: normalizeSlug(event.target.value) }))}
-          />
 
           <label className="flex items-center space-x-2">
             <input
