@@ -50,6 +50,8 @@ class StoreAiSalesService
 
     return handoff!("customer_requested_human") if human_request?
     return start_new_order if new_order_request?
+    return handle_product_search if product_from_link.present?
+    return handle_store_info if priority_store_info_request?
     return existing_pix_status_answer if existing_pix_status_request?
     return order_status_answer if order_status_request?
     return post_order_greeting if recently_completed_order? && ReplymeshKnowledgeService.greeting?(@question)
@@ -65,7 +67,6 @@ class StoreAiSalesService
     return handle_product_number if product_number_selection?
     return handle_product_candidate_text if product_candidate_text_selection?
     return ask_candidate_selection if product_selection_confirmation?
-    return handle_product_search if product_from_link.present?
     return handle_store_info if store_info_request?
     return handle_product_search
   rescue StandardError => e
@@ -624,7 +625,7 @@ class StoreAiSalesService
     cart.complete!
     conversation.update!(status: "closed", last_message_at: Time.current)
     answer(
-      ["Pedido ##{order.order_number} criado com sucesso.", pix_text, "A equipe da loja ja recebeu o pedido."].compact_blank.join("\n\n"),
+      ["Pedido criado com sucesso.", pix_text, "A equipe da loja ja recebeu o pedido."].compact_blank.join("\n\n"),
       "success",
       stage: cart.stage,
       next_action: pix_text.present? ? "waiting_payment" : "completed",
@@ -1021,8 +1022,9 @@ class StoreAiSalesService
 
   def manual_pix_available?
     settings = store_settings
+    accepted_pix = Array(settings&.accepted_payment_methods).include?("pix")
     FeatureGate.enabled?(@company, "pix") &&
-      settings&.pix_enabled? &&
+      (settings&.pix_enabled? || accepted_pix) &&
       (settings.pix_payload.present? || settings.pix_key.present?)
   end
 
@@ -1048,7 +1050,7 @@ class StoreAiSalesService
     elsif order.external_payment_id.present?
       "Seu Pix esta aguardando pagamento."
     else
-      "O Pix manual do pedido ##{order.order_number} esta aguardando a confirmacao da loja."
+      "O Pix manual do seu pedido esta aguardando a confirmacao da loja."
     end
     answer(text, "success", next_action: order.payment_status == "paid" ? "completed" : "waiting_payment")
   end
@@ -1076,7 +1078,7 @@ class StoreAiSalesService
     if order
       return answer(
         [
-          "Encontrei o pedido ##{order.order_number}.",
+          "Encontrei seu pedido mais recente.",
           order_items_text(order),
           "Status: #{order_status_label(order.status)}.",
           "Pagamento: #{payment_label(order.payment_method)}#{payment_status_suffix(order)}.",
@@ -1229,6 +1231,14 @@ class StoreAiSalesService
       normalized_question.match?(/\b(loja|endereco|telefone|whatsapp|local|retirada)\b/)
   end
 
+  def priority_store_info_request?
+    return false if cart.stage.in?(%w[payment_selection order_confirmation])
+    return false if normalized_question.match?(/pedido|meu pedido|status do pagamento|status pagamento|paguei|pago/)
+
+    hours_question? || delivery_question? ||
+      (payment_question? && normalized_question.match?(/aceita|forma de pagamento|formas de pagamento|tem pix|pix manual|cartao/))
+  end
+
   def hours_question?
     normalized_question.match?(/horario|funcionamento|abre|aberto|fecha|fechado|que horas/)
   end
@@ -1302,7 +1312,19 @@ class StoreAiSalesService
   def payment_status_suffix(order)
     return "" if order.payment_status.blank? || order.payment_status == "not_required"
 
-    " (#{order.payment_status})"
+    " (#{payment_status_label(order.payment_status)})"
+  end
+
+  def payment_status_label(status)
+    {
+      "pending" => "aguardando confirmacao da loja",
+      "pending_payment" => "aguardando pagamento",
+      "paid" => "pago",
+      "failed" => "falhou",
+      "expired" => "expirado",
+      "refunded" => "estornado",
+      "cancelled" => "cancelado"
+    }[status.to_s] || status.to_s
   end
 
   def order_items_text(order)

@@ -446,12 +446,59 @@ RSpec.describe StoreAiSalesService do
     )
 
     status = send_message("consulta meu pedido")
-    expect(status[:answer]).to include("pedido ##{order.order_number}", "Itens:", "1x #{product.name}", "aceito", "R$ 30,00")
+    expect(status[:answer]).to include("seu pedido mais recente", "Itens:", "1x #{product.name}", "aceito", "R$ 30,00")
+    expect(status[:answer]).not_to include("##{order.order_number}")
     expect(status[:answer]).not_to include("Nao encontrei esse produto")
 
     by_number = send_message("Pedido número ##{order.order_number}")
-    expect(by_number[:answer]).to include("pedido ##{order.order_number}", "1x #{product.name}")
+    expect(by_number[:answer]).to include("seu pedido mais recente", "1x #{product.name}")
+    expect(by_number[:answer]).not_to include("##{order.order_number}")
     expect(by_number[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "prioritizes store questions over latest order lookup after an order exists" do
+    customer = create_customer(company, phone: phone)
+    order = create_order(company: company, customer: customer, status: "accepted", payment_method: "money", payment_status: "pending", total_cents: 3_000)
+    order.order_items.create!(
+      company: company,
+      product: product,
+      product_name: product.name,
+      unit_price_cents: product.price_cents,
+      quantity: 1,
+      total_price_cents: product.price_cents
+    )
+    store.update!(store_status: "open", delivery_fee_cents: 500, estimated_delivery_minutes: 40)
+
+    open_answer = send_message("bom dia esta aberto?")
+    expect(open_answer[:answer]).to include("loja esta aberta")
+    expect(open_answer[:answer]).not_to include("pedido")
+
+    delivery_time = send_message("quanto tempo entrega?")
+    expect(delivery_time[:answer]).to include("Tempo estimado: 40 minutos")
+    expect(delivery_time[:answer]).not_to include("pedido")
+
+    status = send_message("status do pedido")
+    expect(status[:answer]).to include("seu pedido mais recente", "Pagamento: Dinheiro (aguardando confirmacao da loja)")
+    expect(status[:answer]).not_to include("pending")
+  end
+
+  it "uses manual Pix when a Pix key exists and Pix is listed as accepted even if pix_enabled is false" do
+    prepare_payment_cart
+    store.update!(
+      pix_enabled: false,
+      pix_provider: "manual",
+      pix_key: "pix@qa.test",
+      pix_payload: nil,
+      pix_receiver_name: "QA Pix Manual",
+      accepted_payment_methods: %w[cash pix debit_card credit_card]
+    )
+
+    selection = send_message("pix")
+    expect(selection[:answer]).to include("Pix manual", "CONFIRMAR")
+
+    confirmation = send_message("confirmar")
+    expect(confirmation[:answer]).to include("pix@qa.test", "QA Pix Manual")
+    expect(confirmation[:answer]).not_to include("Pedido #")
   end
 
   it "explains the open cart when the customer asks about the current order" do
@@ -549,7 +596,8 @@ RSpec.describe StoreAiSalesService do
     expect(payment[:answer]).to include("CONFIRMAR")
 
     final = send_message("confirmado")
-    expect(final[:answer]).to include("Pedido #")
+    expect(final[:answer]).to include("Pedido criado com sucesso")
+    expect(final[:answer]).not_to include("Pedido #")
 
     another = send_message("quero fazer outro pedido")
     expect(another[:answer]).to include("vamos fazer um novo pedido", "Qual voce gostaria")
@@ -659,7 +707,7 @@ RSpec.describe StoreAiSalesService do
     expect(talk.call("blz", teen_phone)[:answer]).to include("Forma de pagamento")
     expect(talk.call("dinheiro", teen_phone)[:answer]).to include("troco")
     expect(talk.call("n precisa", teen_phone)[:answer]).to include("CONFIRMAR")
-    expect(talk.call("fechou", teen_phone)[:answer]).to include("Pedido #")
+    expect(talk.call("fechou", teen_phone)[:answer]).to include("Pedido criado com sucesso")
 
     adult_phone = "5521999923023"
     expect(talk.call("qnt fica o frete pro centro?", adult_phone)[:answer]).to include("R$ 9,00")
@@ -674,7 +722,7 @@ RSpec.describe StoreAiSalesService do
     expect(talk.call("Rua das Flores, 60, Centro", older_phone)[:answer]).to include("Forma de pagamento")
     expect(talk.call("cartao", older_phone)[:answer]).to include("credito", "debito")
     expect(talk.call("debito", older_phone)[:answer]).to include("CONFIRMAR")
-    expect(talk.call("confirmar", older_phone)[:answer]).to include("Pedido #")
+    expect(talk.call("confirmar", older_phone)[:answer]).to include("Pedido criado com sucesso")
   end
 
   it "hands off after repeated unknown product attempts instead of repeating forever" do
