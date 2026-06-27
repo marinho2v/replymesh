@@ -16,7 +16,6 @@ class FounderSignupService
       slug = CompanyDomainService.normalize_slug(params[:slug])
       return failure("Subdomínio reservado ou indisponível.") if CompanyDomainService.reserved_slug?(slug) || Company.exists?(slug:)
       return failure("Confirme os termos de uso e a política do programa.") unless truthy?(params[:accepted_terms])
-      return failure("Não foi possível concluir o cadastro.") if params[:website].present?
       return failure("As senhas não coincidem.") unless params[:password] == params[:password_confirmation]
 
       code = format("%06d", SecureRandom.random_number(1_000_000))

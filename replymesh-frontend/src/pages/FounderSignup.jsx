@@ -6,7 +6,7 @@ import "../styles/founder-signup.css";
 const EMPTY = {
   responsible_name: "", email: "", phone: "", password: "", password_confirmation: "",
   company_name: "", business_type: "", city: "", state: "", slug: "",
-  accepted_terms: false, website: "",
+  accepted_terms: false,
 };
 
 const normalizeSlug = (value) => value
@@ -116,7 +116,6 @@ export function FounderSignup() {
                 <label>Estado<input required maxLength="2" placeholder="RJ" value={form.state} onChange={(e) => update("state", e.target.value.toUpperCase())} /></label>
               </div>
               <label>Endereço da loja<div className="founder-domain"><input required value={form.slug || slugPreview} onChange={(e) => update("slug", normalizeSlug(e.target.value))} /><span>.replymesh.cloud</span></div></label>
-              <input className="founder-hp" tabIndex="-1" autoComplete="off" value={form.website} onChange={(e) => update("website", e.target.value)} />
               <label className="founder-check"><input required type="checkbox" checked={form.accepted_terms} onChange={(e) => update("accepted_terms", e.target.checked)} /> Aceito os <Link to="/termos-de-uso">Termos de Uso</Link> e a política do Programa Fundadores.</label>
               {error && <p className="founder-error">{error}</p>}
               <button className="founder-primary" disabled={busy}>{busy ? "Enviando..." : "Receber código de confirmação"}</button>

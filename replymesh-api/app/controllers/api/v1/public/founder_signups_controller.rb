@@ -23,7 +23,7 @@ module Api
         def signup_params
           params.require(:signup).permit(
             :responsible_name, :email, :phone, :password, :password_confirmation,
-            :company_name, :business_type, :city, :state, :slug, :accepted_terms, :website
+            :company_name, :business_type, :city, :state, :slug, :accepted_terms
           )
         end
 
