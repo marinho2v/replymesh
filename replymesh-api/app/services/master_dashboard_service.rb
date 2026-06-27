@@ -47,6 +47,8 @@ class MasterDashboardService
       companies_trial: metric(Company.where(status: "trial").count),
       companies_inactive: metric(Company.where(status: %w[inactive suspended canceled]).count),
       companies_new: metric(Company.where(created_at: @range).count, Company.where(created_at: @previous_range).count),
+      founder_companies: metric(Company.where(origin: "founder_program").count),
+      founder_remaining: metric(FounderProgramSetting.current.remaining),
       master_users: metric(User.where.not(master_role_id: nil).or(User.where(global_role: "super_admin")).count),
       store_users: metric(User.joins(:company_members).distinct.count),
       orders_total: metric(Order.count),

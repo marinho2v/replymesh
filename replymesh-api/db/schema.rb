@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -251,6 +251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
   end
 
   create_table "companies", force: :cascade do |t|
+    t.string "commercial_status"
     t.string "contract_type", default: "monthly", null: false
     t.datetime "created_at", null: false
     t.string "custom_domain"
@@ -259,11 +260,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
     t.datetime "dns_verified_at"
     t.text "document_number"
     t.string "domain_status", default: "pending", null: false
+    t.datetime "founder_registered_at"
     t.integer "free_period_days", default: 0, null: false
     t.text "internal_note"
     t.text "legal_name"
     t.integer "monthly_price_cents"
     t.text "name", null: false
+    t.string "origin"
     t.text "plan_status", default: "trial", null: false
     t.string "primary_domain", null: false
     t.text "responsible_email", null: false
@@ -277,8 +280,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
     t.text "timezone", default: "America/Sao_Paulo", null: false
     t.datetime "trial_ends_at"
     t.datetime "updated_at", null: false
+    t.index ["commercial_status"], name: "index_companies_on_commercial_status"
     t.index ["custom_domain"], name: "index_companies_on_custom_domain", unique: true, where: "(custom_domain IS NOT NULL)"
     t.index ["domain_status"], name: "index_companies_on_domain_status"
+    t.index ["origin"], name: "index_companies_on_origin"
     t.index ["primary_domain"], name: "index_companies_on_primary_domain", unique: true
     t.index ["slug"], name: "index_companies_on_slug", unique: true
     t.index ["ssl_status"], name: "index_companies_on_ssl_status"
@@ -485,6 +490,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
     t.index ["company_id"], name: "index_domains_on_company_id"
     t.index ["domain"], name: "index_domains_on_domain", unique: true
     t.index ["status"], name: "index_domains_on_status"
+  end
+
+  create_table "founder_program_settings", force: :cascade do |t|
+    t.boolean "allow_signups", default: false, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "default_modules", default: [], null: false
+    t.boolean "enabled", default: false, null: false
+    t.datetime "ends_at"
+    t.integer "signup_limit", default: 100, null: false
+    t.datetime "started_at"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "founder_signup_attempts", force: :cascade do |t|
+    t.integer "attempts_count", default: 0, null: false
+    t.string "business_type", null: false
+    t.string "city", null: false
+    t.string "code_digest", null: false
+    t.string "company_name", null: false
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "expires_at", null: false
+    t.string "ip_address"
+    t.datetime "last_sent_at", null: false
+    t.string "password_digest", null: false
+    t.string "phone", null: false
+    t.string "responsible_name", null: false
+    t.string "slug", null: false
+    t.string "state", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.index ["email"], name: "index_founder_signup_attempts_on_email"
+    t.index ["ip_address", "created_at"], name: "index_founder_signup_attempts_on_ip_address_and_created_at"
+    t.index ["phone"], name: "index_founder_signup_attempts_on_phone"
+    t.index ["slug"], name: "index_founder_signup_attempts_on_slug"
   end
 
   create_table "inventory_items", force: :cascade do |t|

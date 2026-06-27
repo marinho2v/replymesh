@@ -45,6 +45,10 @@ class CompanyModuleCatalog
   PRESETS = {
     "basic" => (CORE_KEYS + %w[reports whatsapp_manual]).uniq,
     "operation" => (CORE_KEYS + %w[reports whatsapp_manual delivery pos motoboy]).uniq,
+    "founder_free" => (CORE_KEYS + %w[
+      reports delivery delivery_zones pos tables motoboy whatsapp_manual coupons
+      promotions roulette banners pix
+    ]).uniq,
     "complete" => DEFINITIONS.map(&:key)
   }.freeze
 

@@ -23,6 +23,8 @@ Rails.application.routes.draw do
 
       namespace :master do
         get "dashboard", to: "dashboard#show"
+        get "founder_program", to: "founder_program#show"
+        patch "founder_program", to: "founder_program#update"
 
         # Financeiro
         get "financeiro",               to: "financeiro#index"
@@ -299,6 +301,10 @@ Rails.application.routes.draw do
 
       namespace :public do
         get "platform", to: "platform#show"
+        get "founder_program", to: "founder_signups#status"
+        post "founder_signups", to: "founder_signups#create"
+        post "founder_signups/verify", to: "founder_signups#verify"
+        post "founder_signups/resend", to: "founder_signups#resend"
 
         scope ":company_slug", constraints: { company_slug: /[^\/]+/ }, format: false do
           get  "store",           to: "stores#show"

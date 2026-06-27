@@ -98,19 +98,28 @@ class CompanyOnboardingService
       internal_note: company_params[:internal_note],
       contract_type: company_params[:contract_type].presence || "monthly",
       timezone: company_params[:timezone].presence || "America/Sao_Paulo",
-      default_locale: company_params[:default_locale].presence || "pt-BR"
+      default_locale: company_params[:default_locale].presence || "pt-BR",
+      origin: company_params[:origin],
+      commercial_status: company_params[:commercial_status],
+      founder_registered_at: company_params[:founder_registered_at]
     )
   end
 
   def create_admin_user!
-    User.create!(
+    user = User.new(
       name: company_params[:responsible_name],
       email: company_params[:responsible_email],
       phone: company_params[:responsible_phone],
-      password: company_params[:admin_password].presence || SecureRandom.base58(16),
       global_role: "user",
       status: "active"
     )
+    if company_params[:admin_password_digest].present?
+      user.password_digest = company_params[:admin_password_digest]
+    else
+      user.password = company_params[:admin_password].presence || SecureRandom.base58(16)
+    end
+    user.save!
+    user
   end
 
   def create_company_member!

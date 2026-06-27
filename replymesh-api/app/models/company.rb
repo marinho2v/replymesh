@@ -78,6 +78,8 @@ class Company < ApplicationRecord
   validates :monthly_price_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :free_period_days, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :contract_type, inclusion: { in: %w[monthly quarterly semiannual annual custom] }
+  validates :origin, inclusion: { in: %w[master founder_program import] }, allow_blank: true
+  validates :commercial_status, inclusion: { in: %w[paid founder_free trial complimentary] }, allow_blank: true
   validate :slug_is_not_reserved
   validate :custom_domain_has_valid_format
 

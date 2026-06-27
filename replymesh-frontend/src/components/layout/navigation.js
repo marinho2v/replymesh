@@ -107,6 +107,7 @@ export const NAV = [
     icon: "Settings",
     children: [
       { id: "config:geral", label: "Geral", path: "/configuracoes/geral" },
+      { id: "config:fundadores", label: "Programa Fundadores", path: "/configuracoes/programa-fundadores" },
       { id: "config:identidade", label: "Identidade Visual", path: "/configuracoes/identidade-visual" },
       { id: "config:redes", label: "Redes Sociais", path: "/configuracoes/redes-sociais" },
       { id: "config:entrega", label: "Entrega", path: "/configuracoes/entrega" },

@@ -107,6 +107,16 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  getFounderProgramStatus: () => request("/public/founder_program"),
+  startFounderSignup: (signup) => request("/public/founder_signups", { method: "POST", body: JSON.stringify({ signup }) }),
+  verifyFounderSignup: (signupId, code) => request("/public/founder_signups/verify", {
+    method: "POST",
+    body: JSON.stringify({ signup_id: signupId, code }),
+  }),
+  resendFounderSignup: (signupId) => request("/public/founder_signups/resend", {
+    method: "POST",
+    body: JSON.stringify({ signup_id: signupId }),
+  }),
   logout: () => request("/auth/logout", { method: "DELETE" }),
   login: (email, password) => request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   me: () => request("/auth/me"),
@@ -114,6 +124,11 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request(`/master/dashboard${query ? `?${query}` : ""}`);
   },
+  getFounderProgram: () => request("/master/founder_program"),
+  updateFounderProgram: (founderProgram) => request("/master/founder_program", {
+    method: "PATCH",
+    body: JSON.stringify({ founder_program: founderProgram }),
+  }),
   getCompanies: () => request("/master/companies"),
   getCompany: (id) => request(`/master/companies/${id}`),
   createCompany: (payload) => request("/master/companies", { method: "POST", body: JSON.stringify(payload) }),

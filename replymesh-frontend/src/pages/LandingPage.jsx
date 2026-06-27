@@ -145,6 +145,9 @@ export function LandingPage() {
               Cardápio digital, pedidos online, WhatsApp automático, estoque, motoboy, impressão automática e relatórios em uma única plataforma.
             </p>
             <div className="hero-cta">
+              <Link to="/comece-gratis" className="btn btn-primary">
+                Comece grátis
+              </Link>
               <a href="#recursos" className="btn btn-ghost">
                 Ver demonstração
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/></svg>

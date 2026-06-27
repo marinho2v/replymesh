@@ -182,6 +182,14 @@ export function Dashboard() {
               dir="up"
               onClick={() => navigate("/usuarios-master")}
             />
+            <StatCard
+              icon="Sparkles"
+              label="Programa Fundadores"
+              value={`${fmtInt(metricValue(overview.founder_companies))} cadastradas`}
+              delta={`${fmtInt(metricValue(overview.founder_remaining))} vagas restantes`}
+              dir="flat"
+              onClick={() => navigate("/configuracoes/programa-fundadores")}
+            />
           </div>
 
           <div className="grid-3">

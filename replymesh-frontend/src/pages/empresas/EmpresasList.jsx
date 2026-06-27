@@ -30,6 +30,8 @@ const normalizePlanSlug = (slug) => {
 
 const EMP_TABS = [
   { id: "todas", label: "Todas", filter: () => true },
+  { id: "pagas", label: "Pagas", filter: (company) => company.commercial_status === "paid" },
+  { id: "fundadores", label: "Fundadores / Gratuitas", filter: (company) => company.origin === "founder_program" },
   { id: "ativas", label: "Ativas", filter: (company) => company.status === "active" },
   { id: "inativas", label: "Inativas", filter: (company) => company.status === "inactive" },
   { id: "teste", label: "Em teste", filter: (company) => company.status === "trial" },
@@ -37,6 +39,8 @@ const EMP_TABS = [
 
 const titles = {
   todas: "Todas as Empresas",
+  pagas: "Empresas Pagas",
+  fundadores: "Empresas Fundadoras e Gratuitas",
   ativas: "Empresas Ativas",
   inativas: "Empresas Inativas",
   teste: "Empresas em Teste",

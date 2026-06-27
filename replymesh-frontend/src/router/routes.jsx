@@ -26,11 +26,13 @@ const CompanySettings = lazy(() => import("../pages/configuracoes/CompanySetting
 const AiSettings = lazy(() => import("../pages/configuracoes/AiSettings.jsx").then((module) => ({ default: module.AiSettings })));
 const SystemUpdates = lazy(() => import("../pages/configuracoes/SystemUpdates.jsx").then((module) => ({ default: module.SystemUpdates })));
 const MasterBranding = lazy(() => import("../pages/configuracoes/MasterBranding.jsx").then((module) => ({ default: module.MasterBranding })));
+const FounderProgram = lazy(() => import("../pages/configuracoes/FounderProgram.jsx").then((module) => ({ default: module.FounderProgram })));
 const AndroidApps = lazy(() => import("../pages/AndroidApps.jsx").then((module) => ({ default: module.AndroidApps })));
 const LandingPage = lazy(() => import("../pages/LandingPage.jsx").then((module) => ({ default: module.LandingPage })));
 const TermosDeUso = lazy(() => import("../pages/TermosDeUso.jsx").then((module) => ({ default: module.TermosDeUso })));
 const PoliticaDePrivacidade = lazy(() => import("../pages/PoliticaDePrivacidade.jsx").then((module) => ({ default: module.PoliticaDePrivacidade })));
 const InstitutionalPage = lazy(() => import("../pages/InstitutionalPage.jsx").then((module) => ({ default: module.InstitutionalPage })));
+const FounderSignup = lazy(() => import("../pages/FounderSignup.jsx").then((module) => ({ default: module.FounderSignup })));
 
 const page = (element) => (
   <Suspense fallback={<div className="route-loader" role="status">Carregando pagina...</div>}>
@@ -44,6 +46,9 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/login", element: page(<Login onToast={onToast} onLogin={authHandlers.onLogin} />) },
   { path: "/", element: page(<LandingPage />) },
   { path: "/home", element: page(<LandingPage />) },
+  { path: "/fundadores", element: page(<FounderSignup />) },
+  { path: "/cadastro", element: page(<FounderSignup />) },
+  { path: "/comece-gratis", element: page(<FounderSignup />) },
   { path: "/termos-de-uso", element: page(<TermosDeUso />) },
   { path: "/politica-de-privacidade", element: page(<PoliticaDePrivacidade />) },
   { path: "/recursos", element: page(<InstitutionalPage page="recursos" />) },
@@ -90,6 +95,7 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/configuracoes/ia", element: protectedPage(<AiSettings onToast={onToast} />) },
   { path: "/configuracoes/atualizacoes", element: protectedPage(<SystemUpdates onToast={onToast} />) },
   { path: "/configuracoes/aparencia", element: protectedPage(<MasterBranding onToast={onToast} />) },
+  { path: "/configuracoes/programa-fundadores", element: protectedPage(<FounderProgram onToast={onToast} />) },
   { path: "/aplicativos-android", element: protectedPage(<AndroidApps onToast={onToast} />) },
   { path: "/configuracoes/:tab", element: protectedPage(<CompanySettings onToast={onToast} />) },
   { path: "*", element: <Navigate to="/dashboard" replace /> },
