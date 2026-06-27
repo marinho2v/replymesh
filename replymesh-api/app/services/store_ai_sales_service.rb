@@ -50,6 +50,7 @@ class StoreAiSalesService
 
     return handoff!("customer_requested_human") if human_request?
     return existing_pix_status_answer if existing_pix_status_request?
+    return order_status_answer if order_status_request?
     return completed_order_answer if recently_completed_order?
     return handle_greeting if greeting_without_cart?
     return handle_photo_request if photo_request?
@@ -293,6 +294,22 @@ class StoreAiSalesService
       return ask_payment
     end
 
+    if cart.stage == "address_confirmation" && !looks_like_address?
+      return answer(
+        "Pode confirmar se vamos usar o endereco salvo? Responda *sim* ou envie outro endereco completo com rua, numero e bairro.",
+        "blocked",
+        next_action: "confirm_address"
+      )
+    end
+
+    unless looks_like_address?
+      return answer(
+        "Me envie o endereco de entrega com rua, numero e bairro para continuar.",
+        "blocked",
+        next_action: "collect_address"
+      )
+    end
+
     parsed = parse_address(@question)
     cart.update!(delivery_address: parsed, stage: "delivery_calculation")
     calculate_delivery
@@ -359,14 +376,22 @@ class StoreAiSalesService
       return select_card_type(normalized_question.match?(/credito/) ? "credito" : "debito")
     end
 
-    cart.update!(
-      payment_method: "card_on_delivery",
-      metadata_json: cart.metadata_json.merge("payment_step" => "card_type")
-    )
-    answer(
-      "Vai pagar no *credito* ou *debito*?",
-      "success",
-      next_action: "ask_card_type"
+    if normalized_question.match?(/cartao/)
+      cart.update!(
+        payment_method: "card_on_delivery",
+        metadata_json: cart.metadata_json.merge("payment_step" => "card_type")
+      )
+      return answer(
+        "Vai pagar no *credito* ou *debito*?",
+        "success",
+        next_action: "ask_card_type"
+      )
+    end
+
+    return answer(
+      "Escolha a forma de pagamento para finalizar: *Pix*, *dinheiro* ou *cartao*.",
+      "blocked",
+      next_action: "select_payment"
     )
   end
 
@@ -914,6 +939,37 @@ class StoreAiSalesService
     )
   end
 
+  def order_status_answer
+    order = requested_order || latest_customer_order
+    if order
+      return answer(
+        [
+          "Encontrei o pedido ##{order.order_number}.",
+          "Status: #{order_status_label(order.status)}.",
+          "Pagamento: #{payment_label(order.payment_method)}#{payment_status_suffix(order)}.",
+          "Total: #{format_brl(order.total_cents)}."
+        ].compact.join("\n"),
+        "success",
+        next_action: order.completed? || order.cancelled? ? "completed" : "track_order",
+        order: serialize_order(order)
+      )
+    end
+
+    if cart.items.any?
+      return answer(
+        "Voce ainda tem um pedido em atendimento comigo.\n\n#{cart_progress_text}",
+        "success",
+        next_action: next_action_for_cart_stage
+      )
+    end
+
+    answer(
+      "Ainda nao encontrei pedido finalizado nesse numero. Se quiser fazer um pedido agora, me diga o produto que voce quer.",
+      "blocked",
+      next_action: "product_discovery"
+    )
+  end
+
   def latest_ai_pix_order
     @latest_ai_pix_order ||= @company.orders
       .where(customer_phone: [@phone, @phone.sub(/\A55/, "")])
@@ -921,6 +977,23 @@ class StoreAiSalesService
       .where("created_at >= ?", 24.hours.ago)
       .order(created_at: :desc)
       .first
+  end
+
+  def requested_order
+    number = @question.to_s[/#?\s*(\d+)/, 1]
+    return nil if number.blank?
+
+    orders_for_phone.where(order_number: number.to_i).order(created_at: :desc).first ||
+      @company.orders.where(order_number: number.to_i).where("created_at >= ?", 24.hours.ago).order(created_at: :desc).first
+  end
+
+  def latest_customer_order
+    orders_for_phone.where("created_at >= ?", 24.hours.ago).order(created_at: :desc).first
+  end
+
+  def orders_for_phone
+    phones = [@phone, @phone.sub(/\A55/, "")].uniq
+    @company.orders.where(customer_phone: phones).or(@company.orders.where(customer_whatsapp: phones))
   end
 
   def price_for(product)
@@ -958,7 +1031,7 @@ class StoreAiSalesService
 
   def waiting_for_address?
     cart.stage.in?(%w[address_collection address_confirmation delivery_calculation]) ||
-      (cart.items.any? && cart.delivery_address.blank?)
+      (cart.items.any? && cart.delivery_address.blank? && looks_like_address?)
   end
 
   def waiting_for_customer_name?
@@ -970,7 +1043,7 @@ class StoreAiSalesService
   end
 
   def payment_selection?
-    cart.stage == "payment_selection" && normalized_question.match?(/pix|dinheiro|cartao|credito|debito/)
+    cart.stage == "payment_selection"
   end
 
   def existing_pix_status_request?
@@ -990,7 +1063,7 @@ class StoreAiSalesService
 
   def confirmation?
     cart.stage == "order_confirmation" &&
-      normalized_question.match?(/\A(confirmar|confirma|confirmo|fechar|finalizar|pode fazer|pode confirmar|sim)\z/)
+      (yes? || normalized_question.match?(/\A(confirmar|confirma|confirmo|fechar|finalizar|pode fazer|pode confirmar)\z/))
   end
 
   def collecting_payment_details?
@@ -998,11 +1071,69 @@ class StoreAiSalesService
   end
 
   def yes?
-    normalized_question.match?(/\A(sim|isso|pode|ok|confirmo|confirmar)\z/)
+    normalized_question.match?(/\A(s+i+m+|isso|isso mesmo|pode|pode sim|sim pode|ok|ok pode|confirmo|confirmar|confirmado|fechado)\z/)
   end
 
   def negative_answer?
-    normalized_question.match?(/\A(nao|nao precisa|sem troco|nenhum)\z/)
+    normalized_question.match?(/\A(nao|nao quero|nao precisa|sem|sem troco|nenhum)\z/)
+  end
+
+  def order_status_request?
+    return false if cart.stage.in?(%w[address_confirmation upsell payment_selection order_confirmation]) && (yes? || negative_answer?)
+
+    normalized_question.match?(/pedido|status|acompanha|andamento|aberto|consulta|numero|número|#\s*\d+|chega|tempo/)
+  end
+
+  def looks_like_address?
+    normalized_question.match?(/\b(rua|av|avenida|travessa|estrada|rodovia|bairro|numero|número|nº|n°|casa|apto|apartamento|bloco|quadra|lote|condominio|condomínio|complemento|referencia|referência)\b/) ||
+      (@question.to_s.include?(",") && @question.to_s.match?(/\d/))
+  end
+
+  def cart_progress_text
+    case cart.stage
+    when "address_confirmation"
+      "Ja tenho no carrinho: #{cart_item_names}.\nPreciso confirmar o endereco salvo. Responda *sim* ou envie outro endereco completo."
+    when "address_collection", "delivery_calculation"
+      "Ja tenho no carrinho: #{cart_item_names}.\nAgora preciso do endereco de entrega com rua, numero e bairro."
+    when "payment_selection"
+      "Ja tenho no carrinho: #{cart_item_names}.\nAgora escolha a forma de pagamento: *Pix*, *dinheiro* ou *cartao*."
+    when "order_confirmation"
+      "Ja tenho no carrinho: #{cart_item_names}.\nConfira e responda *CONFIRMAR* para finalizar."
+    else
+      "Ja tenho no carrinho: #{cart_item_names}.\nPodemos continuar seu pedido por aqui."
+    end
+  end
+
+  def cart_item_names
+    Array(cart.items).map { |item| "#{item['quantity']}x #{item['name']}" }.join(", ")
+  end
+
+  def next_action_for_cart_stage
+    {
+      "address_confirmation" => "confirm_address",
+      "address_collection" => "collect_address",
+      "delivery_calculation" => "collect_address",
+      "payment_selection" => "select_payment",
+      "order_confirmation" => "confirm_order"
+    }[cart.stage] || "continue_sale"
+  end
+
+  def order_status_label(status)
+    {
+      "pending" => "recebido",
+      "accepted" => "aceito",
+      "preparing" => "em preparo",
+      "ready" => "pronto",
+      "out_for_delivery" => "saiu para entrega",
+      "completed" => "entregue/finalizado",
+      "cancelled" => "cancelado"
+    }[status] || status
+  end
+
+  def payment_status_suffix(order)
+    return "" if order.payment_status.blank? || order.payment_status == "not_required"
+
+    " (#{order.payment_status})"
   end
 
   def money_cents_from(text)

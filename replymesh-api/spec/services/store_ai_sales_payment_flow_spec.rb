@@ -337,6 +337,69 @@ RSpec.describe StoreAiSalesService do
     expect(continuation[:cart][:items].map { |item| item["product_id"] }).to include(product.id, beverage.id)
   end
 
+  it "confirms the saved address with yes instead of searching for a product" do
+    customer = create_customer(company, phone: phone)
+    customer.customer_addresses.create!(
+      company: company,
+      street: "Rua Salva",
+      number: "20",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      is_default: true
+    )
+
+    selection = send_message("quero x tudo")
+    expect(selection[:answer]).to include("endereco salvo")
+
+    confirmation = send_message("Sim")
+    expect(confirmation[:answer]).to include("Forma de pagamento")
+    expect(confirmation[:answer]).not_to include("Nao encontrei esse produto")
+    expect(confirmation[:cart][:stage]).to eq("payment_selection")
+  end
+
+  it "does not treat a generic answer in payment selection as a product search" do
+    prepare_payment_cart
+
+    result = send_message("sim")
+
+    expect(result[:status]).to eq("blocked")
+    expect(result[:answer]).to include("Escolha a forma de pagamento")
+    expect(result[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "answers order status questions without falling back to product search" do
+    customer = create_customer(company, phone: phone)
+    order = create_order(company: company, customer: customer, status: "accepted", total_cents: 3_000)
+
+    status = send_message("consulta meu pedido")
+    expect(status[:answer]).to include("pedido ##{order.order_number}", "aceito", "R$ 30,00")
+    expect(status[:answer]).not_to include("Nao encontrei esse produto")
+
+    by_number = send_message("Pedido número ##{order.order_number}")
+    expect(by_number[:answer]).to include("pedido ##{order.order_number}")
+    expect(by_number[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "explains the open cart when the customer asks about the current order" do
+    customer = create_customer(company, phone: phone)
+    customer.customer_addresses.create!(
+      company: company,
+      street: "Rua Salva",
+      number: "20",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      is_default: true
+    )
+
+    send_message("quero x tudo")
+    result = send_message("eu tenho pedido aberto?")
+
+    expect(result[:answer]).to include("pedido em atendimento", "confirmar o endereco")
+    expect(result[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
   it "does not create an AI order when the store is closed" do
     prepare_payment_cart
     store.update!(store_status: "closed", block_orders_when_closed: true)
