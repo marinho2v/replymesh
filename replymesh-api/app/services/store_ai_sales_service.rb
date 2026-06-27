@@ -49,8 +49,10 @@ class StoreAiSalesService
     conversation.store_ai_messages.create!(role: "user", content: @question) if @question.present?
 
     return handoff!("customer_requested_human") if human_request?
+    return start_new_order if new_order_request?
     return existing_pix_status_answer if existing_pix_status_request?
     return order_status_answer if order_status_request?
+    return post_order_greeting if recently_completed_order? && ReplymeshKnowledgeService.greeting?(@question)
     return completed_order_answer if recently_completed_order?
     return handle_greeting if greeting_without_cart?
     return handle_photo_request if photo_request?
@@ -61,6 +63,10 @@ class StoreAiSalesService
     return handle_customer_name if waiting_for_customer_name?
     return handle_address if waiting_for_address?
     return handle_product_number if product_number_selection?
+    return handle_product_candidate_text if product_candidate_text_selection?
+    return ask_candidate_selection if product_selection_confirmation?
+    return handle_product_search if product_from_link.present?
+    return handle_store_info if store_info_request?
     return handle_product_search
   rescue StandardError => e
     log_event("flow_failed", exception: e)
@@ -133,6 +139,51 @@ class StoreAiSalesService
     )
   end
 
+  def start_new_order
+    previous_conversation = conversation
+    previous_cart = previous_conversation.store_ai_cart
+    previous_cart&.update!(stage: "completed", expires_at: 1.minute.ago)
+    previous_conversation.update!(status: "closed", paused_until: nil, last_message_at: Time.current)
+
+    @conversation = @company.store_ai_conversations.create!(
+      phone: @phone,
+      channel: @simulate ? "simulator" : "whatsapp",
+      status: "open",
+      last_message_at: Time.current
+    )
+    @cart = @company.store_ai_carts.create!(
+      store_ai_conversation: @conversation,
+      customer_phone: @phone,
+      stage: "greeting",
+      expires_at: 2.hours.from_now
+    )
+
+    products = recommended_products(@company.products.active.includes(:category).limit(80))
+    customer = customer_by_phone
+    if customer
+      cart.update!(
+        stage: "product_selection",
+        metadata_json: cart.metadata_json.merge(
+          "customer_id" => customer.id,
+          "candidate_product_ids" => products.map(&:id)
+        )
+      )
+      return answer(
+        "Claro, vamos fazer um novo pedido.\n\n#{recommendation_text(products)}",
+        "success",
+        products: serialize_products(products),
+        next_action: "select_product"
+      )
+    end
+
+    cart.update!(stage: "customer_identification", metadata_json: cart.metadata_json.merge("name_context" => "new_order"))
+    answer(
+      "Claro, vamos fazer um novo pedido. Antes de comecar, qual seu nome?",
+      "success",
+      next_action: "collect_customer_name"
+    )
+  end
+
   def handle_product_number
     ids = Array(cart.metadata_json["candidate_product_ids"])
     index = @question[/\d+/].to_i - 1
@@ -140,7 +191,25 @@ class StoreAiSalesService
     return handle_product_search unless product
 
     add_product(product)
+    cart.update!(metadata_json: cart.metadata_json.except("candidate_product_ids"))
     offer_upsell_or_continue
+  end
+
+  def handle_product_candidate_text
+    product = best_candidate_product
+    return ask_candidate_selection unless product
+
+    add_product(product)
+    cart.update!(metadata_json: cart.metadata_json.except("candidate_product_ids"))
+    offer_upsell_or_continue
+  end
+
+  def ask_candidate_selection
+    answer(
+      "Qual opcao voce quer? Pode responder com o numero ou o nome do produto.",
+      "blocked",
+      next_action: "select_product"
+    )
   end
 
   def handle_greeting
@@ -182,9 +251,28 @@ class StoreAiSalesService
       "total_cents" => price_for(product),
       "selected_options" => []
     }
-    cart.update!(items: Array(cart.items) + [item])
+    cart.update!(
+      items: Array(cart.items) + [item],
+      metadata_json: cart.metadata_json.except("unknown_count")
+    )
     cart.refresh_totals!
     log_event("product_selected", product_id: product.id, total_cents: cart.total_cents)
+  end
+
+  def handle_store_info
+    if hours_question?
+      return answer(hours_answer, "success", next_action: cart.items.any? ? next_action_for_cart_stage : "product_discovery")
+    end
+
+    if delivery_question?
+      return answer(delivery_answer, "success", next_action: cart.items.any? ? next_action_for_cart_stage : "product_discovery")
+    end
+
+    if payment_question?
+      return answer(payment_methods_answer, "success", next_action: cart.items.any? ? next_action_for_cart_stage : "product_discovery")
+    end
+
+    answer(store_summary_answer, "success", next_action: cart.items.any? ? next_action_for_cart_stage : "product_discovery")
   end
 
   def ask_address
@@ -260,7 +348,7 @@ class StoreAiSalesService
       metadata_json: cart.metadata_json.merge("upsell_product_id" => suggestion.id)
     )
     answer(
-      "Boa escolha! Gostaria de adicionar #{suggestion.name} por #{format_brl(price_for(suggestion))}? Responda *sim* ou *nao*.",
+      "Boa escolha, separei #{cart.items.last['name']} no carrinho.\n\nGostaria de adicionar #{suggestion.name} por #{format_brl(price_for(suggestion))}? Responda *sim* ou *nao*.",
       "success",
       products: serialize_products([suggestion]),
       next_action: "offer_upsell"
@@ -335,6 +423,14 @@ class StoreAiSalesService
   end
 
   def handle_payment_selection
+    if normalized_question.match?(/aceita|formas?|pagamentos?|forma de pagamento/)
+      return answer(
+        "#{payment_methods_answer}\n\nPara finalizar, escolha: *Pix*, *dinheiro* ou *cartao*.",
+        "success",
+        next_action: "select_payment"
+      )
+    end
+
     if normalized_question.match?(/pix/)
       return pix_unavailable_answer unless pix_available?
 
@@ -396,12 +492,29 @@ class StoreAiSalesService
   end
 
   def handle_payment_details
+    if normalized_question.match?(/\A(pix|cartao|credito|debito)\z/) ||
+        (cart.metadata_json["payment_step"] == "card_type" && normalized_question.match?(/\Adinheiro\z/))
+      cart.update!(
+        payment_method: nil,
+        metadata_json: cart.metadata_json.except("payment_step", "payment_mode", "needs_change", "change_for_cents", "card_type")
+      )
+      return handle_payment_selection
+    end
+
     case cart.metadata_json["payment_step"]
     when "cash_change_question"
       return handle_cash_change_question
     when "cash_change_amount"
       return handle_cash_change_amount
     when "card_type"
+      if normalized_question.match?(/pix|dinheiro/)
+        cart.update!(
+          payment_method: nil,
+          metadata_json: cart.metadata_json.except("payment_step", "card_type")
+        )
+        return handle_payment_selection
+      end
+
       return select_card_type("credito") if normalized_question.match?(/credito/)
       return select_card_type("debito") if normalized_question.match?(/debito/)
 
@@ -588,11 +701,10 @@ class StoreAiSalesService
   end
 
   def unknown_product_answer
-    if @settings.handoff_on_unknown?
-      cart.metadata_json["unknown_count"] = cart.metadata_json["unknown_count"].to_i + 1
-      cart.save!
-      return handoff!("unknown_after_two_attempts") if cart.metadata_json["unknown_count"].to_i >= 2
-    end
+    cart.metadata_json["unknown_count"] = cart.metadata_json["unknown_count"].to_i + 1
+    cart.save!
+    return handoff!("unknown_after_two_attempts") if @settings.handoff_on_unknown? && cart.metadata_json["unknown_count"].to_i >= 2
+    return handoff!("unknown_after_three_attempts") if cart.metadata_json["unknown_count"].to_i >= 3
 
     answer("Nao encontrei esse produto no cardapio atual. Pode me dizer outro nome ou categoria?", "fallback", next_action: "product_discovery", fallback: true)
   end
@@ -638,7 +750,17 @@ class StoreAiSalesService
         else
           ranked = scope.map do |product|
             haystack = ReplymeshKnowledgeService.normalize([product.name, product.description, product.category&.name].join(" "))
-            score = terms.sum { |term| haystack.include?(term) ? (haystack.start_with?(term) ? 8 : 3) : 0 }
+            compact_haystack = haystack.delete(" ")
+            score = terms.sum do |term|
+              compact_term = term.delete(" ")
+              if haystack.include?(term)
+                haystack.start_with?(term) ? 8 : 3
+              elsif compact_term.length >= 4 && compact_haystack.include?(compact_term)
+                3
+              else
+                0
+              end
+            end
             score += 2 if normalized_question.match?(/hamburg|burger|lanche/) && haystack.match?(/hamburg|burger|lanche/)
             score += 2 if product.is_featured?
             score += 1 if product.is_promotional?
@@ -679,6 +801,7 @@ class StoreAiSalesService
       "hamburguer" => %w[hamburguer burger lanche],
       "costela" => %w[costela artesanal],
       "bacon" => %w[bacon],
+      "xbacon" => %w[x bacon],
       "cheddar" => %w[cheddar queijo],
       "doce" => %w[doce sobremesa],
       "combo" => %w[combo promocao]
@@ -932,7 +1055,16 @@ class StoreAiSalesService
 
   def completed_order_answer
     answer(
-      "Pedido recebido! A loja vai acompanhar seu pedido por aqui.",
+      "Pedido recebido! A loja vai acompanhar seu pedido por aqui.\n\nSe quiser fazer outro pedido, me diga *novo pedido*. Se quiser consultar o andamento, me diga *status do pedido*.",
+      "success",
+      stage: "completed",
+      next_action: "completed"
+    )
+  end
+
+  def post_order_greeting
+    answer(
+      "Ola! Seu ultimo pedido ja foi recebido pela loja.\n\nPosso te ajudar a acompanhar esse pedido ou iniciar um *novo pedido*.",
       "success",
       stage: "completed",
       next_action: "completed"
@@ -945,6 +1077,7 @@ class StoreAiSalesService
       return answer(
         [
           "Encontrei o pedido ##{order.order_number}.",
+          order_items_text(order),
           "Status: #{order_status_label(order.status)}.",
           "Pagamento: #{payment_label(order.payment_method)}#{payment_status_suffix(order)}.",
           "Total: #{format_brl(order.total_cents)}."
@@ -1029,6 +1162,19 @@ class StoreAiSalesService
     cart.stage == "product_selection" && @question.match?(/\A\s*\d+\s*\z/)
   end
 
+  def product_candidate_text_selection?
+    cart.stage == "product_selection" &&
+      Array(cart.metadata_json["candidate_product_ids"]).any? &&
+      selection_terms.any? &&
+      best_candidate_product.present?
+  end
+
+  def product_selection_confirmation?
+    cart.stage == "product_selection" &&
+      Array(cart.metadata_json["candidate_product_ids"]).any? &&
+      (yes? || normalized_question.match?(/\A(quero|pode ser|esse|essa|isso)\z/))
+  end
+
   def waiting_for_address?
     cart.stage.in?(%w[address_collection address_confirmation delivery_calculation]) ||
       (cart.items.any? && cart.delivery_address.blank? && looks_like_address?)
@@ -1071,17 +1217,40 @@ class StoreAiSalesService
   end
 
   def yes?
-    normalized_question.match?(/\A(s+i+m+|isso|isso mesmo|pode|pode sim|sim pode|ok|ok pode|confirmo|confirmar|confirmado|fechado)\z/)
+    normalized_question.match?(/\A(s+i+m+|isso|isso mesmo|pode|pode sim|sim pode|ok|ok pode|confirmo|confirmar|confirmado|fechado|fechou|beleza|blz|certo|manda|manda ver|show)\z/)
   end
 
   def negative_answer?
-    normalized_question.match?(/\A(nao|nao quero|nao precisa|sem|sem troco|nenhum)\z/)
+    normalized_question.match?(/\A(n|nao|nao quero|nao obrigado|obrigado nao|nao precisa|nao precisa nao|n precisa|sem|sem troco|nenhum|deixa sem|dispenso)\z/)
+  end
+
+  def store_info_request?
+    hours_question? || delivery_question? || payment_question? ||
+      normalized_question.match?(/\b(loja|endereco|telefone|whatsapp|local|retirada)\b/)
+  end
+
+  def hours_question?
+    normalized_question.match?(/horario|funcionamento|abre|aberto|fecha|fechado|que horas/)
+  end
+
+  def delivery_question?
+    normalized_question.match?(/entrega|taxa|frete|bairro|regiao|retirada|tempo de entrega|demora|qnt|quanto fica/)
+  end
+
+  def payment_question?
+    normalized_question.match?(/pagamento|pix|dinheiro|cartao|credito|debito|aceita/)
+  end
+
+  def new_order_request?
+    normalized_question.match?(/novo pedido|pedido novo|fazer (um )?(novo )?pedido|fazer outro pedido|quero fazer pedido|quero fazer um pedido|nova compra/) ||
+      normalized_question.match?(/\A(quero pedir|quero comprar|comprar agora)\z/)
   end
 
   def order_status_request?
     return false if cart.stage.in?(%w[address_confirmation upsell payment_selection order_confirmation]) && (yes? || negative_answer?)
+    return false if new_order_request?
 
-    normalized_question.match?(/pedido|status|acompanha|andamento|aberto|consulta|numero|número|#\s*\d+|chega|tempo/)
+    normalized_question.match?(/status|acompanha|andamento|aberto|consulta|numero|número|#\s*\d+|chega|tempo|meu pedido|pedido numero|pedido número|cad[eê]|ta onde/)
   end
 
   def looks_like_address?
@@ -1134,6 +1303,125 @@ class StoreAiSalesService
     return "" if order.payment_status.blank? || order.payment_status == "not_required"
 
     " (#{order.payment_status})"
+  end
+
+  def order_items_text(order)
+    items = order.order_items.to_a
+    return nil if items.empty?
+
+    lines = items.map do |item|
+      name = item.product_name.presence || item.product&.name || "Produto"
+      "- #{item.quantity}x #{name}"
+    end
+    "Itens:\n#{lines.join("\n")}"
+  end
+
+  def best_candidate_product
+    ids = Array(cart.metadata_json["candidate_product_ids"])
+    products = @company.products.active.includes(:category).where(id: ids).to_a
+    scored = products.map do |product|
+      haystack = ReplymeshKnowledgeService.normalize([product.name, product.description, product.category&.name].join(" "))
+      compact_haystack = haystack.delete(" ")
+      score = selection_terms.sum do |term|
+        compact_term = term.delete(" ")
+        if haystack.include?(term)
+          haystack.start_with?(term) ? 8 : 3
+        elsif compact_term.length >= 4 && compact_haystack.include?(compact_term)
+          3
+        else
+          0
+        end
+      end
+      [product, score]
+    end.select { |_product, score| score.positive? }.sort_by { |_product, score| -score }
+    return nil if scored.empty?
+    return nil if scored.size > 1 && scored[0][1] == scored[1][1]
+
+    scored.first.first
+  end
+
+  def selection_terms
+    @selection_terms ||= normalized_question.split -
+      ReplymeshKnowledgeService::STOP_WORDS -
+      %w[quero queria pedir comprar compra produto produtos lanche comida opcao opcoes pode ser esse essa isso de do da dos das o a os as um uma mano ae ai eai porfa pfv]
+  end
+
+  def hours_answer
+    settings = store_settings
+    return "Nao encontrei horario cadastrado para a loja agora." unless settings
+
+    status = case settings.store_status
+             when "open" then "aberta"
+             when "paused" then "pausada"
+             else "fechada"
+             end
+    today = opening_hours_for_today(settings)
+    parts = ["A loja esta #{status} agora."]
+    if today && today["enabled"]
+      parts << "Horario de hoje: #{today['open']} as #{today['close']}."
+    end
+    parts << settings.closed_message if settings.store_status == "closed" && settings.respond_to?(:closed_message) && settings.closed_message.present?
+    parts << "Posso te ajudar a escolher um produto do cardapio."
+    parts.join("\n")
+  end
+
+  def opening_hours_for_today(settings)
+    days = %w[sunday monday tuesday wednesday thursday friday saturday]
+    Array(settings.opening_hours).presence
+    settings.opening_hours.to_h[days[Time.current.in_time_zone("America/Sao_Paulo").wday]]
+  rescue StandardError
+    nil
+  end
+
+  def delivery_answer
+    settings = store_settings
+    zone = matching_delivery_zone
+    parts = []
+    if zone
+      parts << "Entregamos na regiao #{zone.name}."
+      parts << "Taxa de entrega: #{format_brl(zone.delivery_fee_cents)}."
+      parts << "Tempo estimado: #{zone.estimated_minutes} minutos." if zone.respond_to?(:estimated_minutes) && zone.estimated_minutes.present?
+      parts << "Pedido minimo: #{format_brl(zone.minimum_order_cents)}." if zone.respond_to?(:minimum_order_cents) && zone.minimum_order_cents.to_i.positive?
+    else
+      parts << "Fazemos entrega." if settings&.respond_to?(:delivery_enabled) ? settings.delivery_enabled : true
+      parts << "Taxa padrao: #{format_brl(settings&.delivery_fee_cents.to_i)}."
+      parts << "Tempo estimado: #{settings.estimated_delivery_minutes} minutos." if settings&.estimated_delivery_minutes.to_i.positive?
+      parts << "Me diga seu bairro ou endereco para eu conferir a taxa correta." if @company.delivery_zones.active.exists?
+    end
+    parts << "Tambem e possivel retirar no local." if settings&.pickup_enabled?
+    parts.compact_blank.join("\n")
+  end
+
+  def matching_delivery_zone
+    text = normalized_question
+    @company.delivery_zones.active.by_priority.find do |zone|
+      names = [zone.name, zone.city, *Array(zone.aliases)].map { |value| ReplymeshKnowledgeService.normalize(value) }
+      names.any? { |name| name.present? && text.include?(name) }
+    end
+  end
+
+  def payment_methods_answer
+    methods = []
+    methods << "Dinheiro" if @settings.offer_cash?
+    methods << "Pix" if pix_available? || store_settings&.pix_enabled?
+    methods << "Cartao de credito" if accepted_payment_method?("credit_card")
+    methods << "Cartao de debito" if accepted_payment_method?("debit_card")
+    methods << "Cartao na entrega" if methods.none? { |item| item.include?("Cartao") }
+    "Aceitamos: #{methods.compact_blank.uniq.join(', ')}."
+  end
+
+  def accepted_payment_method?(method)
+    Array(store_settings&.accepted_payment_methods).include?(method)
+  end
+
+  def store_summary_answer
+    settings = store_settings
+    lines = [
+      settings&.store_name.presence || settings&.company_name.presence || @company.name,
+      settings&.address.present? ? "Endereco: #{[settings.address, settings.city, settings.state].compact_blank.join(', ')}." : nil,
+      settings&.whatsapp.present? ? "WhatsApp: #{settings.whatsapp}." : nil
+    ]
+    lines.compact_blank.join("\n")
   end
 
   def money_cents_from(text)

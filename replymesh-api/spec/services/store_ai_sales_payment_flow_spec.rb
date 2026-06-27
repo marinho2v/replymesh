@@ -280,11 +280,28 @@ RSpec.describe StoreAiSalesService do
   it "accepts a public product link and returns a safe public link for its photo" do
     company.update_column(:primary_domain, "qa-pagamentos-ia.replymesh.cloud")
     product.update!(image_url: "/produtos/interno/x-tudo.jpg")
+    link_phone = "5521999997777"
 
-    selection = send_message("quero https://qa-pagamentos-ia.replymesh.cloud/menu?produto=x-tudo")
+    selection = described_class.call(
+      company: company,
+      user: nil,
+      question: "quero https://qa-pagamentos-ia.replymesh.cloud/menu?produto=x-tudo",
+      phone: link_phone,
+      settings: settings,
+      global: nil,
+      simulate: false
+    )
     expect(selection[:cart][:items].last["product_id"]).to eq(product.id)
 
-    photo = send_message("manda foto")
+    photo = described_class.call(
+      company: company,
+      user: nil,
+      question: "manda foto",
+      phone: link_phone,
+      settings: settings,
+      global: nil,
+      simulate: false
+    )
     expect(photo[:answer]).to include("https://qa-pagamentos-ia.replymesh.cloud/menu?produto=x-tudo")
     expect(photo[:answer]).not_to include("/produtos/interno/x-tudo.jpg")
   end
@@ -306,6 +323,39 @@ RSpec.describe StoreAiSalesService do
     recommendations = send_message("Joao")
     expect(recommendations[:answer]).to include("Obrigado, Joao", "Smash Destaque", "Qual voce gostaria")
     expect(recommendations[:products].map { |item| item[:id] }).to include(featured.id)
+  end
+
+  it "selects a suggested product when the customer answers by product name" do
+    costela = Product.create!(
+      company: company,
+      category: product.category,
+      name: "Costela Artesanal",
+      slug: "costela-artesanal",
+      description: "Hamburguer de costela",
+      price_cents: 3_500,
+      is_active: true
+    )
+    customer = create_customer(company, phone: phone)
+    customer.customer_addresses.create!(
+      company: company,
+      street: "Rua Salva",
+      number: "20",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      is_default: true
+    )
+
+    options = send_message("qual voce recomenda?")
+    expect(options[:answer]).to include("Costela Artesanal")
+
+    selection = send_message("quero o de costela")
+    expect(selection[:answer]).to include("Costela Artesanal", "Gostaria de adicionar")
+    expect(selection[:answer]).not_to include("Encontrei essas opcoes")
+    expect(selection[:cart][:items].map { |item| item["product_id"] }).to include(costela.id)
+
+    address = send_message("nao")
+    expect(address[:answer]).to include("endereco salvo")
   end
 
   it "offers one complementary item without insisting" do
@@ -368,16 +418,39 @@ RSpec.describe StoreAiSalesService do
     expect(result[:answer]).not_to include("Nao encontrei esse produto")
   end
 
+  it "answers payment questions without locking the customer and allows changing the method" do
+    prepare_payment_cart
+
+    info = send_message("aceita cartao?")
+    expect(info[:answer]).to include("Aceitamos", "escolha")
+    expect(info[:cart][:payment_method]).to be_nil
+
+    cash = send_message("dinheiro")
+    expect(cash[:answer]).to include("precisar de troco")
+
+    send_message("sim")
+    switch = send_message("pix")
+    expect(switch[:answer]).to match(/Pix nao esta disponivel|CONFIRMAR/)
+  end
+
   it "answers order status questions without falling back to product search" do
     customer = create_customer(company, phone: phone)
     order = create_order(company: company, customer: customer, status: "accepted", total_cents: 3_000)
+    order.order_items.create!(
+      company: company,
+      product: product,
+      product_name: product.name,
+      unit_price_cents: product.price_cents,
+      quantity: 1,
+      total_price_cents: product.price_cents
+    )
 
     status = send_message("consulta meu pedido")
-    expect(status[:answer]).to include("pedido ##{order.order_number}", "aceito", "R$ 30,00")
+    expect(status[:answer]).to include("pedido ##{order.order_number}", "Itens:", "1x #{product.name}", "aceito", "R$ 30,00")
     expect(status[:answer]).not_to include("Nao encontrei esse produto")
 
     by_number = send_message("Pedido número ##{order.order_number}")
-    expect(by_number[:answer]).to include("pedido ##{order.order_number}")
+    expect(by_number[:answer]).to include("pedido ##{order.order_number}", "1x #{product.name}")
     expect(by_number[:answer]).not_to include("Nao encontrei esse produto")
   end
 
@@ -398,6 +471,221 @@ RSpec.describe StoreAiSalesService do
 
     expect(result[:answer]).to include("pedido em atendimento", "confirmar o endereco")
     expect(result[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "starts a new sale after a completed order instead of repeating the latest order status" do
+    customer = create_customer(company, phone: phone)
+    order = create_order(company: company, customer: customer, status: "accepted", payment_method: "pix", payment_status: "pending", total_cents: 6_000)
+    order.order_items.create!(
+      company: company,
+      product: product,
+      product_name: product.name,
+      unit_price_cents: product.price_cents,
+      quantity: 2,
+      total_price_cents: product.price_cents * 2
+    )
+    conversation = company.store_ai_conversations.create!(
+      phone: phone,
+      channel: "whatsapp",
+      status: "closed",
+      last_message_at: 5.minutes.ago
+    )
+    company.store_ai_carts.create!(
+      store_ai_conversation: conversation,
+      customer_phone: phone,
+      stage: "completed",
+      items: [
+        {
+          "product_id" => product.id,
+          "name" => product.name,
+          "quantity" => 2,
+          "unit_price_cents" => product.price_cents,
+          "total_cents" => product.price_cents * 2,
+          "selected_options" => []
+        }
+      ],
+      subtotal_cents: product.price_cents * 2,
+      total_cents: product.price_cents * 2,
+      expires_at: 1.minute.ago
+    )
+
+    greeting = send_message("boa noite")
+    expect(greeting[:answer]).to include("ultimo pedido", "novo pedido")
+
+    new_order = send_message("Quero fazer um novo pedido")
+    expect(new_order[:answer]).to include("vamos fazer um novo pedido", "Qual voce gostaria")
+    expect(new_order[:answer]).not_to include("Encontrei o pedido ##{order.order_number}")
+    expect(new_order[:cart][:stage]).to eq("product_selection")
+  end
+
+  it "handles a human-like conversation from greeting to a second order request" do
+    store.update!(
+      pix_enabled: true,
+      pix_provider: "manual",
+      pix_key: "pix@qa.test",
+      pix_receiver_name: "QA Pagamentos"
+    )
+    customer = create_customer(company, phone: phone)
+    customer.customer_addresses.create!(
+      company: company,
+      street: "Rua Salva",
+      number: "20",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      is_default: true
+    )
+
+    first = send_message("boa noite")
+    expect(first[:answer]).to include("Qual voce gostaria")
+
+    selection = send_message("quero comprar x tudo")
+    expect(selection[:answer]).to include("endereco salvo")
+
+    address = send_message("sim pode")
+    expect(address[:answer]).to include("Forma de pagamento")
+
+    payment = send_message("vou pagar no pix")
+    expect(payment[:answer]).to include("CONFIRMAR")
+
+    final = send_message("confirmado")
+    expect(final[:answer]).to include("Pedido #")
+
+    another = send_message("quero fazer outro pedido")
+    expect(another[:answer]).to include("vamos fazer um novo pedido", "Qual voce gostaria")
+    expect(another[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "answers basic store questions like hours, delivery and payments without inventing products" do
+    store.update!(
+      store_status: "open",
+      delivery_fee_cents: 700,
+      estimated_delivery_minutes: 35,
+      accepted_payment_methods: %w[cash pix debit_card credit_card],
+      pix_enabled: true
+    )
+    DeliveryZone.create!(
+      company: company,
+      name: "Centro",
+      slug: "centro",
+      city: "Rio de Janeiro",
+      aliases: ["centro"],
+      delivery_fee_cents: 900,
+      estimated_minutes: 30,
+      is_active: true,
+      match_priority: 10
+    )
+
+    hours = send_message("qual horario de funcionamento?")
+    expect(hours[:answer]).to include("loja esta aberta", "Horario")
+    expect(hours[:answer]).not_to include("Nao encontrei esse produto")
+
+    delivery = send_message("qual a taxa para o bairro centro?")
+    expect(delivery[:answer]).to include("Centro", "R$ 9,00")
+    expect(delivery[:answer]).not_to include("Nao encontrei esse produto")
+
+    payments = send_message("aceita pix e cartao?")
+    expect(payments[:answer]).to include("Aceitamos", "Pix", "Cartao")
+    expect(payments[:answer]).not_to include("Nao encontrei esse produto")
+  end
+
+  it "handles different human writing styles from teens, adults and older customers" do
+    store.update!(
+      pix_enabled: true,
+      pix_provider: "manual",
+      pix_key: "pix@qa.test",
+      pix_receiver_name: "QA Pagamentos",
+      accepted_payment_methods: %w[cash pix debit_card credit_card]
+    )
+    xbacon = Product.create!(
+      company: company,
+      category: product.category,
+      name: "X-Bacon",
+      slug: "x-bacon",
+      description: "Hamburguer com bacon e cheddar",
+      price_cents: 2_900,
+      is_active: true,
+      is_featured: true
+    )
+    costela = Product.create!(
+      company: company,
+      category: product.category,
+      name: "Costela Artesanal",
+      slug: "costela-artesanal-idoso",
+      description: "Hamburguer artesanal de costela",
+      price_cents: 3_500,
+      is_active: true,
+      is_featured: true
+    )
+    DeliveryZone.create!(
+      company: company,
+      name: "Centro",
+      slug: "centro-humanos",
+      city: "Rio de Janeiro",
+      aliases: ["centro"],
+      delivery_fee_cents: 900,
+      estimated_minutes: 30,
+      is_active: true,
+      match_priority: 10
+    )
+
+    talk = lambda do |message, custom_phone|
+      described_class.call(
+        company: company,
+        user: nil,
+        question: message,
+        phone: custom_phone,
+        settings: settings,
+        global: nil,
+        simulate: false
+      )
+    end
+
+    teen_phone = "5521999915015"
+    teen = create_customer(company, phone: teen_phone)
+    teen.customer_addresses.create!(
+      company: company,
+      street: "Rua Jovem",
+      number: "15",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      is_default: true
+    )
+    teen_selection = talk.call("eai mano quero xbacon", teen_phone)
+    expect(teen_selection[:answer]).to include("X-Bacon")
+    expect(teen_selection[:cart][:items].map { |item| item["product_id"] }).to include(xbacon.id)
+    talk.call("n", teen_phone)
+    expect(talk.call("blz", teen_phone)[:answer]).to include("Forma de pagamento")
+    expect(talk.call("dinheiro", teen_phone)[:answer]).to include("troco")
+    expect(talk.call("n precisa", teen_phone)[:answer]).to include("CONFIRMAR")
+    expect(talk.call("fechou", teen_phone)[:answer]).to include("Pedido #")
+
+    adult_phone = "5521999923023"
+    expect(talk.call("qnt fica o frete pro centro?", adult_phone)[:answer]).to include("R$ 9,00")
+    expect(talk.call("boa noite aceita cartao e pix?", adult_phone)[:answer]).to include("Aceitamos", "Pix", "Cartao")
+
+    older_phone = "5521999960060"
+    older_start = talk.call("Boa noite, gostaria de pedir Costela Artesanal por favor", older_phone)
+    expect(older_start[:answer]).to include("Costela Artesanal", "Gostaria de adicionar")
+    expect(older_start[:cart][:items].map { |item| item["product_id"] }).to include(costela.id)
+    expect(talk.call("não, obrigado", older_phone)[:answer]).to include("qual seu nome")
+    expect(talk.call("Maria Aparecida", older_phone)[:answer]).to include("endereco")
+    expect(talk.call("Rua das Flores, 60, Centro", older_phone)[:answer]).to include("Forma de pagamento")
+    expect(talk.call("cartao", older_phone)[:answer]).to include("credito", "debito")
+    expect(talk.call("debito", older_phone)[:answer]).to include("CONFIRMAR")
+    expect(talk.call("confirmar", older_phone)[:answer]).to include("Pedido #")
+  end
+
+  it "hands off after repeated unknown product attempts instead of repeating forever" do
+    settings.update!(handoff_on_unknown: false)
+
+    expect(send_message("coisa inexistente abc")[:answer]).to include("Nao encontrei")
+    expect(send_message("outra coisa que nao existe xyz")[:answer]).to include("Nao encontrei")
+    third = send_message("mais uma coisa nada a ver qqq")
+
+    expect(third[:status]).to eq("handoff")
+    expect(third[:answer]).to include("atendente")
   end
 
   it "does not create an AI order when the store is closed" do
