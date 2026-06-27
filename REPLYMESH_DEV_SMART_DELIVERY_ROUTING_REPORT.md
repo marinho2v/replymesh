@@ -158,3 +158,17 @@ O cadastro ficou dividido em etapas:
 - Área sem coordenada continua funcionando.
 - Rota do motoboy continua usando distância/prioridade disponíveis.
 - Pedidos antigos não são afetados.
+
+## Atualização — limite do mapa ao Brasil
+
+Status: implementado na branch `dev`.
+
+### Correção aplicada
+
+- O mapa de áreas agora fica limitado visualmente ao território do Brasil.
+- O Leaflet recebeu `maxBounds`, `maxBoundsViscosity` e `minZoom` para impedir navegação para outras regiões do mundo.
+- O tile layer usa `noWrap`, evitando repetição do mapa mundial.
+- Coordenadas fora do Brasil são ignoradas como posição válida da área.
+- Clique/arraste fora do Brasil não grava latitude/longitude.
+- Resultado de busca fora do Brasil é recusado com mensagem para informar bairro, cidade e UF.
+- Fallback continua em São Gonçalo/RJ.

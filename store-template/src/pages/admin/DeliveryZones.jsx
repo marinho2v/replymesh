@@ -50,6 +50,10 @@ const initialFormData = {
 
 const defaultMapCenter = [-22.8268, -43.0634]
 const defaultMapLabel = 'Sao Goncalo/RJ'
+const brazilBounds = [
+  [-34.1, -74.1],
+  [6.2, -28.5],
+]
 
 const areaIcon = L.divIcon({
   className: '',
@@ -72,10 +76,25 @@ const formatKm = (value) => {
   return `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} km`
 }
 
+const isInsideBrazil = (lat, lng) => (
+  Number.isFinite(lat) &&
+  Number.isFinite(lng) &&
+  lat >= brazilBounds[0][0] &&
+  lat <= brazilBounds[1][0] &&
+  lng >= brazilBounds[0][1] &&
+  lng <= brazilBounds[1][1]
+)
+
+const safeBrazilCenter = (center) => {
+  const lat = Number(center?.[0])
+  const lng = Number(center?.[1])
+  return isInsideBrazil(lat, lng) ? [lat, lng] : defaultMapCenter
+}
+
 const getPosition = (formData) => {
   const lat = Number(formData.latitude)
   const lng = Number(formData.longitude)
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null
+  return isInsideBrazil(lat, lng) ? [lat, lng] : null
 }
 
 const buildMapsSearchUrl = (query) => (
@@ -103,7 +122,7 @@ const MapFocus = ({ center }) => {
   const map = useMap()
 
   useEffect(() => {
-    if (center) map.setView(center, 14, { animate: true })
+    if (center) map.setView(safeBrazilCenter(center), 14, { animate: true })
   }, [center, map])
 
   return null
@@ -118,7 +137,7 @@ const MapClickHandler = ({ onPositionChange }) => {
 
 const DeliveryAreaMap = ({ formData, mapCenter, mapLabel, onPositionChange, onSearchReference }) => {
   const position = getPosition(formData)
-  const center = position || mapCenter || defaultMapCenter
+  const center = safeBrazilCenter(position || mapCenter || defaultMapCenter)
 
   return (
     <div className="overflow-hidden rounded-2xl border border-dark-600 bg-dark-900">
@@ -133,12 +152,21 @@ const DeliveryAreaMap = ({ formData, mapCenter, mapLabel, onPositionChange, onSe
       </div>
 
       <div className="h-72">
-        <MapContainer center={center} zoom={13} scrollWheelZoom className="h-full w-full">
+        <MapContainer
+          center={center}
+          zoom={13}
+          minZoom={4}
+          maxBounds={brazilBounds}
+          maxBoundsViscosity={1}
+          scrollWheelZoom
+          className="h-full w-full"
+        >
           <MapFocus center={center} />
           <MapClickHandler onPositionChange={onPositionChange} />
           <TileLayer
             attribution="&copy; OpenStreetMap"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            noWrap
           />
           {position && (
             <Marker
@@ -206,7 +234,7 @@ const DeliveryZones = () => {
         setStoreSettings(settings)
         const known = knownCityCenter([settings.city, settings.state || settings.uf].filter(Boolean).join(', '))
         if (known) {
-          setMapCenter(known.center)
+          setMapCenter(safeBrazilCenter(known.center))
           setMapLabel(known.label)
         }
       })
@@ -220,7 +248,7 @@ const DeliveryZones = () => {
 
     const known = knownCityCenter(formData.city || storeSettings?.city)
     if (known) {
-      setMapCenter(known.center)
+      setMapCenter(safeBrazilCenter(known.center))
       setMapLabel(known.label)
     } else {
       setMapCenter(defaultMapCenter)
@@ -288,7 +316,7 @@ const DeliveryZones = () => {
     })
     const position = getPosition({ latitude: zone.latitude, longitude: zone.longitude })
     if (position) {
-      setMapCenter(position)
+      setMapCenter(safeBrazilCenter(position))
       setMapLabel(zone.name || 'Ponto salvo da regiao')
     }
     setAdvancedOpen(Boolean(zone.latitude && zone.longitude))
@@ -342,12 +370,17 @@ const DeliveryZones = () => {
       }
 
       const nextCenter = [Number(result.lat), Number(result.lon)]
+      if (!isInsideBrazil(nextCenter[0], nextCenter[1])) {
+        toast.error('Encontramos um ponto fora do Brasil. Tente informar bairro, cidade e UF.')
+        return
+      }
+
       setFormData(prev => ({
         ...prev,
         latitude: nextCenter[0].toFixed(7),
         longitude: nextCenter[1].toFixed(7),
       }))
-      setMapCenter(nextCenter)
+      setMapCenter(safeBrazilCenter(nextCenter))
       setMapLabel(result.display_name || formData.name || 'Ponto encontrado')
       toast.success('Ponto encontrado. Voce pode arrastar o marcador se precisar.')
     } catch (error) {
@@ -364,18 +397,23 @@ const DeliveryZones = () => {
     setAdvancedOpen(false)
     setRegionPreview(null)
     const known = knownCityCenter(storeSettings?.city)
-    setMapCenter(known?.center || defaultMapCenter)
+    setMapCenter(safeBrazilCenter(known?.center || defaultMapCenter))
     setMapLabel(known?.label || defaultMapLabel)
   }
 
   const updatePosition = (lat, lng) => {
     const nextCenter = [Number(lat), Number(lng)]
+    if (!isInsideBrazil(nextCenter[0], nextCenter[1])) {
+      toast.error('Escolha um ponto dentro do Brasil.')
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       latitude: nextCenter[0].toFixed(7),
       longitude: nextCenter[1].toFixed(7),
     }))
-    setMapCenter(nextCenter)
+    setMapCenter(safeBrazilCenter(nextCenter))
     setMapLabel(formData.name || 'Ponto marcado no mapa')
   }
 
