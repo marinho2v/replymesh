@@ -40,9 +40,9 @@ try {
 if ($LASTEXITCODE -ne 0) { throw "Auditoria de segredos falhou." }
 
 $dist = Join-Path $frontend "dist"
-$bundleText = Get-ChildItem $dist -Recurse -File |
+$bundleText = (Get-ChildItem $dist -Recurse -File |
   Where-Object { $_.Extension -in ".html", ".js", ".css", ".json" } |
-  Get-Content -Raw
+  ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 
 if ($bundleText -match "http://(localhost|127\.0\.0\.1):3010/api/v1|qa-pizza") {
   throw "Publicacao bloqueada: o pacote contem configuracao DEV/QA."
