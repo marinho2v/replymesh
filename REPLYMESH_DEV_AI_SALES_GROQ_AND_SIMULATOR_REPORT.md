@@ -5,6 +5,53 @@ Status: **IA VENDEDORA COM GROQ COM PENDÊNCIAS**
 Data: 2026-06-22
 Branch: `dev`
 
+## IA Delivery Pro Max em 2026-06-27
+
+Status: **IA DELIVERY PRO MAX IMPLEMENTADA NA DEV**
+
+### Motor por camadas
+
+- adicionada camada `AiMessageNormalizer` para normalizar portugues informal, abreviacoes, girias, acentos e erros comuns;
+- adicionada camada `AiIntentRouter` com intencoes, score e confianca para perguntas de cardapio, produto, horario, entrega, pagamento, status, confirmacao, humano e reclamacao;
+- adicionada camada `AiProductSearch` para busca inteligente no cardapio por nome, descricao, categoria, termo relacionado e fuzzy matching simples;
+- a IA vendedora passou a usar o motor novo sem alterar o classificador legado da Carina/Store AI tradicional;
+- acoes criticas continuam deterministicas no backend: produto, preco, taxa, pagamento, pedido e status.
+
+### Conversa e venda
+
+- perguntas como `quais opcoes de lanches voce tem`, `manda cardapio`, `tem refri`, `tem bacon`, `tem costela` e `qual voce recomenda` passam a abrir lista real de produtos;
+- depois de pedido concluido, perguntas de cardapio iniciam nova descoberta de produto em vez de repetir status do pedido;
+- `pedido aberto?` volta a explicar carrinho/pedido em andamento quando existir conversa ativa;
+- busca de produto prioriza dados reais da empresa atual e nao inventa preco/produto;
+- handoff continua reservado para pedido humano, reclamacao ou repeticao real de desconhecido.
+
+### Logs seguros
+
+- logs internos do fluxo vendedor incluem mensagem original mascarada, mensagem normalizada, intencao, confianca, stage e motivo de erro/handoff;
+- telefone continua mascarado por ultimos 4 digitos;
+- nenhum token, senha ou chave de provider e registrado.
+
+### Testes adicionados
+
+- nova suite `ai_delivery_pro_max_intent_spec.rb` com mais de 100 frases reais de clientes brasileiros;
+- nova suite `ai_product_search_spec.rb` validando busca por giria, descricao, categoria e erro de digitacao;
+- suite da IA vendedora validada junto com Pix manual, Pix Mercado Pago, dinheiro, cartao, pedido real, endereco salvo, status e multiempresa do fluxo vendedor.
+
+### Validacao
+
+- `ruby -c` aprovado nos novos servicos e no `StoreAiSalesService`;
+- `bundle exec rspec spec/services/ai_delivery_pro_max_intent_spec.rb spec/services/ai_product_search_spec.rb spec/services/store_ai_sales_payment_flow_spec.rb` aprovado com 31 exemplos e 0 falhas;
+- `npm run build` do `store-template` aprovado;
+- `git diff --check` aprovado nos arquivos do escopo;
+- auditoria textual de segredos nos diffs do escopo sem achados.
+
+### Observacao de escopo
+
+- nao houve deploy;
+- nao houve alteracao em `main`;
+- nao houve alteracao na VPS;
+- o fluxo legado `StoreAiService`/Carina/Evolution nao foi refatorado nesta fase para evitar misturar riscos com a IA vendedora.
+
 ## Fase 2 da IA vendedora em 2026-06-24
 
 Status: **IA VENDEDORA DE DELIVERY VALIDADA NA DEV**

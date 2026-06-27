@@ -739,12 +739,14 @@ class StoreAiSalesService
   def handoff!(reason)
     cart.handoff!(reason: reason)
     conversation.pause_for!(30.minutes, reason: reason)
+    log_event("handoff", errors: [reason])
     answer("Certo, vou deixar um atendente continuar por aqui.", "handoff", stage: "handoff", next_action: "human_handoff")
   end
 
   def unknown_product_answer
     cart.metadata_json["unknown_count"] = cart.metadata_json["unknown_count"].to_i + 1
     cart.save!
+    log_event("unknown", errors: ["intent=#{intent_route.intent}", "normalized=#{normalized_question}"])
     return handoff!("unknown_after_two_attempts") if @settings.handoff_on_unknown? && cart.metadata_json["unknown_count"].to_i >= 2
     return handoff!("unknown_after_three_attempts") if cart.metadata_json["unknown_count"].to_i >= 3
 
@@ -785,45 +787,23 @@ class StoreAiSalesService
       if linked_product
         [linked_product]
       else
-        terms = expanded_search_terms(normalized_question.split - ReplymeshKnowledgeService::STOP_WORDS)
-        scope = @company.products.active.includes(:category).ordered.limit(80)
-        if recommendation_request?
-          recommended_products(scope)
-        else
-          ranked = scope.map do |product|
-            haystack = ReplymeshKnowledgeService.normalize([product.name, product.description, product.category&.name].join(" "))
-            compact_haystack = haystack.delete(" ")
-            score = terms.sum do |term|
-              compact_term = term.delete(" ")
-              if haystack.include?(term)
-                haystack.start_with?(term) ? 8 : 3
-              elsif compact_term.length >= 4 && compact_haystack.include?(compact_term)
-                3
-              else
-                0
-              end
-            end
-            score += 2 if normalized_question.match?(/hamburg|burger|lanche/) && haystack.match?(/hamburg|burger|lanche/)
-            score += 2 if product.is_featured?
-            score += 1 if product.is_promotional?
-            [product, score]
-          end
-          ranked.select { |_product, score| score.positive? }.sort_by { |_product, score| -score }.map(&:first).first(5)
-        end
+        AiProductSearch.call(
+          company: @company,
+          query: @question,
+          limit: 5,
+          recommendation: recommendation_request?
+        ).products
       end
     end
   end
 
   def menu_products
-    scope = @company.products.active.includes(:category).ordered.limit(120)
-    terms = expanded_search_terms(normalized_question.split - ReplymeshKnowledgeService::STOP_WORDS)
-    matches = scope.select do |product|
-      haystack = ReplymeshKnowledgeService.normalize([product.name, product.description, product.category&.name].join(" "))
-      terms.any? { |term| haystack.include?(term) }
-    end
-
-    matches = scope.to_a if matches.empty? || broad_menu_request?
-    recommended_products(matches.first(80))
+    AiProductSearch.call(
+      company: @company,
+      query: @question,
+      limit: 6,
+      recommendation: broad_menu_request? || recommendation_request?
+    ).products
   end
 
   def recommended_products(scope)
@@ -1197,20 +1177,29 @@ class StoreAiSalesService
   end
 
   def normalized_question
-    @normalized_question ||= ReplymeshKnowledgeService.normalize(@question)
+    @normalized_question ||= message_profile.normalized
+  end
+
+  def message_profile
+    @message_profile ||= AiMessageNormalizer.call(@question)
+  end
+
+  def intent_route
+    @intent_route ||= AiIntentRouter.call(@question)
   end
 
   def human_request?
-    StoreAiIntentClassifier.call(@question) == :human_request ||
+    intent_route.intent.in?(%i[human_handoff complaint]) ||
+      StoreAiIntentClassifier.call(@question) == :human_request ||
       normalized_question.match?(/reclamacao|problema|errado|cancelar|atendente/)
   end
 
   def greeting_without_cart?
-    cart.items.empty? && ReplymeshKnowledgeService.greeting?(@question)
+    cart.items.empty? && (intent_route.intent == :greeting || ReplymeshKnowledgeService.greeting?(@question))
   end
 
   def photo_request?
-    normalized_question.match?(/foto|imagem|ver produto/)
+    intent_route.intent == :photo_request || normalized_question.match?(/foto|imagem|ver produto/)
   end
 
   def product_number_selection?
@@ -1280,7 +1269,8 @@ class StoreAiSalesService
   end
 
   def store_info_request?
-    hours_question? || delivery_question? || payment_question? ||
+    intent_route.intent.in?(%i[opening_hours_question delivery_area_question delivery_fee_question payment_question]) ||
+      hours_question? || delivery_question? || payment_question? ||
       normalized_question.match?(/\b(loja|endereco|telefone|whatsapp|local|retirada)\b/)
   end
 
@@ -1293,28 +1283,33 @@ class StoreAiSalesService
   end
 
   def hours_question?
-    normalized_question.match?(/horario|funcionamento|abre|aberto|fecha|fechado|que horas/)
+    intent_route.intent == :opening_hours_question ||
+      normalized_question.match?(/horario|funcionamento|abre|aberto|fecha|fechado|que horas/)
   end
 
   def delivery_question?
-    normalized_question.match?(/entrega|taxa|frete|bairro|regiao|retirada|tempo de entrega|demora|qnt|quanto fica/)
+    intent_route.intent.in?(%i[delivery_area_question delivery_fee_question]) ||
+      normalized_question.match?(/entrega|taxa|frete|bairro|regiao|retirada|tempo de entrega|demora|qnt|quanto custa/)
   end
 
   def payment_question?
-    normalized_question.match?(/pagamento|pix|dinheiro|cartao|credito|debito|aceita/)
+    intent_route.intent == :payment_question ||
+      normalized_question.match?(/pagamento|pix|dinheiro|cartao|credito|debito|aceita/)
   end
 
   def menu_request?
     return false if cart.stage.in?(%w[address_confirmation address_collection delivery_calculation payment_selection order_confirmation]) && (yes? || negative_answer?)
     return false if payment_question? || delivery_question? || hours_question?
 
-    normalized_question.match?(
+    intent_route.intent.in?(%i[menu_request category_request recommendation_request]) ||
+      normalized_question.match?(
       /(\bcardapio\b|\bmenu\b|opcoes|opcao|produtos|lanches|hamburguer|hamburgueres|burguers|sanduiches|bebidas|refrigerantes|sobremesas|porcoes|entradas|tem o que|o que tem|quais.*tem|quais.*vende|me mostra|manda.*cardapio|lista.*produto)/
     )
   end
 
   def broad_menu_request?
-    normalized_question.match?(/cardapio|menu|opcoes|opcao|produtos|tem o que|o que tem|quais.*tem|quais.*vende|me mostra|manda.*cardapio|lista.*produto/)
+    intent_route.intent == :menu_request ||
+      normalized_question.match?(/cardapio|menu|opcoes|opcao|produtos|tem o que|o que tem|quais.*tem|quais.*vende|me mostra|manda.*cardapio|lista.*produto/)
   end
 
   def new_order_request?
@@ -1326,7 +1321,8 @@ class StoreAiSalesService
     return false if cart.stage.in?(%w[address_confirmation upsell payment_selection order_confirmation]) && (yes? || negative_answer?)
     return false if new_order_request?
 
-    normalized_question.match?(/status|acompanha|andamento|aberto|consulta|numero|número|#\s*\d+|chega|tempo|meu pedido|pedido numero|pedido número|cad[eê]|ta onde/)
+    intent_route.intent == :order_status_request ||
+      normalized_question.match?(/status|acompanha|andamento|consulta|numero|número|#\s*\d+|meu pedido|pedido numero|pedido número|pedido.*aberto|aberto.*pedido|cad[eê]|ta onde/)
   end
 
   def looks_like_address?
@@ -1536,6 +1532,10 @@ class StoreAiSalesService
         stage: cart.stage,
         company_id: @company.id,
         phone_last4: @phone.last(4),
+        original_message: safe_log_text(@question).presence,
+        normalized_message: safe_log_text(normalized_question).presence,
+        intent: intent_route.intent,
+        intent_confidence: intent_route.confidence,
         product_id: product_id,
         order_id: order_id,
         total_cents: total_cents || cart.total_cents,
