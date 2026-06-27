@@ -857,3 +857,46 @@ html[data-theme="dark"] .panel{background:var(--card)}
     flex-direction:column;
   }
 }
+
+/* Founder program */
+.founder-admin-page{display:flex;flex-direction:column;gap:18px}
+.founder-admin-hero{align-items:flex-end;padding:2px 0 2px}
+.founder-admin-hero h1{margin:5px 0 7px;font-size:30px;letter-spacing:-.035em}
+.founder-admin-hero p{max-width:680px;margin:0;color:var(--muted);line-height:1.55}
+.founder-admin-kicker{display:inline-flex;align-items:center;gap:7px;color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.founder-admin-status{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 18px;border-radius:16px}
+.founder-admin-status>div{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center;min-width:0}
+.founder-admin-status strong{font-size:15px}
+.founder-admin-status small{grid-column:2;color:var(--muted);font-size:12.5px;line-height:1.45}
+.status-dot{width:10px;height:10px;border-radius:999px;background:var(--muted-2);box-shadow:0 0 0 4px rgba(161,161,170,.14)}
+.status-dot.online{background:var(--green);box-shadow:0 0 0 4px rgba(22,163,74,.13)}
+.status-dot.paused{background:var(--amber);box-shadow:0 0 0 4px rgba(245,158,11,.14)}
+.founder-admin-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.founder-stat{padding:16px;border-radius:16px}
+.founder-stat span{display:block;color:var(--muted);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.045em}
+.founder-stat strong{display:block;margin-top:10px;font-size:25px;line-height:1;letter-spacing:-.03em;color:var(--text)}
+.founder-stat small{display:block;margin-top:8px;color:var(--muted);font-size:12px}
+.founder-admin-card{border-radius:16px}
+.founder-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.founder-section-head h2{margin:0 0 5px;font-size:17px;letter-spacing:-.02em}
+.founder-section-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.founder-admin-pill{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 10px;border-radius:999px;background:#f4f4f5;color:var(--text-2);font-size:11px;font-weight:750;white-space:nowrap}
+.founder-toggle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.founder-toggle{position:relative;display:flex;gap:12px;align-items:flex-start;padding:15px;border:1px solid var(--border);border-radius:13px;background:#fff;cursor:pointer;transition:.16s ease}
+.founder-toggle:hover{border-color:var(--border-strong);transform:translateY(-1px)}
+.founder-toggle.active{border-color:#93c5fd;background:linear-gradient(180deg,#eff6ff,#fff)}
+.founder-toggle input{position:absolute;opacity:0;pointer-events:none}
+.founder-toggle>span{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#f4f4f5;color:var(--muted);border:1px solid var(--border);flex:0 0 auto}
+.founder-toggle.active>span{background:var(--blue);border-color:var(--blue);color:#fff}
+.founder-toggle strong{display:block;font-size:13.5px;margin-bottom:4px}
+.founder-toggle small{display:block;color:var(--muted);font-size:12px;line-height:1.42}
+.founder-admin-form{padding-top:16px;border-top:1px solid var(--border)}
+.founder-admin-modules .module-option{min-height:104px}
+.founder-admin-table{overflow:hidden;border-radius:16px}
+.founder-admin-table .table-wrap{padding:0}
+.founder-admin-table table{width:100%;border-collapse:collapse}
+.founder-admin-table th,.founder-admin-table td{padding:13px 16px;border-bottom:1px solid var(--border);text-align:left;font-size:12.5px}
+.founder-admin-table th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafafa}
+.founder-admin-table tr:last-child td{border-bottom:0}
+@media(max-width:1100px){.founder-admin-stats,.founder-toggle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.founder-admin-hero,.founder-admin-status,.founder-section-head{align-items:flex-start;flex-direction:column}.founder-admin-stats,.founder-toggle-grid{grid-template-columns:1fr}.founder-admin-status .btn{width:100%}}

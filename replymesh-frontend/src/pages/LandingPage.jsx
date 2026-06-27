@@ -101,7 +101,7 @@ export function LandingPage() {
     const clients = Array.isArray(branding.landing_clients) ? branding.landing_clients : [];
     return clients.filter((client) => client?.name).length ? clients.filter((client) => client?.name) : DEFAULT_BRANDING.landing_clients;
   }, [branding.landing_clients]);
-  const scrollClients = landingClients.length > 5;
+  const scrollClients = landingClients.length > 1;
   const visibleClients = scrollClients ? [...landingClients, ...landingClients] : landingClients;
 
   return (
@@ -126,6 +126,9 @@ export function LandingPage() {
             <a href="#clientes">Clientes</a>
             <Link to="/central-de-ajuda">Suporte</Link>
           </nav>
+          <div className="nav-right">
+            <Link to="/comece-gratis" className="btn btn-white nav-cta">Criar conta gratis</Link>
+          </div>
           <button className="menu-btn" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18"/>
@@ -256,11 +259,11 @@ export function LandingPage() {
 
           <div className="capabilities-cta">
             <div>
-              <span className="capabilities-price">Preço sob consulta</span>
-              <p>Soluções personalizadas para cada negócio</p>
+              <span className="capabilities-price">Pronto para profissionalizar seu delivery?</span>
+              <p>Veja uma demonstracao da Replymesh funcionando com pedidos, WhatsApp, gestao e automacoes em tempo real.</p>
             </div>
             <div className="capabilities-actions">
-              <Link to="/login" className="btn btn-white">Solicitar Demonstração</Link>
+              <Link to="/comece-gratis" className="btn btn-white">Comecar gratis</Link>
               <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" className="btn btn-ghost">Falar no WhatsApp</a>
             </div>
           </div>

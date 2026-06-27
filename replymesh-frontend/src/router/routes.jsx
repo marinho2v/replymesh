@@ -33,6 +33,7 @@ const TermosDeUso = lazy(() => import("../pages/TermosDeUso.jsx").then((module) 
 const PoliticaDePrivacidade = lazy(() => import("../pages/PoliticaDePrivacidade.jsx").then((module) => ({ default: module.PoliticaDePrivacidade })));
 const InstitutionalPage = lazy(() => import("../pages/InstitutionalPage.jsx").then((module) => ({ default: module.InstitutionalPage })));
 const FounderSignup = lazy(() => import("../pages/FounderSignup.jsx").then((module) => ({ default: module.FounderSignup })));
+const StoreAccess = lazy(() => import("../pages/StoreAccess.jsx").then((module) => ({ default: module.StoreAccess })));
 
 const page = (element) => (
   <Suspense fallback={<div className="route-loader" role="status">Carregando pagina...</div>}>
@@ -49,6 +50,8 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/fundadores", element: page(<FounderSignup />) },
   { path: "/cadastro", element: page(<FounderSignup />) },
   { path: "/comece-gratis", element: page(<FounderSignup />) },
+  { path: "/entrar", element: page(<StoreAccess />) },
+  { path: "/acessar", element: page(<StoreAccess />) },
   { path: "/termos-de-uso", element: page(<TermosDeUso />) },
   { path: "/politica-de-privacidade", element: page(<PoliticaDePrivacidade />) },
   { path: "/recursos", element: page(<InstitutionalPage page="recursos" />) },

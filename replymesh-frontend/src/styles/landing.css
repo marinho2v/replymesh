@@ -540,7 +540,7 @@
 }
 .lp .capabilities-cta {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0,1fr) auto;
   align-items: center;
   gap: 28px;
   margin-top: 18px;
@@ -553,16 +553,21 @@
 }
 .lp .capabilities-price {
   display: block;
-  margin-bottom: 5px;
+  max-width: 620px;
+  margin-bottom: 7px;
   color: #f6f7f8;
   font-family: 'Sora', sans-serif;
-  font-size: 20px;
+  font-size: clamp(20px, 2.1vw, 27px);
   font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -.025em;
 }
 .lp .capabilities-cta p {
   margin: 0;
+  max-width: 620px;
   color: #9296a0;
-  font-size: 12.5px;
+  font-size: 13.5px;
+  line-height: 1.55;
 }
 
 /* ----------------------------------
@@ -579,6 +584,8 @@
 .lp .client-logo-grid {
   width: 100%;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 .lp .client-logo-track {
   display: flex;
@@ -886,6 +893,13 @@
   .lp .capabilities-cta { margin-top: 12px; padding: 26px 22px; border-radius: 18px; }
   .lp .clients-title { font-size: 24px; }
   .lp .test-sec { padding-bottom: 40px; }
+  .lp .client-logo-grid {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+  }
+  .lp .client-logo-grid.is-scrolling .client-logo-track {
+    animation-duration: 18s;
+  }
   .lp .client-logo-card { flex-basis: calc((100% - 12px) / 2); min-height: 118px; padding: 12px 9px; }
   .lp .client-logo-grid.is-scrolling .client-logo-card { flex-basis: 160px; width: 160px; }
   .lp .client-logo-media { width: 56px; height: 56px; border-radius: 15px; }

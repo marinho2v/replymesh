@@ -68,17 +68,20 @@ export function FounderSignup() {
     <main className="founder-page">
       <header className="founder-nav">
         <Link to="/" className="founder-brand"><img src="/mark.png" alt="" /> Replymesh</Link>
-        <Link to="/login">Já tenho acesso</Link>
+        <Link to="/entrar">Já tenho acesso</Link>
       </header>
       <section className="founder-shell">
         <aside className="founder-intro">
           <span className="founder-kicker">PROGRAMA FUNDADORES</span>
-          <h1>Comece sua operação digital com a Replymesh.</h1>
-          <p>Crie seu cardápio, receba pedidos e organize sua loja em uma plataforma feita para delivery.</p>
-          <ul>
-            <li>Seu endereço exclusivo .replymesh.cloud</li>
-            <li>Cardápio, pedidos, delivery e relatórios</li>
-            <li>WhatsApp manual incluído</li>
+          <h1>Delivery completo, gratis para fundadores.</h1>
+          <p>Cadastre sua loja e comece com uma estrutura profissional para vender online, automatizar o WhatsApp e organizar sua operacao.</p>
+          <ul className="founder-feature-list">
+            <li>Cardapio online com endereco exclusivo .replymesh.cloud</li>
+            <li>Pedidos online, delivery, areas de entrega e relatorios</li>
+            <li>WhatsApp automatico com templates e mensagens prontas</li>
+            <li>Marketing, cupons, recuperacao de vendas e banners</li>
+            <li>IA para atendimento, estoque, clientes e gestao da loja</li>
+            <li>Aplicativo do motoboy e atualizacoes continuas inclusas</li>
           </ul>
           {program && <div className="founder-vacancies">{program.remaining} de {program.limit} vagas disponíveis</div>}
         </aside>
