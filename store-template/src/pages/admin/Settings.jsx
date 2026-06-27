@@ -377,7 +377,12 @@ const Settings = () => {
   const companySlug = localStorage.getItem('replymesh_store_company_slug') || ''
   const publicUrl = companySlug ? `${window.location.origin}/loja/${companySlug}` : window.location.origin
   const whatsappAdminUrl = companySlug ? `/loja/${companySlug}/admin/whatsapp` : '/admin/whatsapp'
-  const manualWhatsappMode = localSettings.whatsapp_mode === 'manual'
+  const effectiveWhatsappMode = ['automatic', 'manual', 'disabled'].includes(localSettings.whatsapp_mode)
+    ? localSettings.whatsapp_mode
+    : 'manual'
+  const manualWhatsappMode = effectiveWhatsappMode === 'manual'
+  const automaticWhatsappMode = effectiveWhatsappMode === 'automatic'
+  const disabledWhatsappMode = effectiveWhatsappMode === 'disabled'
   const effectiveStatus = getEffectiveStoreStatus(localSettings, localHours)
   const effectiveStatusText = effectiveStatus.isOpen ? 'Loja aberta agora' : 'Loja fechada agora'
   const effectiveStatusHelper = effectiveStatus.isOpen && effectiveStatus.closesAt
@@ -438,7 +443,11 @@ const Settings = () => {
     setSavingSettings(true)
     setLastError('')
     setLastSaved('')
-    const result = await saveSettings(localSettings)
+    const settingsPayload = {
+      ...localSettings,
+    }
+    delete settingsPayload.whatsapp_mode
+    const result = await saveSettings(settingsPayload)
     setSavingSettings(false)
     if (!result.success) {
       setLastError(result.error || 'Nao foi possivel salvar as configuracoes.')
@@ -1013,49 +1022,59 @@ const Settings = () => {
             <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
               <p className="text-sm text-gray-400">Modo atual</p>
               <div className="mt-2 flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${manualWhatsappMode ? 'bg-blue-400' : 'bg-green-400'}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${disabledWhatsappMode ? 'bg-gray-500' : manualWhatsappMode ? 'bg-blue-400' : 'bg-green-400'}`} />
                 <span className="font-semibold text-white">
-                  {manualWhatsappMode ? 'Manual pelo WhatsApp Web/App' : 'Automatico com Replymesh Connect'}
+                  {disabledWhatsappMode
+                    ? 'WhatsApp desativado'
+                    : manualWhatsappMode
+                      ? 'Manual pelo WhatsApp Web/App'
+                      : 'Automatico com Replymesh Connect'}
                 </span>
               </div>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className={`cursor-pointer rounded-xl border p-4 ${!manualWhatsappMode ? 'border-yellow-400 bg-yellow-400/5' : 'border-dark-700 bg-dark-900'}`}>
+          <div className="grid gap-3">
+            {automaticWhatsappMode && (
+            <div className="rounded-xl border border-yellow-400 bg-yellow-400/5 p-4">
               <div className="flex items-start gap-3">
-                <input
-                  type="radio"
-                  name="whatsapp_mode"
-                  value="automatic"
-                  checked={!manualWhatsappMode}
-                  onChange={() => updateSetting('whatsapp_mode', 'automatic')}
-                  className="mt-1"
-                />
+                <span className="mt-1 h-3 w-3 rounded-full bg-yellow-400" />
                 <div>
                   <strong className="text-white">Automatico com Replymesh Connect</strong>
                   <p className="mt-1 text-sm text-gray-400">As mensagens sao enviadas automaticamente pelo Replymesh Connect.</p>
                 </div>
               </div>
-            </label>
-            <label className={`cursor-pointer rounded-xl border p-4 ${manualWhatsappMode ? 'border-blue-400 bg-blue-400/5' : 'border-dark-700 bg-dark-900'}`}>
+            </div>
+            )}
+            {manualWhatsappMode && (
+            <div className="rounded-xl border border-blue-400 bg-blue-400/5 p-4">
               <div className="flex items-start gap-3">
-                <input
-                  type="radio"
-                  name="whatsapp_mode"
-                  value="manual"
-                  checked={manualWhatsappMode}
-                  onChange={() => updateSetting('whatsapp_mode', 'manual')}
-                  className="mt-1"
-                />
+                <span className="mt-1 h-3 w-3 rounded-full bg-blue-400" />
                 <div>
                   <strong className="text-white">Manual pelo WhatsApp Web/App</strong>
                   <p className="mt-1 text-sm text-gray-400">O sistema abre o WhatsApp com a mensagem pronta. Voce confere e envia manualmente.</p>
                 </div>
               </div>
-            </label>
+            </div>
+            )}
+            {disabledWhatsappMode && (
+            <div className="rounded-xl border border-dark-700 bg-dark-900 p-4">
+              <div className="flex items-start gap-3">
+                <span className="mt-1 h-3 w-3 rounded-full bg-gray-500" />
+                <div>
+                  <strong className="text-white">WhatsApp desativado</strong>
+                  <p className="mt-1 text-sm text-gray-400">O módulo WhatsApp não está liberado para esta empresa.</p>
+                </div>
+              </div>
+            </div>
+            )}
+          </div>
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-100">
+            O modo operacional do WhatsApp é definido no Painel Master. A loja pode alterar apenas o número de contato.
           </div>
           <div className="rounded-lg border border-dark-700 bg-dark-900 p-4 text-sm text-gray-300">
-            {manualWhatsappMode
+            {disabledWhatsappMode
+              ? 'WhatsApp desativado para esta empresa.'
+              : manualWhatsappMode
               ? 'Modo manual ativo. As mensagens devem ser enviadas pelo atendente.'
               : 'As mensagens automaticas sao configuradas na area WhatsApp.'}
           </div>

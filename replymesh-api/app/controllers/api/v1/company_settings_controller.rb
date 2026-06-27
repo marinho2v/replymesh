@@ -65,7 +65,6 @@ module Api
           :phone,
           :whatsapp,
           :whatsapp_number,
-          :whatsapp_mode,
           :instagram,
           :facebook,
           :email,
@@ -115,6 +114,7 @@ module Api
           accepted_payment_methods: []
         )
       end
+
     end
   end
 end
