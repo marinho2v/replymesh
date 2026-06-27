@@ -5,6 +5,7 @@ import {
   railsUpdateDeliveryZone,
   railsDeleteDeliveryZone,
 } from '../../services/storeApi'
+import { matchDeliveryZone } from '../../services/deliveryZones'
 import { Card, CardContent, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -22,9 +23,13 @@ const initialFormData = {
   aliases: '',
   delivery_fee: '',
   estimated_time: '',
+  estimated_distance_km: '',
+  logistics_group: '',
+  latitude: '',
+  longitude: '',
   minimum_order_amount: '',
   match_priority: 100,
-  notes: '',
+  internal_note: '',
   is_active: true,
 }
 
@@ -57,7 +62,14 @@ const DeliveryZones = () => {
         slug: normalizeSlug(formData.slug || formData.name),
         delivery_fee: parseFloat(formData.delivery_fee) || 0,
         minimum_order_amount: parseFloat(formData.minimum_order_amount) || 0,
+        estimated_distance_km: formData.estimated_distance_km === '' ? '' : parseFloat(formData.estimated_distance_km),
+        latitude: formData.latitude === '' ? '' : parseFloat(formData.latitude),
+        longitude: formData.longitude === '' ? '' : parseFloat(formData.longitude),
         match_priority: parseInt(formData.match_priority, 10) || 100,
+        aliases: String(formData.aliases || '')
+          .split(/[\n,;]+/)
+          .map(value => value.trim())
+          .filter(Boolean),
       }
 
       if (editingZone) {
@@ -88,9 +100,13 @@ const DeliveryZones = () => {
       aliases: Array.isArray(zone.aliases) ? zone.aliases.join('\n') : '',
       delivery_fee: zone.delivery_fee || '',
       estimated_time: zone.estimated_time || '',
+      estimated_distance_km: zone.estimated_distance_km ?? '',
+      logistics_group: zone.logistics_group || '',
+      latitude: zone.latitude ?? '',
+      longitude: zone.longitude ?? '',
       minimum_order_amount: zone.minimum_order_amount || '',
       match_priority: zone.match_priority || 100,
-      notes: zone.notes || '',
+      internal_note: zone.internal_note || zone.notes || '',
       is_active: zone.is_active !== false,
     })
     setModalOpen(true)
@@ -109,8 +125,22 @@ const DeliveryZones = () => {
     }
   }
 
-  const handleTestAddress = () => {
-    toast.info('Teste de endereco disponivel apos integracao completa de entrega')
+  const handleTestAddress = async () => {
+    if (!testAddress.trim()) {
+      toast.error('Informe um bairro, rua ou referência para testar.')
+      return
+    }
+
+    try {
+      setTesting(true)
+      const result = await matchDeliveryZone(testAddress)
+      setTestResult(result)
+    } catch (error) {
+      console.error('Error testing delivery zone:', error)
+      toast.error(error.message || 'Nao foi possivel testar a area de entrega')
+    } finally {
+      setTesting(false)
+    }
   }
 
   const resetForm = () => {
@@ -159,7 +189,13 @@ const DeliveryZones = () => {
                   </p>
                   <p className="text-green-200 text-sm mt-1">
                     Taxa: {formatCurrency(testResult.zone.delivery_fee)}
-                    {testResult.match?.reason ? ` - ${testResult.match.reason}` : ''}
+                    {testResult.zone.estimated_distance_km ? ` · Distancia estimada: ${testResult.zone.estimated_distance_km} km` : ''}
+                    {testResult.zone.estimated_time ? ` · Tempo: ${testResult.zone.estimated_time} min` : ''}
+                    {testResult.zone.logistics_group ? ` · Grupo: ${testResult.zone.logistics_group}` : ''}
+                  </p>
+                  <p className="text-green-200/80 text-xs mt-1">
+                    Score: {testResult.match?.score || 0}
+                    {testResult.zone.match_priority ? ` · Prioridade ${testResult.zone.match_priority}` : ''}
                   </p>
                 </div>
               ) : (
@@ -216,7 +252,17 @@ const DeliveryZones = () => {
                   {zone.estimated_time && (
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-gray-400" />
-                      <span className="text-gray-400 text-sm">{zone.estimated_time}</span>
+                      <span className="text-gray-400 text-sm">{zone.estimated_time} min</span>
+                    </div>
+                  )}
+
+                  {(zone.estimated_distance_km || zone.logistics_group) && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">Logistica</span>
+                      <span className="text-white text-sm font-semibold">
+                        {zone.estimated_distance_km ? `${zone.estimated_distance_km} km` : 'Sem distancia'}
+                        {zone.logistics_group ? ` · ${zone.logistics_group}` : ''}
+                      </span>
                     </div>
                   )}
 
@@ -231,8 +277,8 @@ const DeliveryZones = () => {
                     <p className="text-gray-400 text-xs">Aliases: {zone.aliases.join(', ')}</p>
                   )}
 
-                  {zone.notes && (
-                    <p className="text-gray-400 text-xs mt-2">{zone.notes}</p>
+                  {zone.internal_note && (
+                    <p className="text-gray-400 text-xs mt-2">Obs. interna: {zone.internal_note}</p>
                   )}
                 </div>
               </CardContent>
@@ -301,12 +347,49 @@ const DeliveryZones = () => {
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Tempo estimado em minutos"
+              type="number"
+              placeholder="Ex: 35"
+              value={formData.estimated_time}
+              onChange={(event) => setFormData(prev => ({ ...prev, estimated_time: event.target.value }))}
+            />
+
+            <Input
+              label="Distancia estimada (km)"
+              type="number"
+              step="0.01"
+              placeholder="Ex: 4.5"
+              value={formData.estimated_distance_km}
+              onChange={(event) => setFormData(prev => ({ ...prev, estimated_distance_km: event.target.value }))}
+            />
+          </div>
+
           <Input
-            label="Tempo estimado"
-            placeholder="Ex: 30-40 min"
-            value={formData.estimated_time}
-            onChange={(event) => setFormData(prev => ({ ...prev, estimated_time: event.target.value }))}
+            label="Grupo de rota"
+            placeholder="Ex: Centro, Manilha, Apolo"
+            value={formData.logistics_group}
+            onChange={(event) => setFormData(prev => ({ ...prev, logistics_group: event.target.value }))}
           />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Latitude de referencia"
+              type="number"
+              step="0.0000001"
+              value={formData.latitude}
+              onChange={(event) => setFormData(prev => ({ ...prev, latitude: event.target.value }))}
+            />
+
+            <Input
+              label="Longitude de referencia"
+              type="number"
+              step="0.0000001"
+              value={formData.longitude}
+              onChange={(event) => setFormData(prev => ({ ...prev, longitude: event.target.value }))}
+            />
+          </div>
 
           <Input
             label="Valor minimo do pedido"
@@ -327,9 +410,9 @@ const DeliveryZones = () => {
           </label>
 
           <Textarea
-            label="Observacoes"
-            value={formData.notes}
-            onChange={(event) => setFormData(prev => ({ ...prev, notes: event.target.value }))}
+            label="Observacao interna"
+            value={formData.internal_note}
+            onChange={(event) => setFormData(prev => ({ ...prev, internal_note: event.target.value }))}
             rows={2}
           />
 

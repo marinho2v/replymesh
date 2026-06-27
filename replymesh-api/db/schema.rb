@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_26_000200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -421,17 +421,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.integer "delivery_fee_cents", default: 0, null: false
+    t.decimal "estimated_distance_km", precision: 8, scale: 2
     t.integer "estimated_minutes", default: 40, null: false
+    t.text "internal_note"
     t.boolean "is_active", default: true, null: false
+    t.decimal "latitude", precision: 10, scale: 7
     t.string "legacy_id"
     t.string "legacy_source"
     t.string "legacy_table"
+    t.string "logistics_group"
+    t.decimal "longitude", precision: 10, scale: 7
     t.integer "match_priority", default: 0, null: false
     t.integer "minimum_order_cents", default: 0, null: false
     t.text "name", null: false
     t.text "slug", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id", "is_active"], name: "index_delivery_zones_on_company_id_and_is_active"
+    t.index ["company_id", "logistics_group"], name: "idx_delivery_zones_company_logistics_group"
     t.index ["company_id", "match_priority"], name: "index_delivery_zones_on_company_id_and_match_priority"
     t.index ["company_id", "slug"], name: "index_delivery_zones_on_company_id_and_slug", unique: true
     t.index ["company_id"], name: "index_delivery_zones_on_company_id"
@@ -858,6 +864,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.text "customer_name"
     t.text "customer_phone"
     t.text "customer_whatsapp"
+    t.string "delivery_area_name"
     t.integer "delivery_fee_cents", default: 0, null: false
     t.decimal "delivery_latitude", precision: 10, scale: 7
     t.datetime "delivery_location_received_at"
@@ -867,6 +874,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.bigint "delivery_zone_id"
     t.bigint "dining_table_id"
     t.integer "discount_cents", default: 0, null: false
+    t.integer "estimated_delivery_minutes"
+    t.decimal "estimated_distance_km", precision: 8, scale: 2
     t.string "external_payment_id"
     t.datetime "financial_recorded_at"
     t.string "google_maps_url"
@@ -877,6 +886,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.string "legacy_id"
     t.string "legacy_source"
     t.string "legacy_table"
+    t.string "logistics_group"
     t.bigint "motoboy_id"
     t.boolean "needs_change", default: false, null: false
     t.text "neighborhood"
@@ -897,6 +907,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.string "public_token", null: false
     t.datetime "ready_at"
     t.text "reference"
+    t.integer "route_priority"
     t.text "state"
     t.text "status", default: "pending", null: false
     t.text "street"
@@ -910,6 +921,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_22_024700) do
     t.index ["company_id", "customer_id"], name: "index_orders_on_company_id_and_customer_id"
     t.index ["company_id", "customer_phone", "status", "created_at"], name: "idx_orders_location_phone_lookup"
     t.index ["company_id", "delivery_status"], name: "index_orders_on_company_id_and_delivery_status"
+    t.index ["company_id", "motoboy_id", "delivery_status", "route_priority"], name: "idx_orders_motoboy_route_priority"
     t.index ["company_id", "motoboy_id"], name: "index_orders_on_company_id_and_motoboy_id"
     t.index ["company_id", "order_number"], name: "index_orders_on_company_id_and_order_number", unique: true
     t.index ["company_id", "payment_status"], name: "index_orders_on_company_id_and_payment_status"

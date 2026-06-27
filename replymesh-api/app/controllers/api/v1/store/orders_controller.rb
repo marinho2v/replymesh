@@ -94,10 +94,21 @@ module Api
           result = DeliveryService.assign(order: @order, motoboy: motoboy, user: current_user)
 
           if result.success?
-            render_ok(order: serialize_full(result.data))
+            render_ok(
+              order: serialize_full(result.data),
+              route_suggestion: serialize_route_suggestion(motoboy)
+            )
           else
             render_error(result.error)
           end
+        end
+
+        # GET /api/v1/store/orders/route_suggestion?motoboy_id=123
+        def route_suggestion
+          motoboy = company_scope(::Motoboy).find_by(id: params.require(:motoboy_id))
+          return render_not_found("Motoboy") unless motoboy
+
+          render_ok(route_suggestion: serialize_route_suggestion(motoboy))
         end
 
         # PATCH /api/v1/store/orders/:id/delivery_status
@@ -211,10 +222,15 @@ module Api
             customer_phone: o.customer_phone,
             customer_whatsapp: o.customer_whatsapp,
             address:        order_address(o),
+            delivery_area_name: o.delivery_area_name,
+            estimated_distance_km: o.estimated_distance_km,
+            estimated_delivery_minutes: o.estimated_delivery_minutes,
+            logistics_group: o.logistics_group,
+            route_priority: o.route_priority,
             items_count:    o.order_items.size,
             order_items:    serialize_items(o),
             created_at:     o.created_at,
-            delivery_zone:  o.delivery_zone&.slice("id", "name", "delivery_fee_cents"),
+            delivery_zone:  serialize_delivery_zone(o.delivery_zone),
             dining_table:   o.dining_table&.slice("id", "name", "number"),
             dining_tables:  o.dining_table&.slice("id", "name", "number"),
             motoboy:        o.motoboy&.slice("id", "name")
@@ -230,12 +246,14 @@ module Api
                      reference notes inventory_deducted financial_recorded_at
                      delivery_latitude delivery_longitude google_maps_url waze_url
                      delivery_location_source delivery_location_received_at
+                     delivery_area_name estimated_distance_km estimated_delivery_minutes
+                     logistics_group route_priority
                      accepted_at preparing_at ready_at out_for_delivery_at completed_at cancelled_at
                      created_at updated_at]
           ).merge(
             total_brl:      o.total_brl,
             customer:       o.customer&.slice("id", "full_name", "phone"),
-            delivery_zone:  o.delivery_zone&.slice("id", "name", "delivery_fee_cents"),
+            delivery_zone:  serialize_delivery_zone(o.delivery_zone),
             motoboy:        o.motoboy&.slice("id", "name", "phone"),
             coupon:         o.coupon&.slice("id", "code", "discount_type", "discount_value"),
             dining_table:   o.dining_table&.slice("id", "name", "number"),
@@ -290,6 +308,32 @@ module Api
             city: order.city,
             state: order.state,
             reference: order.reference
+          }
+        end
+
+        def serialize_delivery_zone(zone)
+          return nil unless zone
+
+          zone.slice(
+            "id", "name", "delivery_fee_cents", "estimated_minutes",
+            "estimated_distance_km", "logistics_group", "match_priority"
+          )
+        end
+
+        def serialize_route_suggestion(motoboy)
+          orders = company_scope(Order)
+                   .includes(:customer, :motoboy, :order_items, :delivery_zone)
+                   .where(motoboy_id: motoboy.id, delivery_status: %w[assigned on_the_way])
+                   .to_a
+          route = DeliveryRouteService.call(orders: orders)
+
+          {
+            motoboy: motoboy.slice("id", "name", "phone"),
+            summary: route.summary,
+            maps_url: route.maps_url,
+            orders: route.orders.each_with_index.map do |order, index|
+              serialize_list(order).merge(route_position: index + 1)
+            end
           }
         end
 

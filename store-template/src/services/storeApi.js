@@ -47,6 +47,11 @@ const normalizeZone = (z) => ({
   delivery_fee:          toBrl(z.delivery_fee_cents),
   minimum_order_amount:  toBrl(z.minimum_order_cents ?? 0),
   estimated_time:        z.estimated_minutes ? String(z.estimated_minutes) : '',
+  estimated_distance_km: z.estimated_distance_km ?? '',
+  logistics_group:       z.logistics_group || '',
+  latitude:              z.latitude ?? '',
+  longitude:             z.longitude ?? '',
+  internal_note:         z.internal_note || z.notes || '',
 })
 
 const normalizeBanner = (b) => ({
@@ -103,7 +108,17 @@ export const railsAssignMotoboyToOrder = (orderId, motoboyId, options = {}) => (
     method: 'POST',
     body: { motoboy_id: motoboyId, notes: options.notes },
     headers: withCompanyHeader(options.companyId || currentCompanyId()),
-  }).then(payload => payload.order)
+  }).then(payload => ({
+    ...(payload.order || {}),
+    route_suggestion: payload.route_suggestion || null,
+  }))
+)
+
+export const railsGetMotoboyRouteSuggestion = (motoboyId, options = {}) => (
+  request('/store/orders/route_suggestion', {
+    params: { motoboy_id: motoboyId },
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  }).then(payload => payload.route_suggestion)
 )
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -331,6 +346,11 @@ const zoneToRails = (data) => ({
   delivery_fee_cents:   toCents(data.delivery_fee),
   minimum_order_cents:  toCents(data.minimum_order_amount ?? 0),
   estimated_minutes:    data.estimated_time ? parseInt(data.estimated_time) || null : null,
+  estimated_distance_km: data.estimated_distance_km === '' || data.estimated_distance_km == null ? null : Number(data.estimated_distance_km),
+  logistics_group:       data.logistics_group || null,
+  latitude:              data.latitude === '' || data.latitude == null ? null : Number(data.latitude),
+  longitude:             data.longitude === '' || data.longitude == null ? null : Number(data.longitude),
+  internal_note:         data.internal_note || data.notes || null,
   match_priority:       Number(data.match_priority) || 100,
   is_active:            data.is_active !== false,
   aliases:              Array.isArray(data.aliases) ? data.aliases : (data.aliases ? [data.aliases] : []),

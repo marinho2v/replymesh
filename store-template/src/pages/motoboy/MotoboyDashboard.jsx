@@ -92,6 +92,7 @@ const MotoboyDashboard = () => {
   const navigate = useNavigate()
   const basePath = useCompanyBasePath()
   const [orders, setOrders] = useState([])
+  const [route, setRoute] = useState(null)
   const [profile, setProfile] = useState(null)
   const [company, setCompany] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -116,6 +117,7 @@ const MotoboyDashboard = () => {
       setProfile(profileResponse.motoboy)
       setCompany(profileResponse.company)
       setOrders(ordersResponse.orders || [])
+      setRoute(ordersResponse.route || null)
     } catch (error) {
       if (error.status === 401) {
         navigate(`${basePath}/motoboy/login`, { replace: true })
@@ -184,6 +186,24 @@ const MotoboyDashboard = () => {
         </div>
       ) : (
         <div className="space-y-4">
+          {activeDeliveries.length > 1 && route?.maps_url && (
+            <Card>
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">Rota sugerida</p>
+                  <h2 className="text-xl font-bold text-white">{activeDeliveries.length} entregas em sequencia</h2>
+                  <p className="mt-1 text-sm text-gray-400">
+                    {route.summary?.estimated_distance_km || 0} km estimados · {route.summary?.estimated_delivery_minutes || 0} min estimados
+                  </p>
+                </div>
+                <Button variant="success" onClick={() => openExternal(route.maps_url)}>
+                  <Navigation size={18} className="mr-2" />
+                  Abrir rota no Maps
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {activeDeliveries.map((order) => {
             const address = buildAddress(order)
             const { mapsUrl, wazeUrl } = buildMapsUrls(order, address)
@@ -195,6 +215,7 @@ const MotoboyDashboard = () => {
                 <CardHeader className="flex flex-col gap-2 border-b border-dark-600 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-gray-400">
+                      {order.route_position ? `Parada ${order.route_position} · ` : ''}
                       Atribuido em {formatDateTime(order.assigned_at || order.delivery_history?.assigned_at || order.created_at)}
                     </p>
                     <h2 className="text-xl font-bold text-white">{order.customer_name || 'Cliente'}</h2>
@@ -211,6 +232,14 @@ const MotoboyDashboard = () => {
                         Endereco
                       </p>
                       <p className="text-white">{address || 'Endereco nao informado'}</p>
+                      {(order.delivery_area_name || order.estimated_distance_km || order.logistics_group) && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          {order.delivery_area_name || order.address?.neighborhood || 'Area'}
+                          {order.estimated_distance_km ? ` · ${order.estimated_distance_km} km estimados` : ''}
+                          {order.estimated_delivery_minutes ? ` · ${order.estimated_delivery_minutes} min` : ''}
+                          {order.logistics_group ? ` · Grupo ${order.logistics_group}` : ''}
+                        </p>
+                      )}
                       {order.address?.reference && <p className="mt-1 text-sm text-gray-400">Ref.: {order.address.reference}</p>}
                       {whatsappLocation ? (
                         <div className="mt-3 rounded-lg border border-green-500/70 bg-green-950/70 p-3 shadow-lg shadow-green-950/20">

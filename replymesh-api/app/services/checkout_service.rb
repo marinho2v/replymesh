@@ -174,11 +174,17 @@ class CheckoutService
   def calculate_delivery_fee_cents
     return 0 unless delivery_order?
 
-    zone_id = @params[:delivery_zone_id].presence
-    zone = @company.delivery_zones.active.find_by(id: zone_id) if zone_id
+    zone = selected_delivery_zone
     return zone.delivery_fee_cents.to_i if zone
 
     @company.store_setting&.default_delivery_fee_cents.to_i
+  end
+
+  def selected_delivery_zone
+    return @selected_delivery_zone if defined?(@selected_delivery_zone)
+
+    zone_id = @params[:delivery_zone_id].presence
+    @selected_delivery_zone = zone_id ? @company.delivery_zones.active.find_by(id: zone_id) : nil
   end
 
   def duplicate_order_exists?(phone, total_cents)
@@ -235,6 +241,8 @@ class CheckoutService
   end
 
   def create_order(customer, calculated)
+    zone = selected_delivery_zone
+
     Order.create!(
       company:          @company,
       customer:         customer,
@@ -243,7 +251,12 @@ class CheckoutService
       customer_whatsapp: customer.whatsapp,
       order_type:       @params[:order_type]     || "delivery",
       payment_method:   @params[:payment_method] || "money",
-      delivery_zone_id: @params[:delivery_zone_id],
+      delivery_zone_id: zone&.id || @params[:delivery_zone_id],
+      delivery_area_name: zone&.name,
+      estimated_distance_km: zone&.estimated_distance_km,
+      estimated_delivery_minutes: zone&.estimated_minutes,
+      logistics_group: zone&.logistics_group,
+      route_priority: zone&.match_priority,
       subtotal_cents:   calculated[:subtotal_cents],
       delivery_fee_cents: calculated[:delivery_fee_cents],
       discount_cents:   calculated[:discount_cents],

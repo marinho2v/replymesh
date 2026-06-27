@@ -8,9 +8,16 @@ module Api
           orders = current_company.orders
                                   .includes(:delivery_history, :order_items, :delivery_zone)
                                   .where(motoboy_id: current_motoboy.id, delivery_status: %w[assigned on_the_way])
-                                  .order(created_at: :desc)
+                                  .to_a
+          route = DeliveryRouteService.call(orders: orders)
 
-          render_ok(orders: orders.map { |order| serialize_order(order) })
+          render_ok(
+            orders: route.orders.each_with_index.map { |order, index| serialize_order(order, route_position: index + 1) },
+            route: {
+              summary: route.summary,
+              maps_url: route.maps_url
+            }
+          )
         end
 
         def start
@@ -79,7 +86,7 @@ module Api
           render_not_found("Pedido") unless @order
         end
 
-        def serialize_order(order)
+        def serialize_order(order, route_position: nil)
           {
             id: order.id,
             order_number: order.order_number,
@@ -102,6 +109,12 @@ module Api
             waze_url: order.waze_url,
             delivery_location_source: order.delivery_location_source,
             delivery_location_received_at: order.delivery_location_received_at,
+            delivery_area_name: order.delivery_area_name,
+            estimated_distance_km: order.estimated_distance_km,
+            estimated_delivery_minutes: order.estimated_delivery_minutes,
+            logistics_group: order.logistics_group,
+            route_priority: order.route_priority,
+            route_position: route_position,
             address: order.delivery? ? {
               street: order.street,
               number: order.number,
@@ -111,7 +124,10 @@ module Api
               state: order.state,
               reference: order.reference
             } : nil,
-            delivery_zone: order.delivery_zone&.slice("id", "name", "delivery_fee_cents"),
+            delivery_zone: order.delivery_zone&.slice(
+              "id", "name", "delivery_fee_cents", "estimated_minutes",
+              "estimated_distance_km", "logistics_group", "match_priority"
+            ),
             delivery_history: order.delivery_history&.as_json(only: %i[id status assigned_at delivered_at notes]),
             assigned_at: order.delivery_history&.assigned_at,
             delivered_at: order.delivery_history&.delivered_at,

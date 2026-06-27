@@ -163,6 +163,9 @@ Rails.application.routes.draw do
 
         # Pedidos (ações de status e entrega como member actions)
         resources :orders, only: %i[index show create] do
+          collection do
+            get :route_suggestion
+          end
           member do
             patch :status
             post  :assign_motoboy

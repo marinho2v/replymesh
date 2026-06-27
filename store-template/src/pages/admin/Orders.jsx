@@ -61,6 +61,7 @@ const Orders = () => {
   const [motoboys, setMotoboys] = useState([])
   const [statusFlow, setStatusFlow] = useState()
   const [whatsappMode, setWhatsappMode] = useState('automatic')
+  const [routeSuggestion, setRouteSuggestion] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const notificationSound = useNotificationSound('admin-orders')
@@ -148,6 +149,7 @@ const Orders = () => {
     try {
       const updatedOrder = await railsAssignMotoboyToOrder(order.id, motoboyId)
       updateOrderLocally(updatedOrder)
+      setRouteSuggestion(updatedOrder.route_suggestion || null)
       toast.success(`Motoboy atribuido ao pedido #${order.order_number}`)
       return { success: true, order: normalizeOrder(updatedOrder) }
     } catch (err) {
@@ -204,6 +206,29 @@ const Orders = () => {
       {whatsappMode === 'manual' && (
         <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
           <strong>Modo WhatsApp manual ativo.</strong> As mensagens devem ser conferidas e enviadas pelo atendente após cada atualizacao.
+        </div>
+      )}
+
+      {routeSuggestion?.summary?.total_deliveries > 1 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-50">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <strong>Rota sugerida para {routeSuggestion.motoboy?.name || 'motoboy'}.</strong>
+              <p className="mt-1 text-emerald-100/80">
+                {routeSuggestion.summary.total_deliveries} entregas · {routeSuggestion.summary.estimated_distance_km || 0} km estimados · {routeSuggestion.summary.estimated_delivery_minutes || 0} min estimados.
+              </p>
+            </div>
+            {routeSuggestion.maps_url && (
+              <a
+                href={routeSuggestion.maps_url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-emerald-400/40 px-3 py-2 text-center font-semibold text-emerald-50 transition hover:bg-emerald-400/10"
+              >
+                Abrir rota no Maps
+              </a>
+            )}
+          </div>
         </div>
       )}
 

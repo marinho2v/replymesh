@@ -46,13 +46,16 @@ module Api
         def zone_params
           params.require(:delivery_zone).permit(
             :name, :slug, :city, :delivery_fee_cents, :estimated_minutes,
-            :minimum_order_cents, :match_priority, :is_active, aliases: []
+            :minimum_order_cents, :match_priority, :is_active,
+            :estimated_distance_km, :logistics_group, :latitude, :longitude, :internal_note,
+            aliases: []
           ).merge(company_id: current_company.id)
         end
 
         def serialize(z)
           z.as_json(only: %i[id name slug city aliases delivery_fee_cents estimated_minutes
-                             minimum_order_cents match_priority is_active created_at updated_at])
+                             minimum_order_cents match_priority is_active estimated_distance_km
+                             logistics_group latitude longitude internal_note created_at updated_at])
         end
       end
     end
