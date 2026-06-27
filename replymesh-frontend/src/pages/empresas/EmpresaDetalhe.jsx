@@ -448,6 +448,12 @@ export function EmpresaDetalhe({ edit = false, onToast }) {
         <InfoCard icon="Globe" title="Acesso" items={[["Dominio", company.primary_domain], ["Timezone", company.timezone], ["Idioma", company.default_locale], ["Atualizada", formatDate(company.updated_at)]]} />
         <WhatsappModeCard storeForm={storeForm} saving={savingWhatsappMode} onChange={changeWhatsappMode} />
         <ModuleCard
+          key={[
+            moduleAccess?.preset || "loading",
+            (moduleAccess?.enabled || []).join("|"),
+            form.monthly_price_cents || 0,
+            form.internal_note || "",
+          ].join(":")}
           moduleAccess={moduleAccess}
           catalog={moduleCatalog}
           saving={savingModules}
@@ -466,13 +472,6 @@ function ModuleCard({ moduleAccess, catalog, saving, monthlyPriceCents, internal
   const [planBase, setPlanBase] = useState(moduleAccess?.preset || "custom");
   const [price, setPrice] = useState(monthlyPriceCents || 0);
   const [note, setNote] = useState(internalNote || "");
-
-  useEffect(() => {
-    setDraft(moduleAccess?.enabled || []);
-    setPlanBase(moduleAccess?.preset || "custom");
-  }, [moduleAccess]);
-  useEffect(() => setPrice(monthlyPriceCents || 0), [monthlyPriceCents]);
-  useEffect(() => setNote(internalNote || ""), [internalNote]);
 
   if (!moduleAccess) {
     return <section className="card card-pad company-info-card modules-panel"><div className="company-info-title"><Icon name="Blocks" size={18} />Plano e módulos</div><p className="muted">Carregando módulos...</p></section>;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icon } from "../../components/ui/Icon.jsx";
 import { api } from "../../services/api.js";
 
@@ -6,13 +6,13 @@ export function FounderProgram({ onToast }) {
   const [data, setData] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const load = () => api.getFounderProgram()
+  const load = useCallback(() => api.getFounderProgram()
     .then(setData)
-    .catch((error) => onToast?.(error.message, "error"));
+    .catch((error) => onToast?.(error.message, "error")), [onToast]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   if (!data) return <div className="route-loader">Carregando Programa Fundadores...</div>;
 
