@@ -725,6 +725,71 @@ RSpec.describe StoreAiSalesService do
     expect(talk.call("confirmar", older_phone)[:answer]).to include("Pedido criado com sucesso")
   end
 
+  it "understands menu and product option questions instead of handing off" do
+    category = product.category
+    Product.create!(
+      company: company,
+      category: category,
+      name: "Smash Duplo",
+      slug: "smash-duplo-opcoes",
+      description: "Hamburguer artesanal duplo com queijo",
+      price_cents: 3_200,
+      is_active: true,
+      is_featured: true
+    )
+    Product.create!(
+      company: company,
+      category: category,
+      name: "Coca-Cola",
+      slug: "coca-cola-opcoes",
+      description: "Refrigerante gelado",
+      price_cents: 800,
+      is_active: true
+    )
+
+    first = send_message("quais opcao de lanches voce tem?")
+    expect(first[:status]).to eq("success")
+    expect(first[:answer]).to include("opcoes", "Smash Duplo")
+    expect(first[:next_action]).to eq("select_product")
+
+    second = send_message("manda o cardapio ai")
+    expect(second[:status]).to eq("success")
+    expect(second[:answer]).to include("Qual voce gostaria?")
+
+    beverage = send_message("tem refri?")
+    expect(beverage[:status]).to eq("success")
+    expect(beverage[:answer]).to include("Coca-Cola")
+  end
+
+  it "answers menu questions after a completed order without forcing order status" do
+    create_order(
+      company: company,
+      customer: create_customer(company, phone: phone),
+      status: "accepted",
+      payment_method: "pix",
+      payment_status: "pending_payment"
+    )
+    conversation = company.store_ai_conversations.create!(
+      phone: phone,
+      channel: "whatsapp",
+      status: "closed",
+      last_message_at: Time.current
+    )
+    company.store_ai_carts.create!(
+      store_ai_conversation: conversation,
+      customer_phone: phone,
+      stage: "completed",
+      expires_at: 1.minute.ago
+    )
+
+    result = send_message("quais opcoes de lanche tem?")
+
+    expect(result[:status]).to eq("success")
+    expect(result[:answer]).to include("opcoes")
+    expect(result[:answer]).not_to include("pedido mais recente")
+    expect(result[:answer]).not_to include("pending")
+  end
+
   it "hands off after repeated unknown product attempts instead of repeating forever" do
     settings.update!(handoff_on_unknown: false)
 

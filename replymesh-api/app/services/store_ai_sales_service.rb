@@ -52,6 +52,7 @@ class StoreAiSalesService
     return start_new_order if new_order_request?
     return handle_product_search if product_from_link.present?
     return handle_store_info if priority_store_info_request?
+    return handle_menu_request if menu_request?
     return existing_pix_status_answer if existing_pix_status_request?
     return order_status_answer if order_status_request?
     return post_order_greeting if recently_completed_order? && ReplymeshKnowledgeService.greeting?(@question)
@@ -274,6 +275,46 @@ class StoreAiSalesService
     end
 
     answer(store_summary_answer, "success", next_action: cart.items.any? ? next_action_for_cart_stage : "product_discovery")
+  end
+
+  def handle_menu_request
+    products = menu_products
+    if products.empty?
+      return answer(
+        "Ainda nao encontrei produtos ativos no cardapio desta loja. Vou deixar um atendente ajudar por aqui.",
+        "blocked",
+        next_action: "human_handoff",
+        fallback: true
+      )
+    end
+
+    cart.update!(
+      stage: "product_selection",
+      metadata_json: cart.metadata_json.merge(
+        "candidate_product_ids" => products.map(&:id)
+      ).except("unknown_count")
+    )
+
+    intro = if normalized_question.match?(/lanche|hamburg|burger|sanduiche/)
+      "Temos essas opcoes de lanches no cardapio:"
+    elsif normalized_question.match?(/bebida|refri|coca|suco/)
+      "Temos essas opcoes de bebidas no cardapio:"
+    elsif recommendation_request?
+      "Hoje eu recomendo estas opcoes:"
+    else
+      "Claro. Estas sao algumas opcoes do cardapio:"
+    end
+
+    lines = products.first(6).each_with_index.map do |product, index|
+      "#{index + 1} - #{product.name} - #{format_brl(price_for(product))}"
+    end
+
+    answer(
+      "#{intro}\n\n#{lines.join("\n")}\n\nQual voce gostaria?",
+      "success",
+      products: serialize_products(products),
+      next_action: "select_product"
+    )
   end
 
   def ask_address
@@ -773,6 +814,18 @@ class StoreAiSalesService
     end
   end
 
+  def menu_products
+    scope = @company.products.active.includes(:category).ordered.limit(120)
+    terms = expanded_search_terms(normalized_question.split - ReplymeshKnowledgeService::STOP_WORDS)
+    matches = scope.select do |product|
+      haystack = ReplymeshKnowledgeService.normalize([product.name, product.description, product.category&.name].join(" "))
+      terms.any? { |term| haystack.include?(term) }
+    end
+
+    matches = scope.to_a if matches.empty? || broad_menu_request?
+    recommended_products(matches.first(80))
+  end
+
   def recommended_products(scope)
     sales = OrderItem
       .joins(:order)
@@ -1249,6 +1302,19 @@ class StoreAiSalesService
 
   def payment_question?
     normalized_question.match?(/pagamento|pix|dinheiro|cartao|credito|debito|aceita/)
+  end
+
+  def menu_request?
+    return false if cart.stage.in?(%w[address_confirmation address_collection delivery_calculation payment_selection order_confirmation]) && (yes? || negative_answer?)
+    return false if payment_question? || delivery_question? || hours_question?
+
+    normalized_question.match?(
+      /(\bcardapio\b|\bmenu\b|opcoes|opcao|produtos|lanches|hamburguer|hamburgueres|burguers|sanduiches|bebidas|refrigerantes|sobremesas|porcoes|entradas|tem o que|o que tem|quais.*tem|quais.*vende|me mostra|manda.*cardapio|lista.*produto)/
+    )
+  end
+
+  def broad_menu_request?
+    normalized_question.match?(/cardapio|menu|opcoes|opcao|produtos|tem o que|o que tem|quais.*tem|quais.*vende|me mostra|manda.*cardapio|lista.*produto/)
   end
 
   def new_order_request?
