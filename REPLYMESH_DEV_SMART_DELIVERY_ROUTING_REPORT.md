@@ -71,3 +71,46 @@ Também gera um link de rota no Google Maps. Quando o cliente envia a localizaç
 
 - O comando `docker exec replymesh-api-dev-local bin/rails db:migrate` falhou por final de linha CRLF no shebang do `bin/rails` dentro do container. Foi executado com sucesso usando `docker exec replymesh-api-dev-local ruby bin/rails db:migrate`.
 - Esta fase não implementa cálculo real por geolocalização/Google Distance Matrix. A distância é informada pela loja na área de entrega e serve para organização operacional.
+
+## Atualização — UX visual das áreas com mapa
+
+Status: implementado na branch `dev`.
+
+### Melhorias aplicadas
+
+- Campos de latitude/longitude saíram da visualização principal do modal.
+- Foi criada a seção recolhida “Configurações avançadas” para coordenadas manuais.
+- Foi adicionado o campo “Ponto de referência da região”.
+- Foi adicionado botão “Buscar ponto” usando geocoding público do OpenStreetMap/Nominatim.
+- Foi adicionado botão “Abrir no Google Maps” como fallback.
+- Foi integrado mapa OpenStreetMap/Leaflet no modal.
+- O marcador da área pode ser arrastado para ajustar latitude/longitude internamente.
+- O mapa deixa claro que o ponto é interno e não aparece para o cliente.
+- Labels foram ajustadas para linguagem de lojista:
+  - Distância estimada até a loja (km)
+  - Tempo médio de entrega (min)
+  - Grupo de rota / região próxima
+  - Prioridade da rota
+  - Observação interna
+- Cards das áreas foram reorganizados para mostrar taxa, cidade, distância, tempo, grupo, prioridade e aliases sem expor latitude/longitude.
+- Testador de correspondência passou a mostrar resultado visual com taxa, distância, tempo, grupo e origem do match.
+
+### Dependências
+
+Foram adicionadas dependências compatíveis com React 18:
+
+- `leaflet`
+- `react-leaflet@4.2.1`
+
+### Compatibilidade preservada
+
+- Checkout público não foi alterado.
+- Áreas antigas sem coordenada continuam funcionando.
+- Se mapa/geocoding estiver indisponível, a área ainda pode ser salva com distância/prioridade manual.
+- Motoboy e pedidos antigos continuam usando os dados disponíveis.
+
+### Validações da fase visual
+
+- `npm run build` em `store-template`.
+- `git diff --check`.
+- Auditoria de segredos nos arquivos alterados.

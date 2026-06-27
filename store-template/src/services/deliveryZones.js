@@ -25,16 +25,29 @@ const addressCandidates = (address = {}) => [
   address.zipCode || address.zip_code || address.cep,
 ].filter(Boolean).map(normalizeDeliveryText)
 
+const zoneTerms = (zone) => [
+  { label: zone.name, source: 'nome' },
+  { label: zone.slug, source: 'slug' },
+  ...parseAliases(zone.aliases).map((label) => ({ label, source: 'alias' })),
+].map((term) => ({ ...term, normalized: normalizeDeliveryText(term.label) })).filter(term => term.normalized)
+
 const scoreZone = (zone, address) => {
-  const names = [zone.name, zone.slug, ...parseAliases(zone.aliases)].map(normalizeDeliveryText).filter(Boolean)
+  const terms = zoneTerms(zone)
   const candidates = addressCandidates(address)
   let score = 0
-  names.forEach((name) => candidates.forEach((candidate) => {
-    if (candidate === name) score = Math.max(score, 100)
-    else if (candidate.includes(name)) score = Math.max(score, 85)
-    else if (name.includes(candidate) && candidate.length >= 4) score = Math.max(score, 75)
+  let reason = null
+  terms.forEach((term) => candidates.forEach((candidate) => {
+    let nextScore = 0
+    if (candidate === term.normalized) nextScore = 100
+    else if (candidate.includes(term.normalized)) nextScore = 85
+    else if (term.normalized.includes(candidate) && candidate.length >= 4) nextScore = 75
+
+    if (nextScore > score) {
+      score = nextScore
+      reason = { source: term.source, label: term.label, candidate }
+    }
   }))
-  return score
+  return { score, reason }
 }
 
 export const getDeliveryZones = async (activeOnly = true) => {
@@ -55,7 +68,10 @@ export const matchDeliveryZone = async (addressOrNeighborhood) => {
     : addressOrNeighborhood || {}
   const zones = await getDeliveryZones(true)
   const matches = zones
-    .map((zone) => ({ zone, score: scoreZone(zone, address) }))
+    .map((zone) => {
+      const scored = scoreZone(zone, address)
+      return { zone, score: scored.score, reason: scored.reason }
+    })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || Number(a.zone.match_priority || 100) - Number(b.zone.match_priority || 100))
   return { zone: matches[0]?.zone || null, match: matches[0] || null, candidates: addressCandidates(address), matches }
