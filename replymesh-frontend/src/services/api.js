@@ -129,6 +129,15 @@ export const api = {
     method: "PATCH",
     body: JSON.stringify({ founder_program: founderProgram }),
   }),
+  getSmtpSettings: () => request("/master/smtp_settings"),
+  updateSmtpSettings: (smtpSettings) => request("/master/smtp_settings", {
+    method: "PATCH",
+    body: JSON.stringify({ smtp_settings: smtpSettings }),
+  }),
+  testSmtpSettings: (recipient) => request("/master/smtp_settings/test", {
+    method: "POST",
+    body: JSON.stringify({ recipient }),
+  }),
   getCompanies: () => request("/master/companies"),
   getCompany: (id) => request(`/master/companies/${id}`),
   createCompany: (payload) => request("/master/companies", { method: "POST", body: JSON.stringify(payload) }),

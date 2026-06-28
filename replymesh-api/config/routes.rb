@@ -25,6 +25,9 @@ Rails.application.routes.draw do
         get "dashboard", to: "dashboard#show"
         get "founder_program", to: "founder_program#show"
         patch "founder_program", to: "founder_program#update"
+        get "smtp_settings", to: "smtp_settings#show"
+        patch "smtp_settings", to: "smtp_settings#update"
+        post "smtp_settings/test", to: "smtp_settings#test"
 
         # Financeiro
         get "financeiro",               to: "financeiro#index"

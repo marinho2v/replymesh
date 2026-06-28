@@ -38,6 +38,8 @@ class FounderSignupService
       )
       return failure(attempt.errors.full_messages) unless attempt.save
 
+      return failure("SMTP nao configurado. Configure o envio de e-mail no Painel Master.") unless smtp_ready?
+
       FounderSignupMailer.confirmation_code(attempt.id, code).deliver_now
       Result.new(success?: true, payload: { signup_id: attempt.id, email: masked_email(attempt.email), expires_in: CODE_TTL.to_i }, errors: [])
     rescue StandardError => e
@@ -113,6 +115,8 @@ class FounderSignupService
         last_sent_at: Time.current,
         attempts_count: 0
       )
+      return failure("SMTP nao configurado. Configure o envio de e-mail no Painel Master.") unless smtp_ready?
+
       FounderSignupMailer.confirmation_code(attempt.id, code).deliver_now
       Result.new(success?: true, payload: { expires_in: CODE_TTL.to_i }, errors: [])
     rescue StandardError => e
@@ -131,6 +135,7 @@ class FounderSignupService
     end
 
     def truthy?(value) = ActiveModel::Type::Boolean.new.cast(value)
+    def smtp_ready? = SmtpSetting.current_safe.configured? || (ENV["SMTP_USERNAME"].present? && ENV["SMTP_PASSWORD"].present?)
     def ensure_founder_plan!
       Plan.find_or_create_by!(slug: "founder_free") do |plan|
         plan.name = "Programa Fundadores"

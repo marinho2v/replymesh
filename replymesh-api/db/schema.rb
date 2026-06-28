@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_27_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_28_001000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1087,6 +1087,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_120000) do
     t.index ["company_id"], name: "index_products_on_company_id"
     t.index ["legacy_id"], name: "index_products_on_legacy_id"
     t.index ["stock_item_id"], name: "index_products_on_stock_item_id"
+  end
+
+  create_table "smtp_settings", force: :cascade do |t|
+    t.string "authentication", default: "login", null: false
+    t.datetime "created_at", null: false
+    t.boolean "enable_starttls_auto", default: false, null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "from_email"
+    t.string "from_name", default: "Replymesh", null: false
+    t.string "host", default: "smtp.hostinger.com", null: false
+    t.text "last_test_message"
+    t.string "last_test_status"
+    t.datetime "last_tested_at"
+    t.text "password_encrypted"
+    t.integer "port", default: 465, null: false
+    t.string "reply_to"
+    t.boolean "ssl", default: true, null: false
+    t.string "test_recipient"
+    t.datetime "updated_at", null: false
+    t.string "username"
   end
 
   create_table "store_ai_carts", force: :cascade do |t|

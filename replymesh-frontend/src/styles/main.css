@@ -900,3 +900,18 @@ html[data-theme="dark"] .panel{background:var(--card)}
 .founder-admin-table tr:last-child td{border-bottom:0}
 @media(max-width:1100px){.founder-admin-stats,.founder-toggle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.founder-admin-hero,.founder-admin-status,.founder-section-head{align-items:flex-start;flex-direction:column}.founder-admin-stats,.founder-toggle-grid{grid-template-columns:1fr}.founder-admin-status .btn{width:100%}}
+.smtp-admin-page{display:flex;flex-direction:column;gap:18px}
+.smtp-actions{display:flex;gap:10px;flex-wrap:wrap}
+.smtp-secret-badge{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-size:12px;font-weight:800;background:#fff}
+.smtp-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;color:var(--text-2);font-size:13px;font-weight:700}
+.smtp-checks label{display:flex;align-items:center;gap:8px}
+.smtp-mail-preview{max-width:560px;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 18px 55px rgba(15,23,42,.08)}
+.smtp-mail-top{padding:24px 26px;background:#090a0d;color:#fff}
+.smtp-mail-top span{display:block;color:#8ab4ff;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.smtp-mail-top strong{display:block;margin-top:10px;font-size:24px;letter-spacing:-.035em}
+.smtp-mail-body{padding:26px;color:#111827}
+.smtp-mail-body p{margin:0 0 14px;line-height:1.6}
+.smtp-mail-body small{display:block;color:#6b7280;line-height:1.55}
+.smtp-code{margin:22px 0;padding:20px;border-radius:16px;background:#f8fafc;border:1px solid #e5e7eb;text-align:center;font-size:36px;font-weight:900;letter-spacing:10px;color:#0f172a}
+.smtp-last-test{margin:14px 0 0;font-size:13px;font-weight:750}
+.smtp-last-test.ok{color:#047857}.smtp-last-test.bad{color:#b91c1c}

@@ -27,6 +27,7 @@ const AiSettings = lazy(() => import("../pages/configuracoes/AiSettings.jsx").th
 const SystemUpdates = lazy(() => import("../pages/configuracoes/SystemUpdates.jsx").then((module) => ({ default: module.SystemUpdates })));
 const MasterBranding = lazy(() => import("../pages/configuracoes/MasterBranding.jsx").then((module) => ({ default: module.MasterBranding })));
 const FounderProgram = lazy(() => import("../pages/configuracoes/FounderProgram.jsx").then((module) => ({ default: module.FounderProgram })));
+const SmtpSettings = lazy(() => import("../pages/configuracoes/SmtpSettings.jsx").then((module) => ({ default: module.SmtpSettings })));
 const AndroidApps = lazy(() => import("../pages/AndroidApps.jsx").then((module) => ({ default: module.AndroidApps })));
 const LandingPage = lazy(() => import("../pages/LandingPage.jsx").then((module) => ({ default: module.LandingPage })));
 const TermosDeUso = lazy(() => import("../pages/TermosDeUso.jsx").then((module) => ({ default: module.TermosDeUso })));
@@ -99,6 +100,7 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/configuracoes/atualizacoes", element: protectedPage(<SystemUpdates onToast={onToast} />) },
   { path: "/configuracoes/aparencia", element: protectedPage(<MasterBranding onToast={onToast} />) },
   { path: "/configuracoes/programa-fundadores", element: protectedPage(<FounderProgram onToast={onToast} />) },
+  { path: "/configuracoes/smtp", element: protectedPage(<SmtpSettings onToast={onToast} />) },
   { path: "/aplicativos-android", element: protectedPage(<AndroidApps onToast={onToast} />) },
   { path: "/configuracoes/:tab", element: protectedPage(<CompanySettings onToast={onToast} />) },
   { path: "*", element: <Navigate to="/dashboard" replace /> },
