@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_28_001000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_28_143000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -980,6 +980,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_28_001000) do
     t.index ["public_token"], name: "index_orders_on_public_token", unique: true
   end
 
+  create_table "password_reset_requests", force: :cascade do |t|
+    t.integer "attempts_count", default: 0, null: false
+    t.string "code_digest", null: false
+    t.bigint "company_id", null: false
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "expires_at", null: false
+    t.string "ip_address"
+    t.datetime "last_sent_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.text "user_agent"
+    t.bigint "user_id", null: false
+    t.index ["company_id", "email", "created_at"], name: "idx_password_resets_company_email_created"
+    t.index ["company_id"], name: "index_password_reset_requests_on_company_id"
+    t.index ["email"], name: "index_password_reset_requests_on_email"
+    t.index ["status"], name: "index_password_reset_requests_on_status"
+    t.index ["user_id"], name: "index_password_reset_requests_on_user_id"
+  end
+
   create_table "payment_methods", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
@@ -1651,6 +1672,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_28_001000) do
   add_foreign_key "orders", "dining_tables", on_delete: :nullify
   add_foreign_key "orders", "motoboys", on_delete: :nullify
   add_foreign_key "orders", "users", column: "attendant_id", on_delete: :nullify
+  add_foreign_key "password_reset_requests", "companies", on_delete: :cascade
+  add_foreign_key "password_reset_requests", "users", on_delete: :cascade
   add_foreign_key "payment_methods", "companies", on_delete: :cascade
   add_foreign_key "plan_features", "plans"
   add_foreign_key "product_option_groups", "companies", on_delete: :cascade

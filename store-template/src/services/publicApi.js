@@ -40,7 +40,7 @@ export const primePublicStoreCache = (slug, payload) => {
 const mapStore = (store = {}) => ({
   ...store,
   name: store.store_name || store.name,
-  logo_url: store.logo_url || '/logo.png',
+  logo_url: store.logo_url || '',
   cover_url: store.cover_url || store.banner_url || '',
   display_address: [store.address, store.city, store.state].filter(Boolean).join(' - '),
   default_delivery_fee: centsToCurrency(store.default_delivery_fee_cents),
@@ -193,4 +193,36 @@ export const cancelPublicPixPayment = async (orderId, slug = COMPANY_SLUG) => {
 export const getPublicOrder = async (orderId, slug = COMPANY_SLUG) => {
   const payload = await request(publicPath(slug, `/orders/${encodeURIComponent(orderId)}`), { token: null })
   return payload.order
+}
+
+export const requestPasswordResetCode = async ({ email, companySlug = COMPANY_SLUG }) => {
+  const payload = await request('/public/password_resets', {
+    method: 'POST',
+    token: null,
+    body: { email, company_slug: companySlug },
+  })
+  return payload
+}
+
+export const verifyPasswordResetCode = async ({ resetId, code }) => {
+  const payload = await request('/public/password_resets/verify', {
+    method: 'POST',
+    token: null,
+    body: { reset_id: resetId, code },
+  })
+  return payload
+}
+
+export const resetStorePassword = async ({ resetId, code, password, passwordConfirmation }) => {
+  const payload = await request('/public/password_resets/reset', {
+    method: 'POST',
+    token: null,
+    body: {
+      reset_id: resetId,
+      code,
+      password,
+      password_confirmation: passwordConfirmation,
+    },
+  })
+  return payload
 }

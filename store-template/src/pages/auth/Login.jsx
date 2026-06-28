@@ -189,6 +189,12 @@ const Login = () => {
             <Button type="submit" loading={loading} className="w-full" size="lg">
               Entrar
             </Button>
+
+            <div className="flex justify-center text-sm">
+              <a className="font-semibold text-blue-300 transition-colors hover:text-blue-200" href={`${basePath}/recuperar-senha`}>
+                Esqueci minha senha
+              </a>
+            </div>
           </form>
         </div>
       </div>

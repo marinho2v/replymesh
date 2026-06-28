@@ -2,6 +2,9 @@ module Api
   module V1
     module Store
       class BaseController < ApplicationController
+        rescue_from StandardError, with: :render_store_internal_error
+        rescue_from ActionController::ParameterMissing, with: :render_missing_parameter
+
         before_action :authenticate_user!
         before_action :resolve_current_company!
         before_action :authorize_store_role!
@@ -161,6 +164,11 @@ module Api
         end
 
         def render_error(message, status: :unprocessable_entity, errors: nil)
+          report_store_error(
+            status: Rack::Utils.status_code(status),
+            message: message,
+            context: { errors: Array(errors).first(10) }
+          )
           body = { success: false, error: message }
           body[:errors] = errors if errors
           render json: body, status: status
@@ -186,10 +194,60 @@ module Api
         end
 
         def render_record_errors(record)
-          render_error(
-            record.errors.full_messages.first,
-            errors: record.errors.full_messages,
-            status: :unprocessable_entity
+          messages = record.errors.full_messages
+          report_store_error(
+            status: :unprocessable_entity,
+            message: messages.first,
+            context: {
+              resource_type: record.class.name,
+              resource_id: record.id,
+              validation_errors: record.errors.to_hash(true)
+            }
+          )
+          render json: {
+            success: false,
+            error: messages.first,
+            errors: messages
+          }, status: :unprocessable_entity
+        end
+
+        def render_missing_parameter(error)
+          report_store_error(status: :bad_request, error: error)
+          render json: {
+            success: false,
+            error: "Dados incompletos para concluir a operacao",
+            message: "O campo obrigatorio '#{error.param}' nao foi enviado.",
+            request_id: request.request_id
+          }, status: :bad_request
+        end
+
+        def render_store_internal_error(error)
+          report_store_error(status: :internal_server_error, error: error)
+          Rails.logger.error(
+            "[#{request.request_id}] Store request failed: #{error.class}: #{error.message}"
+          )
+          Rails.logger.error(error.backtrace.first(15).join("\n")) if error.backtrace
+
+          render json: {
+            success: false,
+            error: "internal_server_error",
+            message: "Nao foi possivel concluir a operacao. O erro foi registrado para o suporte.",
+            request_id: request.request_id
+          }, status: :internal_server_error
+        end
+
+        def report_store_error(status:, error: nil, message: nil, context: {})
+          StoreErrorReporter.report!(
+            company: current_company,
+            user: current_user,
+            request: request,
+            status: Rack::Utils.status_code(status),
+            error: error,
+            message: message,
+            context: {
+              controller: controller_path,
+              action: action_name
+            }.merge(context)
           )
         end
 

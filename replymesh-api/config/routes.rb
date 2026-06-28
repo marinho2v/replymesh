@@ -305,9 +305,13 @@ Rails.application.routes.draw do
       namespace :public do
         get "platform", to: "platform#show"
         get "founder_program", to: "founder_signups#status"
+        get "founder_signups/slug", to: "founder_signups#slug"
         post "founder_signups", to: "founder_signups#create"
         post "founder_signups/verify", to: "founder_signups#verify"
         post "founder_signups/resend", to: "founder_signups#resend"
+        post "password_resets", to: "password_resets#create"
+        post "password_resets/verify", to: "password_resets#verify"
+        post "password_resets/reset", to: "password_resets#reset"
 
         scope ":company_slug", constraints: { company_slug: /[^\/]+/ }, format: false do
           get  "store",           to: "stores#show"

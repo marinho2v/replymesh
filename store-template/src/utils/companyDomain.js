@@ -34,6 +34,11 @@ export const companyBasePath = (slug, hostname = window.location.hostname) => {
   return hostSlug && hostSlug === slug ? '' : `/loja/${slug}`
 }
 
+export const officialStoreUrl = (slug) => {
+  const cleanSlug = String(slug || '').trim().toLowerCase()
+  return cleanSlug ? `https://${cleanSlug}.${PLATFORM_DOMAIN}` : ''
+}
+
 export const cleanLegacyCompanyPath = (pathname, slug) => {
   const prefix = `/loja/${slug}`
   if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) return pathname

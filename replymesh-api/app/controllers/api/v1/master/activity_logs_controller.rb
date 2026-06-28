@@ -32,7 +32,10 @@ module Api
 
         def actions_for_type(type)
           {
-            "erros" => %w[error system_alert_created onboarding_failed evolution_error whatsapp_error],
+            "erros" => %w[
+              error store_request_error system_alert_created onboarding_failed
+              evolution_error whatsapp_error webhook_failed automation_failed
+            ],
             "webhooks" => %w[webhook_received webhook_failed webhook_processed],
             "evolution" => %w[
               whatsapp_instance_created whatsapp_instance_status_checked whatsapp_instance_qrcode_requested
@@ -55,13 +58,17 @@ module Api
         end
 
         def serialize_log(log)
+          metadata = scrub_sensitive(log.metadata_json || {})
           {
             id: log.id,
             action: log.action,
             action_label: label_for(log.action),
             resource_type: log.resource_type,
             resource_id: log.resource_id,
-            metadata_json: scrub_sensitive(log.metadata_json || {}),
+            http_status: metadata["status"] || metadata[:status],
+            error_message: metadata["error_message"] || metadata[:error_message],
+            request_path: metadata["path"] || metadata[:path],
+            metadata_json: metadata,
             created_at: log.created_at,
             user: log.user && {
               id: log.user.id,
@@ -79,6 +86,8 @@ module Api
         end
 
         def label_for(action)
+          return "Erro operacional da loja" if action == "store_request_error"
+
           action.to_s.tr("_", " ").capitalize
         end
 

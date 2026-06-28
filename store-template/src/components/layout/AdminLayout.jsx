@@ -34,6 +34,7 @@ import {
   Lock,
   MonitorPlay,
   BookOpen,
+  ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { signOut } from '../../services/auth'
@@ -46,6 +47,7 @@ import NotificationsDropdown from '../shared/NotificationsDropdown'
 import AiFloatingChat from '../ai/AiFloatingChat'
 import { revokeMasterImpersonation } from '../../services/replymeshApi'
 import { railsGetFeatureAccess } from '../../services/storeApi'
+import { officialStoreUrl } from '../../utils/companyDomain'
 
 const normalizeStoreRole = (role) => {
   if (['admin', 'store_admin', 'super_admin', 'owner', 'manager'].includes(role)) return 'admin'
@@ -72,6 +74,7 @@ export const AdminLayout = () => {
   const adminBasePath = `${basePath}/admin`
   const adminPath = (path) => path.replace('/admin', adminBasePath)
   const storeName = store?.name || store?.store_name || ''
+  const publicStoreUrl = officialStoreUrl(store?.slug || profile?.company_slug)
   const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications()
   const featureMap = useMemo(() => {
     const map = new Map()
@@ -384,6 +387,19 @@ export const AdminLayout = () => {
             </button>
 
             <div className="flex items-center space-x-3 ml-auto">
+              {publicStoreUrl && (
+                <a
+                  href={publicStoreUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hidden md:flex items-center gap-1.5 rounded-lg border border-dark-700 bg-dark-800 px-3 py-1.5 text-sm font-semibold text-gray-200 transition-colors hover:border-yellow-400/60 hover:text-white"
+                  title="Abrir loja pública"
+                >
+                  <ExternalLink size={14} />
+                  Ver minha loja
+                </a>
+              )}
+
               {/* Data atual */}
               <div className="hidden sm:flex items-center gap-1.5 text-gray-400 text-sm bg-dark-800 px-3 py-1.5 rounded-lg border border-dark-700">
                 <Calendar size={14} />

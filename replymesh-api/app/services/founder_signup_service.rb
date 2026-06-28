@@ -77,7 +77,7 @@ class FounderSignupService
             plan_status: "active",
             plan_slug: "founder_free",
             monthly_price_cents: 0,
-            whatsapp_mode: "manual",
+            whatsapp_mode: "automatic",
             origin: "founder_program",
             commercial_status: "founder_free",
             founder_registered_at: Time.current,
@@ -148,8 +148,8 @@ class FounderSignupService
     end
     def closed_message = "As vagas do Programa Fundadores foram preenchidas ou as inscrições estão pausadas. Entre em contato para entrar na lista de espera."
     def masked_email(email) = email.sub(/\A(.{2}).*(@.*)\z/, '\1***\2')
-    def public_panel_url(slug) = Rails.env.production? ? "https://#{slug}.replymesh.cloud/admin" : "http://localhost:5174/admin"
-    def public_store_url(slug) = Rails.env.production? ? "https://#{slug}.replymesh.cloud" : "http://localhost:5174/?company=#{slug}"
+    def public_panel_url(slug) = "https://#{slug}.#{CompanyDomainService::DEFAULT_DOMAIN}/admin"
+    def public_store_url(slug) = "https://#{slug}.#{CompanyDomainService::DEFAULT_DOMAIN}"
 
     def expire!(attempt)
       attempt.update!(status: "expired")

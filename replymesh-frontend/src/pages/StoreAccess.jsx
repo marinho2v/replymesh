@@ -14,18 +14,7 @@ const normalizeSlug = (value) => String(value || "")
 
 const storeAdminUrl = (slug) => {
   const cleanSlug = normalizeSlug(slug);
-  if (!cleanSlug) return "";
-
-  const { hostname, protocol } = window.location;
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return "http://localhost:5174/loja/" + cleanSlug + "/admin";
-  }
-
-  if (hostname.endsWith("replymesh.cloud")) {
-    return "https://" + cleanSlug + ".replymesh.cloud/admin";
-  }
-
-  return protocol + "//" + hostname + "/loja/" + cleanSlug + "/admin";
+  return cleanSlug ? `https://${cleanSlug}.replymesh.cloud/admin` : "";
 };
 
 export function StoreAccess() {
@@ -49,7 +38,7 @@ export function StoreAccess() {
         <div className="store-access-copy">
           <span>ACESSO DA LOJA</span>
           <h1>Entre no painel da sua empresa.</h1>
-          <p>Informe o endereço da sua loja para acessar o painel administrativo correto. O login do Master é exclusivo da equipe Replymesh.</p>
+          <p>Informe o endereço da sua loja para acessar o painel administrativo correto com conexão segura.</p>
           <div className="store-access-note">
             Exemplo: <strong>minhaloja</strong>.replymesh.cloud
           </div>
@@ -73,7 +62,7 @@ export function StoreAccess() {
             </div>
           </label>
 
-          {slug && <div className="store-access-preview">Você será enviado para: <strong>{slug}.replymesh.cloud/admin</strong></div>}
+          {slug && <div className="store-access-preview">Você será enviado para: <strong>https://{slug}.replymesh.cloud/admin</strong></div>}
 
           <button type="submit" disabled={!slug}>Entrar no painel da loja</button>
           <Link to="/comece-gratis" className="store-access-secondary">Ainda não tenho conta</Link>

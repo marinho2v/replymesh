@@ -10,6 +10,23 @@ module Api
           render_result FounderSignupService.start(signup_params, request:)
         end
 
+        def slug
+          requested = CompanyDomainService.normalize_slug(params[:slug].presence || params[:company_name])
+          suggested = CompanyDomainService.unique_slug(name: params[:company_name].presence || requested, requested_slug: requested)
+          available = requested.present? &&
+                      !CompanyDomainService.reserved_slug?(requested) &&
+                      !Company.exists?(slug: requested) &&
+                      !Domain.exists?(domain: CompanyDomainService.domain_for(requested))
+
+          render json: {
+            success: true,
+            slug: requested,
+            available: available,
+            suggestion: available ? requested : suggested,
+            url: "https://#{available ? requested : suggested}.#{CompanyDomainService::DEFAULT_DOMAIN}"
+          }
+        end
+
         def verify
           render_result FounderSignupService.verify(id: params[:signup_id], code: params[:code])
         end

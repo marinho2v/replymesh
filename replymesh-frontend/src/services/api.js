@@ -108,6 +108,10 @@ async function request(path, options = {}) {
 
 export const api = {
   getFounderProgramStatus: () => request("/public/founder_program"),
+  checkFounderSlug: (slug, companyName = "") => {
+    const query = new URLSearchParams({ slug, company_name: companyName }).toString();
+    return request(`/public/founder_signups/slug?${query}`);
+  },
   startFounderSignup: (signup) => request("/public/founder_signups", { method: "POST", body: JSON.stringify({ signup }) }),
   verifyFounderSignup: (signupId, code) => request("/public/founder_signups/verify", {
     method: "POST",

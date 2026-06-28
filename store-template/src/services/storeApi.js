@@ -300,12 +300,12 @@ export const railsSaveOptionGroups = async (productId, groups) => {
       if (item.id) {
         await request(`/store/products/${productId}/option_groups/${savedGroup.id}/items/${item.id}`, {
           method: 'PATCH', headers: h(),
-          body: { option_item: railsItem },
+          body: { item: railsItem },
         })
       } else {
         await request(`/store/products/${productId}/option_groups/${savedGroup.id}/items`, {
           method: 'POST', headers: h(),
-          body: { option_item: railsItem },
+          body: { item: railsItem },
         })
       }
     }

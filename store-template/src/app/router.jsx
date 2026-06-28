@@ -27,6 +27,7 @@ const Promotions = lazy(() => import('../pages/public/Promotions'))
 
 // Auth Pages
 const Login = lazy(() => import('../pages/auth/Login'))
+const PasswordReset = lazy(() => import('../pages/auth/PasswordReset'))
 const MasterImpersonation = lazy(() => import('../pages/auth/MasterImpersonation'))
 
 // Admin Pages
@@ -271,6 +272,10 @@ export const router = createBrowserRouter([
     element: <SluggedLogin />,
   },
   {
+    path: '/loja/:companySlug/recuperar-senha',
+    element: <SluggedStaticPage component={PasswordReset} />,
+  },
+  {
     path: '/loja/:companySlug/admin/impersonate',
     element: <SluggedStaticPage component={MasterImpersonation} />,
   },
@@ -335,6 +340,14 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <RootLogin />,
+  },
+  {
+    path: '/recuperar-senha',
+    element: (
+      <CompanySlugProvider slug={COMPANY_SLUG} basePath="">
+        {page(PasswordReset)}
+      </CompanySlugProvider>
+    ),
   },
   {
     path: '/admin/login',

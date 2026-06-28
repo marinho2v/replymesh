@@ -13,6 +13,8 @@ module Api
 
         # GET /store/cash_sessions/:id  (ou :id = "current")
         def show
+          return render_ok(cash_session: nil) if params[:id] == "current" && @session.nil?
+
           render_ok(cash_session: serialize_full(@session))
         end
 
@@ -56,7 +58,7 @@ module Api
                      else
                        company_scope(CashSession).find_by(id: params[:id])
                      end
-          render_not_found("Sessão de caixa") unless @session
+          render_not_found("Sessao de caixa") unless @session || params[:id] == "current"
         end
 
         def serialize(s)

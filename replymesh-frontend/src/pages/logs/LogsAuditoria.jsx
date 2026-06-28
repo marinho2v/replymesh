@@ -231,7 +231,8 @@ export function LogsAuditoria({ onToast }) {
                   <tr key={log.id}>
                     <td>
                       <strong>{log.action_label}</strong>
-                      <div className="muted mono">{log.action}</div>
+                      <div className="muted">{log.error_message || log.action}</div>
+                      {log.request_path && <div className="muted mono">{log.http_status || "-"} · {log.request_path}</div>}
                     </td>
                     <td>{companyLabel(log)}</td>
                     <td>{log.user?.name || "-"}</td>

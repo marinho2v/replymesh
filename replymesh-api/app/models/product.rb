@@ -5,9 +5,19 @@ class Product < ApplicationRecord
   has_many   :product_option_groups, dependent: :destroy
   has_many   :order_items
 
-  validates :name,        presence: true
-  validates :slug,        presence: true, uniqueness: { scope: :company_id }
-  validates :price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :name, presence: { message: "deve ser informado" }
+  validates :slug,
+            presence: { message: "nao pode ficar vazio" },
+            uniqueness: {
+              scope: :company_id,
+              message: "ja esta em uso por outro produto desta loja"
+            }
+  validates :price_cents,
+            numericality: {
+              only_integer: true,
+              greater_than_or_equal_to: 0,
+              message: "deve ser um valor valido"
+            }
 
   scope :for_company, ->(cid) { where(company_id: cid) }
   scope :active,     -> { where(is_active: true) }
@@ -26,6 +36,17 @@ class Product < ApplicationRecord
   private
 
   def auto_slug
-    self.slug ||= name.to_s.downcase.gsub(/[^a-z0-9]+/, "-").slice(0, 64) if name.present?
+    return if slug.present? || name.blank?
+
+    base = (name.to_s.parameterize.presence || "produto").slice(0, 56)
+    candidate = base
+    suffix = 2
+
+    while company&.products&.where(slug: candidate)&.where&.not(id: id)&.exists?
+      candidate = "#{base}-#{suffix}".slice(0, 64)
+      suffix += 1
+    end
+
+    self.slug = candidate
   end
 end

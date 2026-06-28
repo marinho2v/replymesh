@@ -1,0 +1,13 @@
+<h1>Redefinir senha</h1>
+
+<p>Olá, <strong><%= @request.user.name %></strong>.</p>
+
+<p>Recebemos uma solicitação para redefinir a senha do painel da loja <strong><%= @request.company.name %></strong>.</p>
+
+<p>Use o código abaixo para continuar:</p>
+
+<p style="font-size:28px;font-weight:800;letter-spacing:8px"><%= @code %></p>
+
+<p>Este código expira em 15 minutos. Se você não solicitou a troca de senha, ignore este e-mail.</p>
+
+<p>Equipe Replymesh</p>

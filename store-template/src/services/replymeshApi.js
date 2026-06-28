@@ -146,7 +146,7 @@ export const request = async (path, options = {}) => {
     }
 
     throw new ReplymeshApiError(
-      payload?.error || payload?.errors?.[0] || 'Erro ao comunicar com a API Replymesh',
+      payload?.message || payload?.errors?.[0] || payload?.error || 'Erro ao comunicar com a API Replymesh',
       { status: response.status, payload }
     )
   }
