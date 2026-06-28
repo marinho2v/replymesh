@@ -74,6 +74,7 @@ COPY --chown=rails:rails --from=build /rails /rails
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+# Start the Rails API with Puma. Production runs behind the host reverse proxy.
+# Keep this command aligned with the VPS runtime to avoid depending on Thruster.
+EXPOSE 3010
+CMD ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "3010"]
