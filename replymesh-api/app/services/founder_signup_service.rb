@@ -135,7 +135,7 @@ class FounderSignupService
     end
 
     def truthy?(value) = ActiveModel::Type::Boolean.new.cast(value)
-    def smtp_ready? = SmtpSetting.current_safe.configured? || (ENV["SMTP_USERNAME"].present? && ENV["SMTP_PASSWORD"].present?)
+    def smtp_ready? = SmtpSetting.ready?
     def ensure_founder_plan!
       Plan.find_or_create_by!(slug: "founder_free") do |plan|
         plan.name = "Programa Fundadores"

@@ -14,6 +14,7 @@ class PasswordResetService
                  .where(company_members: { company_id: company.id, status: "active" })
                  .first
       return generic_started unless user&.status == "active"
+      return failure("SMTP nao configurado. Configure o envio de e-mail no Painel Master.") unless SmtpSetting.ready?
 
       recent = PasswordResetRequest.where(company:, email: user.email, status: "pending").order(created_at: :desc).first
       if recent&.last_sent_at && (wait = RESEND_DELAY - (Time.current - recent.last_sent_at)).positive?

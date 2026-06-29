@@ -21,6 +21,29 @@ class SmtpSetting < ApplicationRecord
     new
   end
 
+  def self.ready?
+    current_safe.configured? || env_configured?
+  end
+
+  def self.env_configured?
+    ENV["SMTP_USERNAME"].present? && ENV["SMTP_PASSWORD"].present?
+  end
+
+  def self.env_delivery_options
+    return {} unless env_configured?
+
+    boolean = ActiveModel::Type::Boolean.new
+    {
+      address: ENV.fetch("SMTP_HOST", DEFAULT_HOST),
+      port: ENV.fetch("SMTP_PORT", DEFAULT_PORT).to_i,
+      user_name: ENV["SMTP_USERNAME"],
+      password: ENV["SMTP_PASSWORD"],
+      authentication: ENV.fetch("SMTP_AUTHENTICATION", DEFAULT_AUTHENTICATION),
+      ssl: boolean.cast(ENV.fetch("SMTP_SSL", "true")),
+      enable_starttls_auto: boolean.cast(ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "false"))
+    }
+  end
+
   def configured?
     enabled? && host.present? && port.present? && username.present? && password.present? && from_email.present?
   end
