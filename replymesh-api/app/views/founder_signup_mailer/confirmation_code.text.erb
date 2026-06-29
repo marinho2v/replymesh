@@ -1,11 +1,13 @@
+<%= @template[:confirmation_title] %>
+
 Olá, <%= @attempt.responsible_name %>.
 
-Seu código de confirmação Replymesh é:
+<%= @template[:confirmation_intro] %>
 
-<%= @code %>
+Código: <%= @code %>
 
-Ele expira em <%= @expires_in_minutes %> minutos.
+Este código expira em <%= @expires_in_minutes %> minutos.
 
 Se você não solicitou este cadastro, ignore este e-mail.
 
-Equipe Replymesh
+<%= @template[:footer_text] %>

@@ -2,6 +2,7 @@ class SmtpTestMailer < ApplicationMailer
   def test_email(recipient)
     @sent_at = Time.current
     setting = SmtpSetting.current_safe
+    @template = setting.email_template
     mail_options = {
       to: recipient,
       from: setting.from_address,

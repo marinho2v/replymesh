@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_28_143000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1112,7 +1112,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_28_143000) do
 
   create_table "smtp_settings", force: :cascade do |t|
     t.string "authentication", default: "login", null: false
+    t.text "confirmation_email_intro"
+    t.string "confirmation_email_subject"
+    t.string "confirmation_email_title"
     t.datetime "created_at", null: false
+    t.string "email_template_brand_name"
+    t.string "email_template_footer_text"
+    t.string "email_template_logo_url"
+    t.string "email_template_primary_color", default: "#090a0d", null: false
     t.boolean "enable_starttls_auto", default: false, null: false
     t.boolean "enabled", default: false, null: false
     t.string "from_email"
@@ -1122,6 +1129,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_28_143000) do
     t.string "last_test_status"
     t.datetime "last_tested_at"
     t.text "password_encrypted"
+    t.text "password_reset_email_intro"
+    t.string "password_reset_email_subject"
+    t.string "password_reset_email_title"
     t.integer "port", default: 465, null: false
     t.string "reply_to"
     t.boolean "ssl", default: true, null: false

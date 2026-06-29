@@ -3,6 +3,14 @@ class SmtpSetting < ApplicationRecord
   DEFAULT_PORT = 465
   DEFAULT_AUTHENTICATION = "login"
   DEFAULT_FROM_NAME = "Replymesh"
+  DEFAULT_PRIMARY_COLOR = "#090a0d"
+  DEFAULT_FOOTER_TEXT = "Equipe Replymesh"
+  DEFAULT_CONFIRMATION_SUBJECT = "Seu código de confirmação Replymesh"
+  DEFAULT_CONFIRMATION_TITLE = "Confirme seu cadastro"
+  DEFAULT_CONFIRMATION_INTRO = "Use o código abaixo para confirmar seu e-mail e criar sua loja no Programa Fundadores."
+  DEFAULT_PASSWORD_RESET_SUBJECT = "Código para redefinir sua senha Replymesh"
+  DEFAULT_PASSWORD_RESET_TITLE = "Redefinir senha"
+  DEFAULT_PASSWORD_RESET_INTRO = "Recebemos uma solicitação para redefinir a senha do painel da loja."
 
   before_validation :fill_defaults
 
@@ -10,6 +18,8 @@ class SmtpSetting < ApplicationRecord
   validates :port, numericality: { only_integer: true, greater_than: 0, less_than: 65_536 }
   validates :from_email, :username, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :test_recipient, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :email_template_logo_url, allow_blank: true, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }
+  validates :email_template_primary_color, format: { with: /\A#[0-9a-fA-F]{6}\z/ }
 
   def self.current
     first_or_create!
@@ -88,6 +98,21 @@ class SmtpSetting < ApplicationRecord
     "#{name} <#{email}>"
   end
 
+  def email_template
+    {
+      brand_name: email_template_brand_name.presence || from_name.presence || DEFAULT_FROM_NAME,
+      logo_url: email_template_logo_url,
+      primary_color: email_template_primary_color.presence || DEFAULT_PRIMARY_COLOR,
+      footer_text: email_template_footer_text.presence || DEFAULT_FOOTER_TEXT,
+      confirmation_subject: confirmation_email_subject.presence || DEFAULT_CONFIRMATION_SUBJECT,
+      confirmation_title: confirmation_email_title.presence || DEFAULT_CONFIRMATION_TITLE,
+      confirmation_intro: confirmation_email_intro.presence || DEFAULT_CONFIRMATION_INTRO,
+      password_reset_subject: password_reset_email_subject.presence || DEFAULT_PASSWORD_RESET_SUBJECT,
+      password_reset_title: password_reset_email_title.presence || DEFAULT_PASSWORD_RESET_TITLE,
+      password_reset_intro: password_reset_email_intro.presence || DEFAULT_PASSWORD_RESET_INTRO
+    }
+  end
+
   def as_json_safe
     {
       id: id,
@@ -107,6 +132,16 @@ class SmtpSetting < ApplicationRecord
       last_tested_at: last_tested_at,
       last_test_status: last_test_status,
       last_test_message: last_test_message,
+      email_template_brand_name: email_template[:brand_name],
+      email_template_logo_url: email_template[:logo_url],
+      email_template_primary_color: email_template[:primary_color],
+      email_template_footer_text: email_template[:footer_text],
+      confirmation_email_subject: email_template[:confirmation_subject],
+      confirmation_email_title: email_template[:confirmation_title],
+      confirmation_email_intro: email_template[:confirmation_intro],
+      password_reset_email_subject: email_template[:password_reset_subject],
+      password_reset_email_title: email_template[:password_reset_title],
+      password_reset_email_intro: email_template[:password_reset_intro],
       updated_at: updated_at
     }
   end
@@ -133,5 +168,6 @@ class SmtpSetting < ApplicationRecord
     self.port = DEFAULT_PORT if port.blank?
     self.authentication = DEFAULT_AUTHENTICATION if authentication.blank?
     self.from_name = DEFAULT_FROM_NAME if from_name.blank?
+    self.email_template_primary_color = DEFAULT_PRIMARY_COLOR if email_template_primary_color.blank?
   end
 end

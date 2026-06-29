@@ -70,7 +70,17 @@ module Api
             :from_email,
             :from_name,
             :reply_to,
-            :test_recipient
+            :test_recipient,
+            :email_template_brand_name,
+            :email_template_logo_url,
+            :email_template_primary_color,
+            :email_template_footer_text,
+            :confirmation_email_subject,
+            :confirmation_email_title,
+            :confirmation_email_intro,
+            :password_reset_email_subject,
+            :password_reset_email_title,
+            :password_reset_email_intro
           )
         end
       end
