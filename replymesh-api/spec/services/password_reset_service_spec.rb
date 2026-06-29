@@ -21,6 +21,32 @@ RSpec.describe PasswordResetService do
   end
 
   it "sends the reset code using the Master SMTP sender" do
+    configure_smtp!
+
+    result = described_class.start(email: user.email, company_slug: company.slug, request:)
+
+    expect(result).to be_success
+    expect(ActionMailer::Base.deliveries.size).to eq(1)
+    mail = ActionMailer::Base.deliveries.last
+    expect(mail.to).to eq([user.email])
+    expect(mail.from).to eq(["suporte@replymesh.cloud"])
+    expect(mail.subject).to eq("Código para redefinir sua senha Replymesh")
+    expect(mail.body.encoded).to match(/\d{6}/)
+    expect(PasswordResetRequest.last.last_sent_at).to be_present
+  end
+
+  it "does not keep a pending reset when the mail provider rejects delivery" do
+    configure_smtp!
+    allow(PasswordResetMailer).to receive_message_chain(:reset_code, :deliver_now).and_raise(Net::SMTPAuthenticationError.new("535 invalid"))
+
+    result = described_class.start(email: user.email, company_slug: company.slug, request:)
+
+    expect(result).not_to be_success
+    expect(result.errors.join).to include("Nao foi possivel enviar")
+    expect(PasswordResetRequest.where(email: user.email, status: "pending")).to be_empty
+  end
+
+  def configure_smtp!
     SmtpSetting.current.update!(
       enabled: true,
       host: "smtp.hostinger.com",
@@ -33,15 +59,5 @@ RSpec.describe PasswordResetService do
       from_email: "suporte@replymesh.cloud",
       from_name: "Replymesh"
     )
-
-    result = described_class.start(email: user.email, company_slug: company.slug, request:)
-
-    expect(result).to be_success
-    expect(ActionMailer::Base.deliveries.size).to eq(1)
-    mail = ActionMailer::Base.deliveries.last
-    expect(mail.to).to eq([user.email])
-    expect(mail.from).to eq(["suporte@replymesh.cloud"])
-    expect(mail.subject).to eq("Código para redefinir sua senha Replymesh")
-    expect(mail.body.encoded).to match(/\d{6}/)
   end
 end

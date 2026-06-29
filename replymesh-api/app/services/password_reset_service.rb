@@ -7,6 +7,7 @@ class PasswordResetService
 
   class << self
     def start(email:, company_slug:, request:)
+      reset = nil
       company = Company.find_by(slug: CompanyDomainService.normalize_slug(company_slug))
       return generic_started unless company
 
@@ -28,11 +29,15 @@ class PasswordResetService
         email: user.email,
         code_digest: BCrypt::Password.create(code),
         expires_at: CODE_TTL.from_now,
-        last_sent_at: Time.current,
         ip_address: request.remote_ip,
         user_agent: request.user_agent
       )
       PasswordResetMailer.reset_code(reset.id, code).deliver_now
+      reset.update!(last_sent_at: Time.current)
+      Rails.logger.info(
+        "[PasswordReset] code sent request_id=#{reset.id} company_id=#{company.id} " \
+        "user_id=#{user.id} email_domain=#{email_domain(user.email)}"
+      )
 
       Result.new(success?: true, payload: {
         reset_id: reset.id,
@@ -40,7 +45,8 @@ class PasswordResetService
         expires_in: CODE_TTL.to_i
       }, errors: [])
     rescue StandardError => e
-      Rails.logger.error("[PasswordReset] start failed: #{e.class}")
+      reset&.destroy
+      Rails.logger.error("[PasswordReset] start failed: #{e.class}: #{e.message.to_s.truncate(180)}")
       failure("Nao foi possivel enviar o codigo agora. Tente novamente.")
     end
 
@@ -88,6 +94,10 @@ class PasswordResetService
     end
 
     def masked_email(email) = email.sub(/\A(.{2}).*(@.*)\z/, '\1***\2')
+
+    def email_domain(email)
+      email.to_s.split("@").last
+    end
 
     def expire!(reset)
       reset.update!(status: "expired")
