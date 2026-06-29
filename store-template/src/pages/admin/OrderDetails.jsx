@@ -104,7 +104,10 @@ const OrderDetails = () => {
 
   const loadMotoboys = useCallback(async () => {
     try {
-      setMotoboys(await railsGetMotoboys({ params: { active: 'true' } }))
+      setMotoboys(await railsGetMotoboys({
+        params: { active: 'true' },
+        suppressFeatureUnavailable: true,
+      }))
     } catch (error) {
       console.error('Erro ao carregar motoboys:', error)
     }

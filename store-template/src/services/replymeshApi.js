@@ -92,6 +92,7 @@ export const request = async (path, options = {}) => {
     params,
     token = getReplymeshAuthToken(),
     headers = {},
+    suppressFeatureUnavailable = false,
   } = options
 
   const effectiveHeaders = { ...headers }
@@ -134,7 +135,11 @@ export const request = async (path, options = {}) => {
     } else if (response.status === 403 && payload?.error === 'Sessao master vinculada a outra empresa') {
       clearImpersonationSession()
       window.dispatchEvent(new Event('replymesh-auth-changed'))
-    } else if (response.status === 403 && ['feature_not_available', 'feature_disabled'].includes(payload?.error)) {
+    } else if (
+      response.status === 403 &&
+      !suppressFeatureUnavailable &&
+      ['feature_not_available', 'feature_disabled'].includes(payload?.error)
+    ) {
       window.dispatchEvent(new CustomEvent('replymesh:feature-unavailable', {
         detail: {
           feature: payload?.feature,

@@ -100,6 +100,7 @@ export const railsGetMotoboys = (options = {}) => (
   request('/store/motoboys', {
     params: options.params,
     headers: withCompanyHeader(options.companyId || currentCompanyId()),
+    suppressFeatureUnavailable: Boolean(options.suppressFeatureUnavailable),
   }).then(payload => payload.motoboys || [])
 )
 
