@@ -10,8 +10,11 @@ module Api
         ]
 
         def index
-          companies = Company.includes(:domains, :company_members, :store_setting, subscriptions: :plan).order(created_at: :desc)
-          render json: { success: true, companies: companies.map { |company| serialize_company(company) } }
+          companies = Company
+            .includes(:domains, :company_members, :store_setting, subscriptions: :plan)
+            .order(created_at: :desc)
+
+          render json: { success: true, companies: companies.map { |company| serialize_company_list_item(company) } }
         end
 
         def show
@@ -520,6 +523,51 @@ module Api
         rescue StandardError => e
           Rails.logger.error("[CompaniesController] serialize_company error for #{company.id}: #{e.message}")
           { id: company.id, name: company.name, slug: company.slug, status: company.status, error: true }
+        end
+
+        def serialize_company_list_item(company)
+          subscription = loaded_latest_subscription(company)
+          plan = subscription&.plan
+          primary_domain = loaded_primary_domain(company)
+          logo_url = company_asset_url(company, company.store_setting&.logo_url, primary_domain:)
+
+          {
+            id: company.id,
+            name: company.name,
+            slug: company.slug,
+            responsible_email: company.responsible_email,
+            status: company.status,
+            plan_status: company.plan_status,
+            origin: company.origin,
+            commercial_status: company.commercial_status,
+            created_at: company.created_at,
+            updated_at: company.updated_at,
+            primary_domain: primary_domain,
+            subdomain: company.subdomain,
+            custom_domain: company.custom_domain,
+            users_count: company.company_members.size,
+            plan: plan&.name,
+            plan_slug: plan&.slug,
+            subscription_status: subscription&.status,
+            subscription_price_cents: subscription&.price_cents,
+            logo_url: logo_url
+          }
+        rescue StandardError => e
+          Rails.logger.error("[CompaniesController] serialize_company_list_item error for #{company.id}: #{e.message}")
+          { id: company.id, name: company.name, slug: company.slug, status: company.status, error: true }
+        end
+
+        def loaded_latest_subscription(company)
+          subscriptions = company.association(:subscriptions).loaded? ? company.subscriptions.to_a : company.subscriptions.includes(:plan).to_a
+          subscriptions.max_by { |subscription| subscription.created_at || Time.zone.at(0) }
+        end
+
+        def loaded_primary_domain(company)
+          domains = company.association(:domains).loaded? ? company.domains.to_a : company.domains.to_a
+          domain = domains.find { |item| item.respond_to?(:is_primary?) && item.is_primary? } ||
+                   domains.find { |item| item.respond_to?(:is_primary) && item.is_primary } ||
+                   domains.first
+          domain&.domain
         end
 
         def company_asset_url(company, value, primary_domain: nil)
