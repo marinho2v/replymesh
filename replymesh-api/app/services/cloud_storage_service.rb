@@ -1,4 +1,5 @@
 require "aws-sdk-s3"
+require "base64"
 require "erb"
 require "marcel"
 require "mini_magick"
@@ -82,8 +83,27 @@ class CloudStorageService
       false
     end
 
+    def download(storage_key)
+      return nil if storage_key.blank?
+      ensure_configured!
+      ensure_safe_key!(storage_key)
+
+      response = client.get_object(bucket: bucket, key: storage_key.to_s)
+      {
+        body: response.body.read,
+        content_type: response.content_type.presence || OUTPUT_CONTENT_TYPE,
+        cache_control: response.cache_control.presence || CACHE_CONTROL
+      }
+    rescue Aws::S3::Errors::NoSuchKey, Aws::S3::Errors::NotFound
+      nil
+    end
+
     def url_for(storage_key)
       return nil if storage_key.blank?
+
+      if media_proxy_base_url.present?
+        return "#{media_proxy_base_url}/#{encode_storage_key(storage_key)}.webp"
+      end
 
       encoded_key = storage_key.to_s.split("/").map { |part| ERB::Util.url_encode(part) }.join("/")
       if cdn_base_url.present?
@@ -93,6 +113,20 @@ class CloudStorageService
       else
         "#{endpoint}/#{bucket}/#{encoded_key}"
       end
+    end
+
+    def encode_storage_key(storage_key)
+      Base64.urlsafe_encode64(storage_key.to_s, padding: false)
+    end
+
+    def decode_storage_key(token)
+      raw_token = token.to_s.sub(/\.webp\z/i, "")
+      padded = raw_token + ("=" * ((4 - raw_token.length % 4) % 4))
+      key = Base64.urlsafe_decode64(padded)
+      ensure_safe_key!(key)
+      key
+    rescue ArgumentError, UnsafeKeyError
+      nil
     end
 
     def public_url_or_fallback(storage_key, fallback_url)
@@ -113,6 +147,15 @@ class CloudStorageService
     def secret_access_key = ENV["CLOUDFLARE_R2_SECRET_ACCESS_KEY"].presence || ENV["R2_SECRET_ACCESS_KEY"].presence
     def cdn_base_url = (ENV["REPLYMESH_CDN_BASE_URL"].presence || ENV["CLOUDFLARE_R2_CDN_URL"].presence).to_s.delete_suffix("/")
     def public_base_url = ENV["CLOUDFLARE_R2_PUBLIC_BASE_URL"].to_s.delete_suffix("/")
+    def media_proxy_base_url
+      configured = ENV["REPLYMESH_MEDIA_PROXY_BASE_URL"].presence
+      return configured.to_s.delete_suffix("/") if configured.present?
+
+      api_base_url = ENV["API_BASE_URL"].presence
+      return if api_base_url.blank?
+
+      "#{api_base_url.to_s.delete_suffix("/")}/api/v1/public/media"
+    end
 
     private
 

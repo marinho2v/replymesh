@@ -307,6 +307,7 @@ Rails.application.routes.draw do
       end
 
       namespace :public do
+        get "media/:token", to: "media#show", constraints: { token: /[^\/]+/ }
         get "platform", to: "platform#show"
         get "founder_program", to: "founder_signups#status"
         get "founder_signups/slug", to: "founder_signups#slug"
