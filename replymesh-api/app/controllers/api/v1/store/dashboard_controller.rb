@@ -7,6 +7,19 @@ module Api
 
         # GET /api/v1/store/dashboard
         def show
+          render_ok(
+            ReplymeshCacheService.fetch(
+              company: current_company,
+              group: :dashboard,
+              endpoint: :store_dashboard,
+              expires_in: 30.seconds
+            ) { dashboard_payload }
+          )
+        end
+
+        private
+
+        def dashboard_payload
           zone = ActiveSupport::TimeZone[BUSINESS_TIME_ZONE]
           local_today = Time.current.in_time_zone(zone).to_date
           today_range = local_day_range(local_today, zone)
@@ -36,7 +49,7 @@ module Api
 
           trend_data = build_trend_data(local_today, zone)
 
-          render_ok(
+          {
             today_revenue_cents:  today_revenue,
             yesterday_revenue_cents: yesterday_revenue,
             today_revenue_change_percent: revenue_change_percent,
@@ -51,10 +64,8 @@ module Api
             recurring_customers:  recurring,
             used_coupons:         used_coupons,
             trend_data:           trend_data
-          )
+          }
         end
-
-        private
 
         def build_trend_data(local_today, zone)
           (6).downto(0).map do |days_ago|

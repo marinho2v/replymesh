@@ -24,6 +24,7 @@ Rails.application.routes.draw do
 
       namespace :master do
         get "dashboard", to: "dashboard#show"
+        get "performance", to: "performance#show"
         get "founder_program", to: "founder_program#show"
         patch "founder_program", to: "founder_program#update"
         get "smtp_settings", to: "smtp_settings#show"

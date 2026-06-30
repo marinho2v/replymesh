@@ -3,16 +3,25 @@ module Api
     module Public
       class WheelController < BaseController
         def promotions
-          unless FeatureGate.enabled?(current_company, "roulette")
-            return render_ok(roulette_active: false, promotions: [])
-          end
-
-          service = WheelService.new(company: current_company)
-          roulette_active = service.promotion_active?
-
           render_ok(
-            roulette_active: roulette_active,
-            promotions: roulette_active ? [{ key: "roulette", title: "Roleta de Premios", active: true }] : []
+            ReplymeshCacheService.fetch(
+              company: current_company,
+              group: :promotions,
+              endpoint: :public_promotions,
+              expires_in: 5.minutes
+            ) do
+              unless FeatureGate.enabled?(current_company, "roulette")
+                next { roulette_active: false, promotions: [] }
+              end
+
+              service = WheelService.new(company: current_company)
+              roulette_active = service.promotion_active?
+
+              {
+                roulette_active: roulette_active,
+                promotions: roulette_active ? [{ key: "roulette", title: "Roleta de Premios", active: true }] : []
+              }
+            end
           )
         end
 
@@ -23,8 +32,17 @@ module Api
 
         def prizes
           return unless require_public_feature!("roulette")
-          service = WheelService.new(company: current_company)
-          render_ok(prizes: service.promotion_active? ? service.public_prizes : [])
+          render_ok(
+            ReplymeshCacheService.fetch(
+              company: current_company,
+              group: :promotions,
+              endpoint: :public_wheel_prizes,
+              expires_in: 5.minutes
+            ) do
+              service = WheelService.new(company: current_company)
+              { prizes: service.promotion_active? ? service.public_prizes : [] }
+            end
+          )
         end
 
         def spin

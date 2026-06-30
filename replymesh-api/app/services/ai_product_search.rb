@@ -35,7 +35,7 @@ class AiProductSearch
   end
 
   def call
-    products = @company.products.active.includes(:category).ordered.limit(150).to_a
+    products = active_products
     return Result.new(products: recommended(products), scores: {}, terms: terms) if @recommendation || broad_query?
 
     scored = products.map { |product| [product, score_for(product)] }.select { |_product, score| score.positive? }
@@ -49,6 +49,20 @@ class AiProductSearch
   end
 
   private
+
+  def active_products
+    ids = ReplymeshCacheService.fetch(
+      company: @company,
+      group: :ai_context,
+      endpoint: :active_product_ids,
+      expires_in: 5.minutes
+    ) do
+      @company.products.active.ordered.limit(150).pluck(:id)
+    end
+
+    products_by_id = @company.products.active.includes(:category).where(id: ids).index_by(&:id)
+    ids.filter_map { |id| products_by_id[id] }
+  end
 
   def terms
     @terms ||= begin

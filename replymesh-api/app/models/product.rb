@@ -1,5 +1,8 @@
 class Product < ApplicationRecord
   include CloudStorageBacked
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :menu, :products, :featured_products, :promotions, :store, :ai_context
 
   belongs_to :company
   belongs_to :category

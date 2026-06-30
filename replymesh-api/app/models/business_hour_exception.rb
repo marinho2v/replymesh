@@ -1,4 +1,7 @@
 class BusinessHourException < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :business_hours, :store, :ai_context
   belongs_to :company
 
   validates :exception_date, presence: true, uniqueness: { scope: :company_id }

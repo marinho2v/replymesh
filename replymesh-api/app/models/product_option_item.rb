@@ -1,4 +1,8 @@
 class ProductOptionItem < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :menu, :products, :featured_products, :ai_context
+
   belongs_to :company
   belongs_to :product_option_group
 

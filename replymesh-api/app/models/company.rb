@@ -1,4 +1,8 @@
 class Company < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :store, :settings, :menu, :dashboard, :ai_context
+
   has_many :master_impersonation_sessions, dependent: :destroy
   has_many :master_audit_logs, dependent: :nullify
   STATUSES = %w[active inactive trial suspended canceled].freeze

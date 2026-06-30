@@ -1,4 +1,8 @@
 class DiningTable < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :tables
+
   QR_TOKEN_BYTES = 18
   STATUSES = %w[available occupied preparing waiting_payment closed disabled].freeze
 

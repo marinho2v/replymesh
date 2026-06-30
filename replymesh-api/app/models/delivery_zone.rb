@@ -1,4 +1,7 @@
 class DeliveryZone < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :delivery, :delivery_zones, :store, :ai_context
   belongs_to :company
   has_many   :orders
 

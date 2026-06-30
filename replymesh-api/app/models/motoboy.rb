@@ -1,4 +1,8 @@
 class Motoboy < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :motoboys
+
   belongs_to :company
   belongs_to :user, optional: true
   has_many   :orders, foreign_key: :motoboy_id

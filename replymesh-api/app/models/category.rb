@@ -1,5 +1,8 @@
 class Category < ApplicationRecord
   include CloudStorageBacked
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :menu, :categories, :products, :store, :ai_context
 
   belongs_to :company
   has_many   :products, dependent: :nullify

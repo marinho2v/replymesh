@@ -1,5 +1,8 @@
 class WheelPrize < ApplicationRecord
   include CloudStorageBacked
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :promotions, :store
 
   PRIZE_TYPES = %w[percentage fixed coupon_percentage coupon_fixed free_shipping free_item no_prize].freeze
 

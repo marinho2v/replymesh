@@ -2,7 +2,7 @@ module Api
   module V1
     module Public
       class StoresController < BaseController
-        PUBLIC_CACHE_TTL = 60.seconds
+        PUBLIC_CACHE_TTL = 5.minutes
 
         before_action :set_public_cache_headers, only: %i[
           menu banners business_hours delivery_zones
@@ -102,44 +102,9 @@ module Api
           PublicResponseCache.fetch(
             company: current_company,
             endpoint: endpoint,
-            version: public_cache_version(endpoint),
             expires_in: PUBLIC_CACHE_TTL,
             &block
           )
-        end
-
-        def public_cache_version(endpoint)
-          case endpoint.to_sym
-          when :menu
-            [
-              current_company.categories.maximum(:updated_at),
-              current_company.products.maximum(:updated_at),
-              ProductOptionGroup.where(company_id: current_company.id).maximum(:updated_at),
-              ProductOptionItem.where(company_id: current_company.id).maximum(:updated_at),
-              current_company.categories.count,
-              current_company.products.count
-            ]
-          when :delivery_zones
-            [current_company.delivery_zones.maximum(:updated_at), current_company.delivery_zones.count]
-          when :banners
-            [current_company.app_banners.maximum(:updated_at), current_company.app_banners.count]
-          when :business_hours
-            [
-              current_company.business_hours.maximum(:updated_at),
-              current_company.business_hour_exceptions.maximum(:updated_at),
-              current_company.business_hours.count,
-              current_company.business_hour_exceptions.count
-            ]
-          else
-            [
-              current_company.updated_at,
-              current_company.store_setting&.updated_at,
-              current_company.app_banners.maximum(:updated_at),
-              current_company.delivery_zones.maximum(:updated_at),
-              current_company.business_hours.maximum(:updated_at),
-              current_company.business_hour_exceptions.maximum(:updated_at)
-            ]
-          end.compact.map { |value| value.respond_to?(:to_i) ? value.to_i : value }.join("-")
         end
 
         def serialize_store(s, include_media: true)
