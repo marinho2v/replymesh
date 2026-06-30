@@ -560,7 +560,7 @@ const Settings = () => {
             <CloudImageUploader
               label="Imagem de capa/banner"
               mediaType="banner"
-              helper="Use uma imagem horizontal. O sistema otimiza para 1920x1080 em WEBP."
+              helper="Use uma imagem horizontal. O sistema otimiza automaticamente para a melhor exibicao."
               valueUrl={localSettings.banner_url || localSettings.cover_url || ''}
               storageKey={localSettings.banner_storage_key || localSettings.cover_storage_key || ''}
               onError={setLastError}
@@ -600,21 +600,10 @@ const Settings = () => {
           </div>
           <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
             <div className="mb-3 text-sm font-semibold text-white">Ajustes do banner premium</div>
+            <div className="mb-4 rounded-lg border border-blue-900/50 bg-blue-950/20 p-3 text-sm text-blue-100">
+              Estes ajustes usam a imagem de capa/banner cadastrada acima. Para trocar a foto, altere a imagem de capa em Identidade visual.
+            </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="lg:col-span-2">
-                <CloudImageUploader
-                  label="Imagem de capa premium"
-                  mediaType="hero"
-                  helper="Opcional. Se vazio, a loja usa o banner principal."
-                  valueUrl={localSettings.hero_image_url || ''}
-                  storageKey={localSettings.hero_image_storage_key || ''}
-                  onError={setLastError}
-                  onChange={(media) => {
-                    updateSetting('hero_image_url', media.url)
-                    updateSetting('hero_image_storage_key', media.storageKey)
-                  }}
-                />
-              </div>
               <Select
                 label="Posicao da imagem"
                 value={localSettings.hero_image_position || 'center'}

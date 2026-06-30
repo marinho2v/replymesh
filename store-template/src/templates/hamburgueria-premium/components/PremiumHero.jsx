@@ -21,7 +21,7 @@ const PremiumHero = ({ store, businessHours }) => {
   const [showHours, setShowHours] = useState(false)
   const storeName = store?.store_name || store?.name || 'Loja'
   const themeColor = store?.theme_primary_color || store?.primary_color || '#f7a325'
-  const heroImage = store?.hero_image_url || store?.banner_url || store?.cover_url || ''
+  const heroImage = store?.banner_url || store?.cover_url || store?.hero_image_url || ''
   const heroPosition = store?.hero_image_position || 'center'
   const heroZoom = Math.max(80, Math.min(Number(store?.hero_image_zoom || 100), 160))
   const heroOverlay = Math.max(0, Math.min(Number(store?.hero_overlay_opacity ?? 65), 90)) / 100

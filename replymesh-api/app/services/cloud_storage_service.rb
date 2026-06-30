@@ -119,7 +119,7 @@ class CloudStorageService
     def ensure_configured!
       return true if configured?
 
-      raise NotConfiguredError, "Cloudflare R2 nao configurado. Defina bucket, endpoint, access key e secret access key via variaveis de ambiente."
+      raise NotConfiguredError, "Armazenamento de imagens nao configurado. Fale com o suporte Replymesh para liberar o envio de imagens."
     end
 
     def client
