@@ -117,9 +117,17 @@ class ReplymeshCacheService
     end
 
     def log_cache(event, company:, group:, endpoint:, started_at:)
+      elapsed_ms = ((monotonic_time - started_at) * 1000).round(1)
+      PerformanceMonitorService.track_cache(
+        event: event,
+        company_id: company_id(company),
+        endpoint: endpoint || group,
+        group: group,
+        duration_ms: elapsed_ms
+      ) if defined?(PerformanceMonitorService)
+
       return unless cache_logging_enabled?
 
-      elapsed_ms = ((monotonic_time - started_at) * 1000).round(1)
       Rails.logger.info(
         "[ReplymeshCache] #{event} company_id=#{company_id(company)} group=#{group} endpoint=#{endpoint || group} tempo_ms=#{elapsed_ms}"
       )

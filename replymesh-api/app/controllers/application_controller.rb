@@ -7,7 +7,45 @@ class ApplicationController < ActionController::API
 
   attr_reader :current_user, :current_jwt_payload, :current_impersonation_session
 
+  around_action :track_replymesh_performance
+
   private
+
+  def track_replymesh_performance
+    return yield unless defined?(PerformanceMonitorService) && PerformanceMonitorService.enabled?
+
+    query_count = 0
+    sql_ms = 0.0
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    subscriber = lambda do |_name, started, finished, _id, payload|
+      next if payload[:cached]
+      next if payload[:name].to_s.match?(/\A(?:SCHEMA|TRANSACTION)\z/)
+
+      query_count += 1
+      sql_ms += (finished - started) * 1000
+    end
+
+    ActiveSupport::Notifications.instrument(
+      "replymesh.#{performance_area}",
+      endpoint: "#{request.request_method} #{controller_path}##{action_name}",
+      company_id: performance_company_id
+    ) do
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+    end
+  ensure
+    if started_at
+      duration_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000
+      PerformanceMonitorService.track_request(
+        endpoint: "#{request.request_method} #{controller_path}##{action_name}",
+        company_id: performance_company_id,
+        duration_ms: duration_ms,
+        sql_ms: sql_ms,
+        render_ms: [duration_ms - sql_ms, 0].max,
+        query_count: query_count,
+        payload_bytes: response&.body.to_s.bytesize
+      )
+    end
+  end
 
   def authenticate_user!
     token = request.headers["Authorization"].to_s.remove(/^Bearer\s+/)
@@ -194,5 +232,29 @@ class ApplicationController < ActionController::API
       status: "denied",
       request: request
     )
+  end
+
+  def performance_company_id
+    company = instance_variable_get(:@current_company) if instance_variable_defined?(:@current_company)
+    return company.id if company.respond_to?(:id)
+
+    payload = current_jwt_payload || {}
+    payload["impersonated_company_id"] || payload["company_id"]
+  rescue StandardError
+    nil
+  end
+
+  def performance_area
+    value = controller_path
+    return "dashboard" if value.include?("dashboard")
+    return "orders" if value.include?("orders")
+    return "products" if value.include?("products")
+    return "ai" if value.include?("ai")
+    return "public_store" if value.include?("public/")
+    return "checkout" if value.include?("checkout")
+    return "motoboy" if value.include?("motoboy")
+    return "master" if value.include?("master/")
+
+    "api"
   end
 end

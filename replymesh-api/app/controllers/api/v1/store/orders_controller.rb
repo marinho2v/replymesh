@@ -7,7 +7,7 @@ module Api
 
         # GET /api/v1/store/orders
         def index
-          scope = company_scope(Order).includes(:customer, :motoboy, :order_items, :delivery_zone)
+          scope = company_scope(Order).includes(:customer, :motoboy, :dining_table, :order_items, :delivery_zone)
                                       .recent
 
           scope = scope.by_status(params[:status])     if params[:status].present?
@@ -41,7 +41,10 @@ module Api
                                       .where.not(payment_status: "pending_payment")
                                       .recent
 
-          render_ok(orders: scope.limit(page_limit).offset(page_offset).map { |o| serialize_kitchen(o) })
+          orders = scope.limit(page_limit).offset(page_offset).to_a
+          table_sessions_by_order_id = TableSession.where(order_id: orders.map(&:id)).index_by(&:order_id)
+
+          render_ok(orders: orders.map { |order| serialize_kitchen(order, table_sessions_by_order_id[order.id]) })
         end
 
         # GET /api/v1/store/orders/:id
@@ -271,12 +274,12 @@ module Api
           )
         end
 
-        def serialize_kitchen(order)
+        def serialize_kitchen(order, table_session = nil)
           serialize_list(order).merge(
             notes: order.notes,
             source: order.legacy_source,
             table_id: order.dining_table_id,
-            table_session_id: TableSession.find_by(order_id: order.id)&.id,
+            table_session_id: table_session&.id,
             attendant_id: order.attendant_id,
             dining_tables: order.dining_table&.slice("id", "name", "number"),
             profiles: order.attendant&.slice("id", "name", "global_role"),
@@ -322,7 +325,7 @@ module Api
 
         def serialize_route_suggestion(motoboy)
           orders = company_scope(Order)
-                   .includes(:customer, :motoboy, :order_items, :delivery_zone)
+                   .includes(:customer, :motoboy, :dining_table, :order_items, :delivery_zone)
                    .where(motoboy_id: motoboy.id, delivery_status: %w[assigned on_the_way])
                    .to_a
           route = DeliveryRouteService.call(orders: orders)

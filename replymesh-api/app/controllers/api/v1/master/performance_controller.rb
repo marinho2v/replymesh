@@ -6,27 +6,7 @@ module Api
         before_action :require_super_admin!
 
         def show
-          render json: {
-            cache: {
-              hit: nil,
-              miss: nil,
-              provider: Rails.cache.class.name,
-              debug_enabled: Rails.env.development? || ENV["REPLYMESH_CACHE_DEBUG"].to_s == "1"
-            },
-            queries: {
-              average_ms: nil,
-              slowest_endpoint: nil,
-              total_count: nil
-            },
-            responses: {
-              average_ms: nil,
-              slowest_endpoint: nil
-            },
-            companies: {
-              most_accessed: nil
-            },
-            status: "prepared"
-          }
+          render json: PerformanceMonitorService.summary
         end
       end
     end
