@@ -10,10 +10,11 @@ import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Textarea } from '../../components/ui/Textarea'
+import CloudImageUploader from '../../components/media/CloudImageUploader'
 
 const headers = () => ({ 'X-Company-Id': localStorage.getItem('replymesh_store_company_id') || STORE_COMPANY_ID })
 const emptyApp = { app_name: '', display_name: '', logo_url: '', icon_url: '', splash_url: '', primary_color: '#f59e0b', secondary_color: '#111111', support_whatsapp: '', notes: '' }
-const emptyBanner = { title: '', image_url: '', link_url: '', is_active: true, sort_order: 0 }
+const emptyBanner = { title: '', image_url: '', image_storage_key: '', link_url: '', is_active: true, sort_order: 0 }
 
 export default function AppBanners() {
   const [section, setSection] = useState('app')
@@ -102,7 +103,16 @@ export default function AppBanners() {
       <Card><CardContent className="p-5 space-y-4">
         <h2 className="text-white font-semibold">{editingBanner ? 'Editar banner' : 'Novo banner do aplicativo'}</h2>
         <Input label="Titulo" value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} />
-        <Input label="URL da imagem" value={bannerForm.image_url} onChange={(e) => setBannerForm({ ...bannerForm, image_url: e.target.value })} />
+        <CloudImageUploader
+          label="Imagem do banner"
+          mediaType="banner"
+          ownerType="app_banner"
+          ownerId={editingBanner?.id}
+          valueUrl={bannerForm.image_url || ''}
+          storageKey={bannerForm.image_storage_key || ''}
+          onError={(message) => toast.error(message)}
+          onChange={(media) => setBannerForm({ ...bannerForm, image_url: media.url, image_storage_key: media.storageKey })}
+        />
         <Input label="Link ao tocar" value={bannerForm.link_url || ''} onChange={(e) => setBannerForm({ ...bannerForm, link_url: e.target.value })} />
         <Input label="Ordem" type="number" value={bannerForm.sort_order || 0} onChange={(e) => setBannerForm({ ...bannerForm, sort_order: e.target.value })} />
         <label className="flex gap-2 text-sm text-white"><input type="checkbox" checked={bannerForm.is_active !== false} onChange={(e) => setBannerForm({ ...bannerForm, is_active: e.target.checked })} />Banner ativo</label>

@@ -7,7 +7,7 @@ module Api
 
         def index
           categories = company_scope(Category).visible.ordered
-          render_ok(categories: categories.as_json(only: %i[id name slug sort_order is_active created_at]))
+          render_ok(categories: categories.map { |category| serialize(category) })
         end
 
         def show
@@ -44,12 +44,19 @@ module Api
         end
 
         def category_params
-          params.require(:category).permit(:name, :slug, :sort_order, :is_active)
+          params.require(:category).permit(:name, :slug, :image_url, :image_storage_key, :sort_order, :is_active)
                 .merge(company_id: current_company.id)
         end
 
         def serialize(cat)
-          cat.as_json(only: %i[id name slug sort_order is_active created_at updated_at])
+          cat.as_json(only: %i[id name slug image_url image_storage_key sort_order is_active created_at updated_at])
+             .merge(image_url: media_url(cat, :image_storage_key, cat.respond_to?(:image_url) ? cat.image_url : nil))
+        end
+
+        def media_url(record, storage_field, fallback)
+          return fallback unless record.respond_to?(storage_field)
+
+          CloudStorageService.public_url_or_fallback(record.public_send(storage_field), fallback)
         end
       end
     end

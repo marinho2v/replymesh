@@ -390,8 +390,11 @@ module Api
             :whatsapp_number,
             :whatsapp_mode,
             :logo_url,
+            :logo_storage_key,
             :banner_url,
+            :banner_storage_key,
             :cover_url,
+            :cover_storage_key,
             :primary_color,
             :secondary_color,
             :pix_key,
@@ -410,6 +413,7 @@ module Api
             :hero_highlight,
             :hero_subtitle,
             :hero_image_url,
+            :hero_image_storage_key,
             :visual_template_id,
             accepted_payment_methods: [],
             opening_hours: {}
@@ -472,9 +476,9 @@ module Api
             nil
           end
 
-          logo_url = company_asset_url(company, company.store_setting&.logo_url, primary_domain:)
-          banner_url = company_asset_url(company, company.store_setting&.banner_url, primary_domain:)
-          cover_url = company_asset_url(company, company.store_setting&.cover_url, primary_domain:)
+          logo_url = company_asset_url(company, store_media_url(company.store_setting, :logo_storage_key, company.store_setting&.logo_url), primary_domain:)
+          banner_url = company_asset_url(company, store_media_url(company.store_setting, :banner_storage_key, company.store_setting&.banner_url), primary_domain:)
+          cover_url = company_asset_url(company, store_media_url(company.store_setting, :cover_storage_key, company.store_setting&.cover_url), primary_domain:)
 
           {
             id:                      company.id,
@@ -529,7 +533,7 @@ module Api
           subscription = loaded_latest_subscription(company)
           plan = subscription&.plan
           primary_domain = loaded_primary_domain(company)
-          logo_url = company_asset_url(company, company.store_setting&.logo_url, primary_domain:)
+          logo_url = company_asset_url(company, store_media_url(company.store_setting, :logo_storage_key, company.store_setting&.logo_url), primary_domain:)
 
           {
             id: company.id,
@@ -584,6 +588,12 @@ module Api
           path = value.start_with?("/") ? value : "/#{value}"
 
           "https://#{host}#{path}"
+        end
+
+        def store_media_url(setting, storage_field, fallback)
+          return fallback unless setting&.respond_to?(storage_field)
+
+          CloudStorageService.public_url_or_fallback(setting.public_send(storage_field), fallback)
         end
 
         def serialize_admin_users(company)

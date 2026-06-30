@@ -19,11 +19,10 @@ import {
   Printer,
   Settings as SettingsIcon,
   Store,
-  Trash2,
   Truck,
-  Upload,
 } from 'lucide-react'
 import { DEFAULT_TEMPLATE_ID, getAllTemplates, getTemplateById, getTemplateCategories } from '../../templates'
+import CloudImageUploader from '../../components/media/CloudImageUploader'
 
 const TEMPLATE_CATEGORY_LABELS = {
   hamburgueria: 'Hamburgueria',
@@ -238,12 +237,16 @@ const defaultSettings = {
   state: '',
   zip_code: '',
   logo_url: '',
+  logo_storage_key: '',
   banner_url: '',
+  banner_storage_key: '',
   cover_url: '',
+  cover_storage_key: '',
   hero_title: '',
   hero_highlight: '',
   hero_subtitle: '',
   hero_image_url: '',
+  hero_image_storage_key: '',
   hero_image_position: 'center',
   hero_image_zoom: 100,
   hero_overlay_opacity: 65,
@@ -276,9 +279,6 @@ const defaultSettings = {
   mercadopago_access_token: '',
   mercadopago_enabled: false,
 }
-
-const IMAGE_MAX_SIZE_BYTES = 1024 * 1024
-const IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 
 const daysOfWeek = [
   { value: 0, label: 'Domingo' },
@@ -394,40 +394,6 @@ const Settings = () => {
   const updateSetting = (field, value) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }))
     setLastSaved('')
-  }
-
-  const handleImageUpload = (field, event) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    if (!IMAGE_ALLOWED_TYPES.includes(file.type)) {
-      setLastError('Formato de imagem invalido. Use PNG, JPG, WEBP ou SVG.')
-      return
-    }
-
-    if (file.size > IMAGE_MAX_SIZE_BYTES) {
-      setLastError('Imagem muito grande. Tamanho maximo: 1 MB.')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      updateSetting(field, reader.result)
-      if (field === 'banner_url') updateSetting('cover_url', reader.result)
-      setLastError('')
-    }
-    reader.onerror = () => setLastError('Nao foi possivel carregar a imagem.')
-    reader.readAsDataURL(file)
-  }
-
-  const removeLogo = () => {
-    updateSetting('logo_url', '')
-  }
-
-  const removeBanner = () => {
-    updateSetting('banner_url', '')
-    updateSetting('cover_url', '')
   }
 
   const updateHour = (dayOfWeek, field, value) => {
@@ -579,66 +545,32 @@ const Settings = () => {
             A logo aparece no cardapio, checkout, roleta, motoboy, login e impressao.
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
-              <div className="mb-3 text-sm font-semibold text-white">Logo da loja</div>
-              <div className="flex gap-4">
-                <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-yellow-500/30 bg-black">
-                  <img src={localSettings.logo_url || '/logo.png'} alt="Logo da loja" className="h-full w-full object-contain" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                    <Upload size={16} className="mr-2" />
-                    Upload/trocar
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(event) => handleImageUpload('logo_url', event)} />
-                  </label>
-                  <Button type="button" variant="secondary" onClick={removeLogo}>
-                    <Trash2 size={16} className="mr-2" />
-                    Remover logo
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-3">
-                <Input
-                  label="URL da logo"
-                  value={localSettings.logo_url || ''}
-                  onChange={(e) => updateSetting('logo_url', e.target.value)}
-                />
-              </div>
-            </div>
+            <CloudImageUploader
+              label="Logo da loja"
+              mediaType="logo"
+              valueUrl={localSettings.logo_url || ''}
+              storageKey={localSettings.logo_storage_key || ''}
+              onError={setLastError}
+              onChange={(media) => {
+                updateSetting('logo_url', media.url)
+                updateSetting('logo_storage_key', media.storageKey)
+              }}
+            />
 
-            <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
-              <div className="mb-3 text-sm font-semibold text-white">Imagem de capa/banner</div>
-              <div className="flex gap-4">
-                <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dark-600 bg-black">
-                  {localSettings.banner_url || localSettings.cover_url ? (
-                    <img src={localSettings.banner_url || localSettings.cover_url} alt="Banner da loja" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="px-2 text-center text-xs text-gray-500">Sem banner</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500">
-                    <Upload size={16} className="mr-2" />
-                    Upload/trocar
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(event) => handleImageUpload('banner_url', event)} />
-                  </label>
-                  <Button type="button" variant="secondary" onClick={removeBanner}>
-                    <Trash2 size={16} className="mr-2" />
-                    Remover banner
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-3">
-                <Input
-                  label="URL do banner"
-                  value={localSettings.banner_url || localSettings.cover_url || ''}
-                  onChange={(e) => {
-                    updateSetting('banner_url', e.target.value)
-                    updateSetting('cover_url', e.target.value)
-                  }}
-                />
-              </div>
-            </div>
+            <CloudImageUploader
+              label="Imagem de capa/banner"
+              mediaType="banner"
+              helper="Use uma imagem horizontal. O sistema otimiza para 1920x1080 em WEBP."
+              valueUrl={localSettings.banner_url || localSettings.cover_url || ''}
+              storageKey={localSettings.banner_storage_key || localSettings.cover_storage_key || ''}
+              onError={setLastError}
+              onChange={(media) => {
+                updateSetting('banner_url', media.url)
+                updateSetting('cover_url', media.url)
+                updateSetting('banner_storage_key', media.storageKey)
+                updateSetting('cover_storage_key', media.storageKey)
+              }}
+            />
           </div>
           <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
             <div className="mb-3 text-sm font-semibold text-white">Texto principal da home</div>
@@ -669,12 +601,20 @@ const Settings = () => {
           <div className="rounded-lg border border-dark-700 bg-dark-900 p-4">
             <div className="mb-3 text-sm font-semibold text-white">Ajustes do banner premium</div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Input
-                label="URL da imagem de capa premium"
-                value={localSettings.hero_image_url || ''}
-                placeholder="Usa o banner acima se vazio"
-                onChange={(e) => updateSetting('hero_image_url', e.target.value)}
-              />
+              <div className="lg:col-span-2">
+                <CloudImageUploader
+                  label="Imagem de capa premium"
+                  mediaType="hero"
+                  helper="Opcional. Se vazio, a loja usa o banner principal."
+                  valueUrl={localSettings.hero_image_url || ''}
+                  storageKey={localSettings.hero_image_storage_key || ''}
+                  onError={setLastError}
+                  onChange={(media) => {
+                    updateSetting('hero_image_url', media.url)
+                    updateSetting('hero_image_storage_key', media.storageKey)
+                  }}
+                />
+              </div>
               <Select
                 label="Posicao da imagem"
                 value={localSettings.hero_image_position || 'center'}

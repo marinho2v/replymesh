@@ -1,4 +1,6 @@
 class Coupon < ApplicationRecord
+  include CloudStorageBacked
+
   DISCOUNT_TYPES = %w[percentage fixed free_shipping free_item].freeze
 
   belongs_to :company
@@ -17,6 +19,8 @@ class Coupon < ApplicationRecord
                               .where("expires_at IS NULL OR expires_at >= ?", Time.current) }
   scope :manual, -> { where(source: "manual") }
   scope :wheel, -> { where(source: "wheel") }
+
+  cloud_storage_fields :image_storage_key
 
   def exhausted?   = max_uses.present? && used_count >= max_uses
   def increment_usage! = increment!(:used_count)

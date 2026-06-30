@@ -188,7 +188,7 @@ module Api
             hero_title:              s.respond_to?(:hero_title) ? s.hero_title : nil,
             hero_highlight:          s.respond_to?(:hero_highlight) ? s.hero_highlight : nil,
             hero_subtitle:           s.respond_to?(:hero_subtitle) ? s.hero_subtitle : nil,
-            hero_image_url:          s.respond_to?(:hero_image_url) ? s.hero_image_url : nil,
+            hero_image_url:          media_url(s, :hero_image_storage_key, s.respond_to?(:hero_image_url) ? s.hero_image_url : nil),
             hero_image_position:     s.respond_to?(:hero_image_position) ? (s.hero_image_position.presence || 'center') : 'center',
             hero_image_zoom:         s.respond_to?(:hero_image_zoom) ? (s.hero_image_zoom.presence || 100) : 100,
             hero_overlay_opacity:    s.respond_to?(:hero_overlay_opacity) ? (s.hero_overlay_opacity.presence || 65) : 65,
@@ -231,21 +231,24 @@ module Api
         def public_media_fields(s, include_media:)
           return { logo_url: nil, favicon_url: nil, cover_url: nil, banner_url: nil } unless include_media
 
-          cover_url = s.cover_url.presence
-          banner_url = s.banner_url.presence
+          cover_url = media_url(s, :cover_storage_key, s.cover_url.presence)
+          banner_url = media_url(s, :banner_storage_key, s.banner_url.presence)
           canonical_cover = cover_url || banner_url
           duplicate_banner = cover_url.present? && banner_url.present? && cover_url == banner_url
 
           {
-            logo_url: s.logo_url,
-            favicon_url: s.respond_to?(:favicon_url) ? s.favicon_url : nil,
+            logo_url: media_url(s, :logo_storage_key, s.logo_url),
+            favicon_url: media_url(s, :favicon_storage_key, s.respond_to?(:favicon_url) ? s.favicon_url : nil),
             cover_url: canonical_cover,
             banner_url: duplicate_banner ? nil : banner_url
           }
         end
 
         def serialize_banners(banners)
-          banners.as_json(only: %i[id title image_url link_url sort_order])
+          banners.map do |banner|
+            banner.as_json(only: %i[id title image_url image_storage_key link_url sort_order])
+                  .merge(image_url: media_url(banner, :image_storage_key, banner.image_url))
+          end
         end
 
         def serialize_business_hours(hours)
@@ -274,7 +277,8 @@ module Api
             price_cents:             p.price_cents,
             promotional_price_cents: p.promotional_price_cents,
             price_brl:               p.price_brl,
-            image_url:               p.image_url,
+            image_url:               media_url(p, :image_storage_key, p.image_url),
+            image_storage_key:       p.respond_to?(:image_storage_key) ? p.image_storage_key : nil,
             is_featured:             p.is_featured,
             is_promotional:          p.is_promotional,
             is_customizable:         p.is_customizable,
@@ -300,6 +304,12 @@ module Api
               }
             }
           }
+        end
+
+        def media_url(record, storage_field, fallback)
+          return fallback unless record.respond_to?(storage_field)
+
+          CloudStorageService.public_url_or_fallback(record.public_send(storage_field), fallback)
         end
       end
     end

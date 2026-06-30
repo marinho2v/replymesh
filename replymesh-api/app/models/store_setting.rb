@@ -1,4 +1,6 @@
 class StoreSetting < ApplicationRecord
+  include CloudStorageBacked
+
   STATUSES = %w[open closed paused].freeze
   WHATSAPP_MODES = %w[automatic manual disabled].freeze
   PIX_KEY_TYPES = %w[cpf cnpj email phone random].freeze
@@ -25,6 +27,7 @@ class StoreSetting < ApplicationRecord
   validates :pix_key_type, inclusion: { in: PIX_KEY_TYPES }, allow_blank: true
 
   before_validation :normalize_company_settings
+  cloud_storage_fields :logo_storage_key, :banner_storage_key, :cover_storage_key, :favicon_storage_key, :hero_image_storage_key
 
   def apply_company_settings!(attributes)
     attrs = attributes.to_h
@@ -33,8 +36,11 @@ class StoreSetting < ApplicationRecord
     self.trade_name = attrs["trade_name"] if attrs.key?("trade_name")
     self.store_name = attrs["store_name"] if attrs.key?("store_name")
     self.logo_url = attrs["logo_url"] if attrs.key?("logo_url")
+    self.logo_storage_key = attrs["logo_storage_key"] if attrs.key?("logo_storage_key") && respond_to?(:logo_storage_key=)
     self.banner_url = attrs["banner_url"] if attrs.key?("banner_url")
+    self.banner_storage_key = attrs["banner_storage_key"] if attrs.key?("banner_storage_key") && respond_to?(:banner_storage_key=)
     self.cover_url = attrs["cover_url"] if attrs.key?("cover_url")
+    self.cover_storage_key = attrs["cover_storage_key"] if attrs.key?("cover_storage_key") && respond_to?(:cover_storage_key=)
     self.hero_subtitle = attrs["description"] if attrs.key?("description") && respond_to?(:hero_subtitle=)
     self.primary_color = attrs["primary_color"] if attrs.key?("primary_color")
     self.secondary_color = attrs["secondary_color"] if attrs.key?("secondary_color")
@@ -80,6 +86,7 @@ class StoreSetting < ApplicationRecord
     self.hero_highlight = attrs["hero_highlight"] if attrs.key?("hero_highlight") && respond_to?(:hero_highlight=)
     self.hero_subtitle = attrs["hero_subtitle"] if attrs.key?("hero_subtitle") && respond_to?(:hero_subtitle=)
     self.hero_image_url = attrs["hero_image_url"] if attrs.key?("hero_image_url") && respond_to?(:hero_image_url=)
+    self.hero_image_storage_key = attrs["hero_image_storage_key"] if attrs.key?("hero_image_storage_key") && respond_to?(:hero_image_storage_key=)
     self.hero_image_position = attrs["hero_image_position"] if attrs.key?("hero_image_position") && respond_to?(:hero_image_position=)
     self.hero_image_zoom = attrs["hero_image_zoom"] if attrs.key?("hero_image_zoom") && respond_to?(:hero_image_zoom=)
     self.hero_overlay_opacity = attrs["hero_overlay_opacity"] if attrs.key?("hero_overlay_opacity") && respond_to?(:hero_overlay_opacity=)
@@ -102,11 +109,15 @@ class StoreSetting < ApplicationRecord
       company_name: company_name.presence || store_name.presence || company.name,
       trade_name: trade_name.presence || store_name.presence || company.name,
       store_name: store_name.presence || trade_name.presence || company_name.presence || company.name,
-      logo_url: logo_url,
-      banner_url: banner_url.presence || cover_url,
-      cover_url: cover_url.presence || banner_url,
+      logo_url: cloud_media_url(:logo_storage_key, logo_url),
+      logo_storage_key: respond_to?(:logo_storage_key) ? logo_storage_key : nil,
+      banner_url: cloud_media_url(:banner_storage_key, banner_url.presence || cover_url),
+      banner_storage_key: respond_to?(:banner_storage_key) ? banner_storage_key : nil,
+      cover_url: cloud_media_url(:cover_storage_key, cover_url.presence || banner_url),
+      cover_storage_key: respond_to?(:cover_storage_key) ? cover_storage_key : nil,
       description: respond_to?(:hero_subtitle) ? hero_subtitle : nil,
-      favicon_url: respond_to?(:favicon_url) ? favicon_url : nil,
+      favicon_url: cloud_media_url(:favicon_storage_key, respond_to?(:favicon_url) ? favicon_url : nil),
+      favicon_storage_key: respond_to?(:favicon_storage_key) ? favicon_storage_key : nil,
       primary_color: primary_color,
       secondary_color: secondary_color,
       whatsapp: whatsapp.presence || whatsapp_number.presence || phone,
@@ -154,7 +165,8 @@ class StoreSetting < ApplicationRecord
       mercadopago_access_token:  respond_to?(:mercadopago_access_token) ? mask_token(mercadopago_access_token) : nil,
       mercadopago_webhook_secret: respond_to?(:mercadopago_webhook_secret) ? mercadopago_webhook_secret : nil,
       mercadopago_enabled:       respond_to?(:mercadopago_enabled) ? mercadopago_enabled : false,
-      hero_image_url: respond_to?(:hero_image_url) ? hero_image_url : nil,
+      hero_image_url: cloud_media_url(:hero_image_storage_key, respond_to?(:hero_image_url) ? hero_image_url : nil),
+      hero_image_storage_key: respond_to?(:hero_image_storage_key) ? hero_image_storage_key : nil,
       hero_image_position: respond_to?(:hero_image_position) ? (hero_image_position.presence || "center") : "center",
       hero_image_zoom: respond_to?(:hero_image_zoom) ? (hero_image_zoom.presence || 100) : 100,
       hero_overlay_opacity: respond_to?(:hero_overlay_opacity) ? (hero_overlay_opacity.presence || 65) : 65,
@@ -177,6 +189,12 @@ class StoreSetting < ApplicationRecord
   end
 
   private
+
+  def cloud_media_url(storage_field, fallback_url)
+    return fallback_url unless respond_to?(storage_field)
+
+    CloudStorageService.public_url_or_fallback(public_send(storage_field), fallback_url)
+  end
 
   def mask_token(token)
     return nil if token.blank?

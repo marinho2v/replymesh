@@ -17,6 +17,7 @@ import { Badge } from '../../components/ui/Badge'
 import { formatCurrency } from '../../utils/currency'
 import { Plus, Edit, Trash2, Star, Tag, Package, Search, Settings2, RotateCcw, ArrowUp, ArrowDown, ListOrdered, Pizza } from 'lucide-react'
 import { toast } from 'sonner'
+import CloudImageUploader from '../../components/media/CloudImageUploader'
 import {
   buildPizzaOptionGroups,
   defaultAdvancedPizzaConfig,
@@ -79,6 +80,7 @@ const Products = () => {
     promotional_price: '',
     category_id: '',
     image_url: '',
+    image_storage_key: '',
     is_featured: false,
     is_promotional: false,
     is_combo: false,
@@ -227,6 +229,7 @@ const Products = () => {
       promotional_price: product.promotional_price || '',
       category_id: toSelectId(product.category_id),
       image_url: product.image_url || '',
+      image_storage_key: product.image_storage_key || '',
       is_featured: product.is_featured,
       is_promotional: product.is_promotional,
       is_combo: product.is_combo,
@@ -280,6 +283,7 @@ const Products = () => {
       promotional_price: '',
       category_id: '',
       image_url: '',
+      image_storage_key: '',
       is_featured: false,
       is_promotional: false,
       is_combo: false,
@@ -1091,10 +1095,19 @@ const Products = () => {
             onChange={(e) => setFormData(prev => ({ ...prev, category_id: e.target.value }))}
           />
 
-          <Input
-            label="URL da imagem"
-            value={formData.image_url}
-            onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+          <CloudImageUploader
+            label="Imagem do produto"
+            mediaType="product"
+            ownerType="product"
+            ownerId={editingProduct?.id}
+            valueUrl={formData.image_url}
+            storageKey={formData.image_storage_key}
+            onError={(message) => toast.error(message)}
+            onChange={(media) => setFormData(prev => ({
+              ...prev,
+              image_url: media.url,
+              image_storage_key: media.storageKey,
+            }))}
           />
 
           <div className="grid grid-cols-3 gap-4">

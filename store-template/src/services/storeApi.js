@@ -58,6 +58,7 @@ const normalizeBanner = (b) => ({
   id:         b.id,
   title:      b.title,
   image_url:  b.image_url,
+  image_storage_key: b.image_storage_key,
   link_url:   b.link_url,
   is_active:  b.is_active,
   sort_order: b.sort_order,
@@ -204,6 +205,7 @@ const productToRails = (data, { partial = false } = {}) => {
   }
   if (!partial || data.cost_price !== undefined) product.cost_price_cents = data.cost_price ? toCents(data.cost_price) : 0
   if (!partial || data.image_url !== undefined) product.image_url = data.image_url || null
+  if (!partial || data.image_storage_key !== undefined) product.image_storage_key = data.image_storage_key || null
   if (data.is_featured !== undefined) product.is_featured = !!data.is_featured
   if (data.is_promotional !== undefined) product.is_promotional = !!data.is_promotional
   if (data.is_combo !== undefined) product.is_combo = !!data.is_combo
@@ -322,13 +324,13 @@ export const railsGetBanners = () =>
 export const railsCreateBanner = (data) =>
   request('/store/app_banners', {
     method: 'POST', headers: h(),
-    body: { app_banner: { title: data.title, image_url: data.image_url, link_url: data.link_url || null, is_active: data.is_active !== false, sort_order: Number(data.sort_order) || 0 } },
+    body: { app_banner: { title: data.title, image_url: data.image_url, image_storage_key: data.image_storage_key || null, link_url: data.link_url || null, is_active: data.is_active !== false, sort_order: Number(data.sort_order) || 0 } },
   }).then(r => normalizeBanner(r.app_banner))
 
 export const railsUpdateBanner = (id, data) =>
   request(`/store/app_banners/${id}`, {
     method: 'PATCH', headers: h(),
-    body: { app_banner: { title: data.title, image_url: data.image_url, link_url: data.link_url || null, is_active: data.is_active, sort_order: Number(data.sort_order) || 0 } },
+    body: { app_banner: { title: data.title, image_url: data.image_url, image_storage_key: data.image_storage_key || null, link_url: data.link_url || null, is_active: data.is_active, sort_order: Number(data.sort_order) || 0 } },
   }).then(r => normalizeBanner(r.app_banner))
 
 export const railsDeleteBanner = (id) =>

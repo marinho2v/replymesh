@@ -14,6 +14,11 @@ gem "rack-cors"
 # Autorização
 gem "pundit"
 
+# Cloud storage S3-compatible (Cloudflare R2) e processamento seguro de imagens
+gem "aws-sdk-s3", "~> 1.150"
+gem "mini_magick", "~> 5.0"
+gem "marcel", "~> 1.0"
+
 # Variáveis de ambiente
 gem "dotenv-rails"
 

@@ -1,4 +1,6 @@
 class Product < ApplicationRecord
+  include CloudStorageBacked
+
   belongs_to :company
   belongs_to :category
   belongs_to :stock_item, class_name: "InventoryItem", optional: true
@@ -25,6 +27,7 @@ class Product < ApplicationRecord
   scope :ordered,    -> { order(:sort_order, :name) }
 
   before_validation :auto_slug
+  cloud_storage_fields :image_storage_key
 
   def price_brl   = price_cents.to_f / 100
   def cost_brl    = cost_price_cents.to_f / 100

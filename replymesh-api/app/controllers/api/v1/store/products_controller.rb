@@ -52,7 +52,7 @@ module Api
         def product_params
           params.require(:product).permit(
             :name, :slug, :description, :category_id, :price_cents,
-            :promotional_price_cents, :cost_price_cents, :image_url,
+            :promotional_price_cents, :cost_price_cents, :image_url, :image_storage_key,
             :is_featured, :is_promotional, :is_combo, :is_customizable,
             :track_inventory, :stock_item_id, :sort_order, :is_active
           ).merge(company_id: current_company.id)
@@ -60,8 +60,9 @@ module Api
 
         def serialize_list(p)
           p.as_json(only: %i[id name slug category_id price_cents promotional_price_cents
-                             cost_price_cents image_url is_featured is_promotional is_combo
+                             cost_price_cents image_url image_storage_key is_featured is_promotional is_combo
                              is_customizable is_active sort_order track_inventory stock_item_id])
+           .merge(image_url: media_url(p, :image_storage_key, p.image_url))
            .merge(category: p.category&.slice("id", "name"),
                   category_name: p.category&.name,
                   price_brl: p.price_brl,
@@ -71,9 +72,10 @@ module Api
         def serialize_full(p)
           p.as_json(
             only: %i[id name slug description price_cents promotional_price_cents
-                     cost_price_cents image_url is_featured is_promotional is_combo
+                     cost_price_cents image_url image_storage_key is_featured is_promotional is_combo
                      is_customizable track_inventory sort_order is_active created_at updated_at]
           ).merge(
+            image_url: media_url(p, :image_storage_key, p.image_url),
             category: p.category&.slice("id", "name"),
             price_brl: p.price_brl,
             margin_percent: p.margin_percent,
@@ -84,6 +86,12 @@ module Api
                ))
             }
           )
+        end
+
+        def media_url(record, storage_field, fallback)
+          return fallback unless record.respond_to?(storage_field)
+
+          CloudStorageService.public_url_or_fallback(record.public_send(storage_field), fallback)
         end
       end
     end

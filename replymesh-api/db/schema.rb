@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_30_033000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -126,6 +126,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
   create_table "app_banners", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
+    t.string "image_storage_key"
     t.text "image_url"
     t.boolean "is_active", default: true, null: false
     t.string "legacy_id"
@@ -137,6 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.datetime "updated_at", null: false
     t.index ["company_id", "is_active", "sort_order"], name: "index_app_banners_on_company_id_and_is_active_and_sort_order"
     t.index ["company_id"], name: "index_app_banners_on_company_id"
+    t.index ["image_storage_key"], name: "index_app_banners_on_image_storage_key"
     t.index ["legacy_id"], name: "index_app_banners_on_legacy_id"
   end
 
@@ -234,6 +236,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
+    t.string "image_storage_key"
+    t.string "image_url"
     t.boolean "is_active", default: true, null: false
     t.string "legacy_id"
     t.string "legacy_source"
@@ -247,6 +251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.index ["company_id", "slug"], name: "index_categories_on_company_id_and_slug", unique: true
     t.index ["company_id", "sort_order"], name: "index_categories_on_company_id_and_sort_order"
     t.index ["company_id"], name: "index_categories_on_company_id"
+    t.index ["image_storage_key"], name: "index_categories_on_image_storage_key"
     t.index ["legacy_id"], name: "index_categories_on_legacy_id"
   end
 
@@ -330,6 +335,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "discount_type", default: "percentage", null: false
     t.decimal "discount_value", precision: 10, scale: 2, default: "0.0", null: false
     t.datetime "expires_at"
+    t.string "image_storage_key"
+    t.string "image_url"
     t.boolean "is_active", default: true, null: false
     t.boolean "is_single_use_per_customer", default: false, null: false
     t.string "legacy_id"
@@ -349,6 +356,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.index ["company_id", "source"], name: "index_coupons_on_company_id_and_source"
     t.index ["company_id"], name: "index_coupons_on_company_id"
     t.index ["customer_id"], name: "index_coupons_on_customer_id"
+    t.index ["image_storage_key"], name: "index_coupons_on_image_storage_key"
     t.index ["legacy_id"], name: "index_coupons_on_legacy_id"
   end
 
@@ -393,6 +401,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.integer "total_spent_cents", default: 0, null: false
     t.datetime "updated_at", null: false
     t.text "whatsapp"
+    t.index ["company_id", "created_at"], name: "idx_customers_company_created"
     t.index ["company_id", "is_recurring"], name: "index_customers_on_company_id_and_is_recurring"
     t.index ["company_id", "phone"], name: "index_customers_on_company_id_and_phone", unique: true
     t.index ["company_id"], name: "index_customers_on_company_id"
@@ -441,6 +450,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "name", null: false
     t.text "slug", null: false
     t.datetime "updated_at", null: false
+    t.index ["company_id", "is_active", "match_priority"], name: "idx_delivery_zones_public_lookup"
     t.index ["company_id", "is_active"], name: "index_delivery_zones_on_company_id_and_is_active"
     t.index ["company_id", "logistics_group"], name: "idx_delivery_zones_company_logistics_group"
     t.index ["company_id", "match_priority"], name: "index_delivery_zones_on_company_id_and_match_priority"
@@ -963,11 +973,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.index ["company_id", "customer_id"], name: "index_orders_on_company_id_and_customer_id"
     t.index ["company_id", "customer_phone", "status", "created_at"], name: "idx_orders_location_phone_lookup"
     t.index ["company_id", "delivery_status"], name: "index_orders_on_company_id_and_delivery_status"
+    t.index ["company_id", "delivery_zone_id", "created_at"], name: "idx_orders_company_delivery_zone_created"
     t.index ["company_id", "motoboy_id", "delivery_status", "route_priority"], name: "idx_orders_motoboy_route_priority"
     t.index ["company_id", "motoboy_id"], name: "index_orders_on_company_id_and_motoboy_id"
     t.index ["company_id", "order_number"], name: "index_orders_on_company_id_and_order_number", unique: true
+    t.index ["company_id", "payment_method", "created_at"], name: "idx_orders_company_payment_method_created"
+    t.index ["company_id", "payment_status", "created_at"], name: "idx_orders_company_payment_status_created"
     t.index ["company_id", "payment_status"], name: "index_orders_on_company_id_and_payment_status"
     t.index ["company_id", "public_token"], name: "index_orders_on_company_id_and_public_token", unique: true
+    t.index ["company_id", "status", "created_at"], name: "idx_orders_company_status_created"
     t.index ["company_id", "status"], name: "index_orders_on_company_id_and_status"
     t.index ["company_id"], name: "index_orders_on_company_id"
     t.index ["coupon_id"], name: "index_orders_on_coupon_id"
@@ -1083,6 +1097,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.integer "cost_price_cents", default: 0
     t.datetime "created_at", null: false
     t.text "description"
+    t.string "image_storage_key"
     t.text "image_url"
     t.boolean "is_active", default: true, null: false
     t.boolean "is_combo", default: false, null: false
@@ -1102,10 +1117,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.datetime "updated_at", null: false
     t.index ["category_id"], name: "index_products_on_category_id"
     t.index ["company_id", "category_id"], name: "index_products_on_company_id_and_category_id"
+    t.index ["company_id", "is_active", "category_id", "sort_order"], name: "idx_products_public_menu_lookup"
     t.index ["company_id", "is_active"], name: "index_products_on_company_id_and_is_active"
     t.index ["company_id", "is_featured"], name: "index_products_on_company_id_and_is_featured"
     t.index ["company_id", "slug"], name: "index_products_on_company_id_and_slug", unique: true
     t.index ["company_id"], name: "index_products_on_company_id"
+    t.index ["image_storage_key"], name: "index_products_on_image_storage_key"
     t.index ["legacy_id"], name: "index_products_on_legacy_id"
     t.index ["stock_item_id"], name: "index_products_on_stock_item_id"
   end
@@ -1251,6 +1268,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "address"
     t.boolean "allow_pickup", default: true, null: false
     t.string "average_delivery_time"
+    t.string "banner_storage_key"
     t.text "banner_url"
     t.boolean "block_orders_when_closed", default: true, null: false
     t.boolean "block_outside_delivery_area", default: true, null: false
@@ -1258,6 +1276,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "closed_message"
     t.bigint "company_id", null: false
     t.text "company_name"
+    t.string "cover_storage_key"
     t.text "cover_url"
     t.datetime "created_at", null: false
     t.integer "default_delivery_fee_cents", default: 0, null: false
@@ -1269,16 +1288,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "email"
     t.integer "estimated_delivery_minutes", default: 40, null: false
     t.text "facebook"
+    t.string "favicon_storage_key"
     t.integer "free_delivery_above_cents", default: 0, null: false
     t.integer "hero_height", default: 480, null: false
     t.string "hero_highlight"
     t.string "hero_image_position"
+    t.string "hero_image_storage_key"
     t.text "hero_image_url"
     t.integer "hero_image_zoom", default: 100, null: false
     t.integer "hero_overlay_opacity", default: 65, null: false
     t.text "hero_subtitle"
     t.string "hero_title"
     t.text "instagram"
+    t.string "logo_storage_key"
     t.text "logo_url"
     t.text "mercadopago_access_token"
     t.boolean "mercadopago_enabled", default: false, null: false
@@ -1312,7 +1334,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.string "whatsapp_mode", default: "automatic", null: false
     t.text "whatsapp_number"
     t.text "zip_code"
+    t.index ["banner_storage_key"], name: "index_store_settings_on_banner_storage_key"
     t.index ["company_id"], name: "index_store_settings_on_company_id", unique: true
+    t.index ["cover_storage_key"], name: "index_store_settings_on_cover_storage_key"
+    t.index ["logo_storage_key"], name: "index_store_settings_on_logo_storage_key"
     t.check_constraint "whatsapp_mode::text = ANY (ARRAY['automatic'::character varying, 'manual'::character varying, 'disabled'::character varying]::text[])", name: "store_settings_whatsapp_mode_check"
   end
 
@@ -1328,6 +1353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "status", default: "trial", null: false
     t.datetime "trial_ends_at"
     t.datetime "updated_at", null: false
+    t.index ["company_id", "status", "created_at"], name: "idx_subscriptions_company_status_created"
     t.index ["company_id"], name: "index_subscriptions_on_company_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
     t.index ["status"], name: "index_subscriptions_on_status"
@@ -1457,6 +1483,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "avatar_storage_key"
     t.string "avatar_url"
     t.datetime "created_at", null: false
     t.text "email", null: false
@@ -1468,6 +1495,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "phone"
     t.text "status", default: "active", null: false
     t.datetime "updated_at", null: false
+    t.index ["avatar_storage_key"], name: "index_users_on_avatar_storage_key"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["master_role_id", "status"], name: "index_users_on_master_role_id_and_status"
     t.index ["master_role_id"], name: "index_users_on_master_role_id"
@@ -1492,6 +1520,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.text "status", default: "not_created", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id", "instance_name"], name: "index_whatsapp_instances_on_company_id_and_instance_name", unique: true
+    t.index ["company_id", "status", "updated_at"], name: "idx_whatsapp_instances_company_status_updated"
     t.index ["company_id"], name: "index_whatsapp_instances_on_company_id"
     t.index ["instance_uuid"], name: "index_whatsapp_instances_on_instance_uuid"
     t.index ["status"], name: "index_whatsapp_instances_on_status"
@@ -1571,6 +1600,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.integer "current_wins", default: 0, null: false
     t.text "description"
     t.decimal "discount_value", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "image_storage_key"
+    t.string "image_url"
     t.boolean "is_active", default: true, null: false
     t.integer "max_total_wins"
     t.integer "minimum_order_cents", default: 0, null: false
@@ -1581,6 +1612,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_113000) do
     t.datetime "updated_at", null: false
     t.index ["company_id", "is_active", "sort_order"], name: "index_wheel_prizes_on_company_id_and_is_active_and_sort_order"
     t.index ["company_id"], name: "index_wheel_prizes_on_company_id"
+    t.index ["image_storage_key"], name: "index_wheel_prizes_on_image_storage_key"
   end
 
   create_table "wheel_spins", force: :cascade do |t|

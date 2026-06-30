@@ -222,6 +222,10 @@ Rails.application.routes.draw do
         resources :table_sessions, only: %i[index show create update]
 
         # Configuração da loja
+        resources :media, only: %i[create] do
+          collection { delete :destroy }
+        end
+        delete "media", to: "media#destroy"
         resources :users, only: %i[index create update destroy]
         resources :tickets, only: %i[index show create] do
           member do

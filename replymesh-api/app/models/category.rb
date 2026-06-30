@@ -1,4 +1,6 @@
 class Category < ApplicationRecord
+  include CloudStorageBacked
+
   belongs_to :company
   has_many   :products, dependent: :nullify
 
@@ -12,6 +14,7 @@ class Category < ApplicationRecord
   scope :ordered,    -> { order(:sort_order, :name) }
 
   before_validation :auto_slug
+  cloud_storage_fields :image_storage_key
 
   private
 

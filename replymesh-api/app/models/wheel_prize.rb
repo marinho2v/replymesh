@@ -1,4 +1,6 @@
 class WheelPrize < ApplicationRecord
+  include CloudStorageBacked
+
   PRIZE_TYPES = %w[percentage fixed coupon_percentage coupon_fixed free_shipping free_item no_prize].freeze
 
   belongs_to :company
@@ -14,6 +16,8 @@ class WheelPrize < ApplicationRecord
   scope :active, -> { where(is_active: true) }
   scope :available, -> { active.where("max_total_wins IS NULL OR current_wins < max_total_wins") }
   scope :canonical_order, -> { order(:sort_order, :id) }
+
+  cloud_storage_fields :image_storage_key
 
   def exhausted?
     max_total_wins.present? && current_wins >= max_total_wins

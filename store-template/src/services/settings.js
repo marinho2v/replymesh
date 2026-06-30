@@ -32,8 +32,12 @@ export const getStoreSettings = async () => {
       phone: settings.phone || settings.whatsapp || settings.whatsapp_number || '',
       whatsapp_number: settings.whatsapp || settings.whatsapp_number || '',
       logo_url: settings.logo_url || '',
+      logo_storage_key: settings.logo_storage_key || '',
       banner_url: settings.banner_url || settings.cover_url || '',
+      banner_storage_key: settings.banner_storage_key || settings.cover_storage_key || '',
       cover_url: settings.cover_url || settings.banner_url || '',
+      cover_storage_key: settings.cover_storage_key || settings.banner_storage_key || '',
+      hero_image_storage_key: settings.hero_image_storage_key || '',
       visual_template_id: settings.visual_template_id || DEFAULT_TEMPLATE_ID,
     }
   } catch (error) {
@@ -123,12 +127,16 @@ const sanitizeStoreSettings = (settingsData = {}, includeOptionalColumns = true)
   const payload = {
     store_name: emptyToNull(settingsData.store_name),
     logo_url: emptyToNull(settingsData.logo_url),
+    logo_storage_key: emptyToNull(settingsData.logo_storage_key),
     banner_url: emptyToNull(settingsData.banner_url || settingsData.cover_url),
+    banner_storage_key: emptyToNull(settingsData.banner_storage_key || settingsData.cover_storage_key),
     cover_url: emptyToNull(settingsData.cover_url || settingsData.banner_url),
+    cover_storage_key: emptyToNull(settingsData.cover_storage_key || settingsData.banner_storage_key),
     hero_title: emptyToNull(settingsData.hero_title),
     hero_highlight: emptyToNull(settingsData.hero_highlight),
     hero_subtitle: emptyToNull(settingsData.hero_subtitle),
     hero_image_url: emptyToNull(settingsData.hero_image_url),
+    hero_image_storage_key: emptyToNull(settingsData.hero_image_storage_key),
     hero_image_position: emptyToNull(settingsData.hero_image_position) || 'center',
     hero_image_zoom: integerOrDefault(settingsData.hero_image_zoom, 100),
     hero_overlay_opacity: integerOrDefault(settingsData.hero_overlay_opacity, 65),
@@ -212,8 +220,12 @@ export const updateStoreSettings = async (settingsData) => {
       phone: settings.phone || settings.whatsapp || settingsData.phone,
       whatsapp_number: settings.whatsapp || settingsData.whatsapp_number,
       logo_url: settings.logo_url || '',
+      logo_storage_key: settings.logo_storage_key || settingsData.logo_storage_key || '',
       banner_url: settings.banner_url || settings.cover_url || settingsData.banner_url || settingsData.cover_url || '',
+      banner_storage_key: settings.banner_storage_key || settings.cover_storage_key || settingsData.banner_storage_key || settingsData.cover_storage_key || '',
       cover_url: settings.cover_url || settings.banner_url || settingsData.cover_url || settingsData.banner_url || '',
+      cover_storage_key: settings.cover_storage_key || settings.banner_storage_key || settingsData.cover_storage_key || settingsData.banner_storage_key || '',
+      hero_image_storage_key: settings.hero_image_storage_key || settingsData.hero_image_storage_key || '',
     }
   } catch (error) {
     console.error('Error updating Rails store settings:', error)
