@@ -6,6 +6,7 @@ require "mini_magick"
 require "securerandom"
 require "stringio"
 require "tempfile"
+require "uri"
 
 class CloudStorageService
   class Error < StandardError; end
@@ -130,7 +131,9 @@ class CloudStorageService
     end
 
     def public_url_or_fallback(storage_key, fallback_url)
-      url_for(storage_key).presence || fallback_url
+      url_for(storage_key).presence ||
+        url_for(extract_storage_key_from_url(fallback_url)).presence ||
+        fallback_url
     end
 
     def preview_metadata(storage_key)
@@ -248,6 +251,30 @@ class CloudStorageService
       return true if key.start_with?("companies/#{company_id}/")
 
       raise UnsafeKeyError, "Imagem pertence a outra empresa."
+    end
+
+    def extract_storage_key_from_url(url)
+      raw_url = url.to_s.strip
+      return if raw_url.blank?
+
+      direct_bases = [public_base_url, "#{endpoint}/#{bucket}"].compact.map { |base| base.to_s.delete_suffix("/") }.reject(&:blank?)
+      direct_bases.each do |base|
+        next unless raw_url.start_with?("#{base}/")
+
+        key = URI.decode_www_form_component(raw_url.delete_prefix("#{base}/"))
+        ensure_safe_key!(key)
+        return key
+      end
+
+      parsed_path = URI.parse(raw_url).path.to_s
+      bucket_prefix = "/#{bucket}/"
+      return unless bucket.present? && parsed_path.include?(bucket_prefix)
+
+      key = URI.decode_www_form_component(parsed_path.split(bucket_prefix, 2).last.to_s)
+      ensure_safe_key!(key)
+      key
+    rescue URI::InvalidURIError, UnsafeKeyError
+      nil
     end
   end
 end
