@@ -217,7 +217,7 @@ export function Dashboard() {
                   const badge = STATUS_BADGE[company.status] || STATUS_BADGE.inactive;
                   return (
                     <div className="lrow" key={company.id}>
-                      <CoAvatar name={company.name} />
+                      <CoAvatar name={company.name} imageUrl={company.logo_url} />
                       <div className="m">
                         <div className="t">{company.name}</div>
                         <div className="s mono">{company.domain || "-"}</div>
@@ -272,7 +272,7 @@ export function Dashboard() {
                         <tr key={company.id}>
                           <td>
                             <div className="cell-co">
-                              <CoAvatar name={company.name} size={32} />
+                              <CoAvatar name={company.name} imageUrl={company.logo_url} size={32} />
                               <div>
                                 <div className="t">{company.name}</div>
                                 <div className="s mono">{company.domain || "-"}</div>

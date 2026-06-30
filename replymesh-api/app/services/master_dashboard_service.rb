@@ -110,7 +110,7 @@ class MasterDashboardService
   end
 
   def recent_companies
-    Company.includes(:domains, :subscriptions, :whatsapp_instances)
+    Company.includes(:domains, :subscriptions, :whatsapp_instances, :store_setting)
       .order(created_at: :desc)
       .limit(8)
       .map do |company|
@@ -121,6 +121,7 @@ class MasterDashboardService
           id: company.id,
           name: company.name,
           slug: company.slug,
+          logo_url: company_logo_url(company),
           domain: company.domains.first&.domain || "#{company.slug}.replymesh.cloud",
           plan: sub&.plan&.name || "-",
           status: company.status,
@@ -130,6 +131,10 @@ class MasterDashboardService
           created_at: company.created_at
         }
       end
+  end
+
+  def company_logo_url(company)
+    company.logo_url.presence || company.store_setting&.logo_url.presence
   end
 
   def recent_activities
