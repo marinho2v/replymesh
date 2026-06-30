@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, Store } from 'lucide-react'
 import { signIn, signOut } from '../../services/auth'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -14,6 +14,43 @@ import { setCurrentStoreCompany } from '../../services/storeApi'
 const REMEMBER_LOGIN_KEY = 'replymesh:remember-login'
 const SAVED_LOGIN_KEY = 'replymesh:saved-login'
 
+const StoreLookupState = ({ status, onRetry }) => {
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4 py-12 text-white">
+        <main className="w-full max-w-lg text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full border border-dark-600 bg-dark-800" />
+          <p className="text-sm text-gray-400">Verificando loja...</p>
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4 py-12 text-white">
+      <main className="w-full max-w-lg text-center">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg border border-dark-700 bg-dark-900">
+          {status === 'unavailable' ? <CircleAlert size={30} className="text-amber-400" /> : <Store size={30} className="text-gray-300" />}
+        </div>
+        <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Replymesh</p>
+        <h1 className="text-3xl font-bold">{status === 'unavailable' ? 'Loja indisponível' : 'Loja não encontrada'}</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-gray-400">
+          {status === 'unavailable'
+            ? 'Esta loja está temporariamente indisponível. Tente novamente mais tarde.'
+            : 'Não encontramos uma loja ativa neste endereço.'}
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-7 inline-flex h-10 items-center justify-center rounded-lg border border-dark-600 bg-dark-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-dark-800"
+        >
+          Tentar novamente
+        </button>
+      </main>
+    </div>
+  )
+}
+
 const Login = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -21,6 +58,7 @@ const Login = () => {
   const basePath = useCompanyBasePath()
   const { profile } = useAuth()
   const [storeInfo, setStoreInfo] = useState(null)
+  const [storeStatus, setStoreStatus] = useState('loading')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberLogin, setRememberLogin] = useState(true)
@@ -70,18 +108,29 @@ const Login = () => {
     }
   }, [basePath, location.state, profile, navigate])
 
-  useEffect(() => {
-    if (!companySlug) return
+  const loadStoreInfo = () => {
+    if (!companySlug) {
+      setStoreInfo(null)
+      setStoreStatus('not_found')
+      return
+    }
 
+    setStoreStatus('loading')
     getPublicStoreInfo(companySlug)
       .then(store => {
         const storeSlug = store.slug || companySlug
         setStoreInfo(store)
+        setStoreStatus('ready')
         setCurrentStoreCompany({ companyId: store.company_id || store.id, slug: storeSlug })
       })
-      .catch(() => {
-        localStorage.setItem('replymesh_store_company_slug', companySlug)
+      .catch((error) => {
+        setStoreInfo(null)
+        setStoreStatus(error?.status === 423 || error?.payload?.code === 'store_unavailable' ? 'unavailable' : 'not_found')
       })
+  }
+
+  useEffect(() => {
+    loadStoreInfo()
   }, [companySlug])
 
   useEffect(() => {
@@ -99,6 +148,11 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (storeStatus !== 'ready') {
+      toast.error('Esta loja não está disponível para login.')
+      return
+    }
 
     const input = email.trim()
     if (input && !input.includes('@') && /^\d[\d\s\-().]+$/.test(input)) {
@@ -127,6 +181,10 @@ const Login = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (storeStatus !== 'ready') {
+    return <StoreLookupState status={storeStatus} onRetry={loadStoreInfo} />
   }
 
   return (
