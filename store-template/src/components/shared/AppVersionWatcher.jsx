@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { COMPANY_SLUG } from '../../services/replymeshApi'
 import { getPublicStoreInfo } from '../../services/publicApi'
+import { scheduleAdaptivePoll } from '../../utils/adaptivePolling'
 
 const APP_VERSION_KEY = 'replymesh:app-cache-version'
 const CHECK_INTERVAL_MS = 120000
+const HIDDEN_CHECK_INTERVAL_MS = 10 * 60 * 1000
 
 const clearTechnicalCache = async () => {
   try {
@@ -81,9 +83,14 @@ const AppVersionWatcher = () => {
     }
 
     checkVersion()
-    const intervalId = window.setInterval(checkVersion, CHECK_INTERVAL_MS)
+    const stopPolling = scheduleAdaptivePoll({
+      run: checkVersion,
+      visibleMs: CHECK_INTERVAL_MS,
+      hiddenMs: HIDDEN_CHECK_INTERVAL_MS,
+      maxMs: HIDDEN_CHECK_INTERVAL_MS,
+    })
 
-    return () => window.clearInterval(intervalId)
+    return () => stopPolling()
   }, [])
 
   return null

@@ -11,8 +11,10 @@ import {
 } from '../../services/storeApi'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import { toast } from 'sonner'
+import { scheduleAdaptivePoll } from '../../utils/adaptivePolling'
 
 const STATUS_POLL_INTERVAL = 15000
+const HIDDEN_STATUS_POLL_INTERVAL = 60000
 
 const statusLabel = {
   connected: 'Conectado',
@@ -150,8 +152,14 @@ const Whatsapp = () => {
   // Auto-polling de status
   useEffect(() => {
     if (!instance) return
-    pollRef.current = window.setInterval(pollStatus, STATUS_POLL_INTERVAL)
-    return () => window.clearInterval(pollRef.current)
+    pollRef.current = scheduleAdaptivePoll({
+      run: pollStatus,
+      visibleMs: STATUS_POLL_INTERVAL,
+      hiddenMs: HIDDEN_STATUS_POLL_INTERVAL,
+      maxMs: 120000,
+      enabled: whatsappMode !== 'manual',
+    })
+    return () => pollRef.current?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance?.id, instance?.status, whatsappMode])
 

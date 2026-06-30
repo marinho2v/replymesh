@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { runSupabaseQuery, supabase } from '../services/supabase'
+import { scheduleAdaptivePoll } from '../utils/adaptivePolling'
 
 const ORDER_LIST_COLUMNS = 'id, order_number, customer_name, customer_phone, customer_whatsapp, subtotal, delivery_fee, discount_amount, total, status, order_type, payment_method, created_at, delivery_zone_id, neighborhood'
 const ORDER_LIST_LIMIT = 80
 const ORDER_POLL_INTERVAL = 5000
+const ORDER_HIDDEN_POLL_INTERVAL = 30000
 
 const getDateBounds = (date) => {
   const start = new Date(`${date}T00:00:00`)
@@ -205,10 +207,15 @@ export const useRealtimeOrders = (filters = {}, options = {}) => {
       })
 
     channelRef.current = channel
-    const pollId = window.setInterval(fetchOrders, ORDER_POLL_INTERVAL)
+    const stopPolling = scheduleAdaptivePoll({
+      run: fetchOrders,
+      visibleMs: ORDER_POLL_INTERVAL,
+      hiddenMs: ORDER_HIDDEN_POLL_INTERVAL,
+      maxMs: 60000,
+    })
 
     return () => {
-      window.clearInterval(pollId)
+      stopPolling()
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
         channelRef.current = null

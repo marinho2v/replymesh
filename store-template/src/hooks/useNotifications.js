@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { request } from '../services/replymeshApi'
+import { scheduleAdaptivePoll } from '../utils/adaptivePolling'
 
 const POLL_INTERVAL_MS = 60_000 // 1 minuto
+const HIDDEN_POLL_INTERVAL_MS = 5 * 60_000
 
 export const useNotifications = ({ enabled = true } = {}) => {
   const [notifications, setNotifications] = useState([])
@@ -24,13 +26,19 @@ export const useNotifications = ({ enabled = true } = {}) => {
 
   useEffect(() => {
     fetch()
-    const timer = setInterval(fetch, POLL_INTERVAL_MS)
+    const stopPolling = scheduleAdaptivePoll({
+      run: fetch,
+      visibleMs: POLL_INTERVAL_MS,
+      hiddenMs: HIDDEN_POLL_INTERVAL_MS,
+      maxMs: HIDDEN_POLL_INTERVAL_MS,
+      enabled,
+    })
     window.addEventListener('replymesh:notifications-refresh', fetch)
     return () => {
-      clearInterval(timer)
+      stopPolling()
       window.removeEventListener('replymesh:notifications-refresh', fetch)
     }
-  }, [fetch])
+  }, [fetch, enabled])
 
   const markRead = useCallback(async (id) => {
     try {

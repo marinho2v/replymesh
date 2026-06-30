@@ -14,8 +14,10 @@ import {
 } from '../../services/storeApi'
 import { flowFromWhatsappTemplates } from '../../utils/orderStatus.jsx'
 import { getStoreSettings } from '../../services/settings'
+import { scheduleAdaptivePoll } from '../../utils/adaptivePolling'
 
 const POLL_INTERVAL = 5000
+const HIDDEN_POLL_INTERVAL = 30000
 const STATUS_SUMMARY_LABELS = {
   pending: 'Pendentes',
   accepted: 'Aceitos',
@@ -124,9 +126,14 @@ const Orders = () => {
     loadOrders()
     loadMotoboys()
     loadStatusFlow()
-    const pollId = window.setInterval(() => loadOrders({ silent: true }), POLL_INTERVAL)
+    const stopPolling = scheduleAdaptivePoll({
+      run: () => loadOrders({ silent: true }),
+      visibleMs: POLL_INTERVAL,
+      hiddenMs: HIDDEN_POLL_INTERVAL,
+      maxMs: 60000,
+    })
 
-    return () => window.clearInterval(pollId)
+    return () => stopPolling()
   }, [loadOrders, loadMotoboys, loadStatusFlow])
 
   const updateOrderLocally = useCallback((updatedOrder) => {

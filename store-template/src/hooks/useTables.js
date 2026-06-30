@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from './useAuth'
+import { scheduleAdaptivePoll } from '../utils/adaptivePolling'
 import {
   closeTableSession,
   createDiningTable,
@@ -37,11 +38,16 @@ export const useDiningTables = () => {
 
   useEffect(() => {
     refetch()
-    pollRef.current = window.setInterval(refetch, 8000)
+    pollRef.current = scheduleAdaptivePoll({
+      run: refetch,
+      visibleMs: 8000,
+      hiddenMs: 45000,
+      maxMs: 60000,
+    })
 
     return () => {
       if (pollRef.current) {
-        window.clearInterval(pollRef.current)
+        pollRef.current()
         pollRef.current = null
       }
     }

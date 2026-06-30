@@ -13,37 +13,41 @@ module Api
 
         # GET /api/v1/public/:company_slug/store
         def show
-          settings = current_company.store_setting
-          render_ok(
-            store: serialize_store(settings),
-            store_settings: serialize_store_settings(settings),
-            app_banners: FeatureGate.enabled?(current_company, "banners") ? serialize_banners(current_company.app_banners.active.ordered) : [],
-            business_hours: serialize_business_hours(current_company.business_hours.ordered),
-            business_hour_exceptions: serialize_business_hour_exceptions(current_company.business_hour_exceptions.upcoming),
-            delivery_zones: FeatureGate.enabled?(current_company, "delivery_zones") ? serialize_delivery_zones(current_company.delivery_zones.active.by_priority) : []
-          )
+          render_ok(public_cache(:store) do
+            settings = current_company.store_setting
+            {
+              store: serialize_store(settings),
+              store_settings: serialize_store_settings(settings),
+              app_banners: FeatureGate.enabled?(current_company, "banners") ? serialize_banners(current_company.app_banners.active.ordered) : [],
+              business_hours: serialize_business_hours(current_company.business_hours.ordered),
+              business_hour_exceptions: serialize_business_hour_exceptions(current_company.business_hour_exceptions.upcoming),
+              delivery_zones: FeatureGate.enabled?(current_company, "delivery_zones") ? serialize_delivery_zones(current_company.delivery_zones.active.by_priority) : []
+            }
+          end)
         end
 
         # GET /api/v1/public/:company_slug/menu
         def menu
-          categories = current_company.categories.active.ordered.to_a
-          products_by_category_id = current_company.products
-                                                   .active
-                                                   .ordered
-                                                   .includes(:category, product_option_groups: :product_option_items)
-                                                   .to_a
-                                                   .group_by(&:category_id)
+          render_ok(public_cache(:menu) do
+            categories = current_company.categories.active.ordered.to_a
+            products_by_category_id = current_company.products
+                                                     .active
+                                                     .ordered
+                                                     .includes(:category, product_option_groups: :product_option_items)
+                                                     .to_a
+                                                     .group_by(&:category_id)
 
-          render_ok(
-            menu: categories.map { |cat|
-              {
-                id:       cat.id,
-                name:     cat.name,
-                slug:     cat.slug,
-                products: (products_by_category_id[cat.id] || []).map { |p| serialize_product(p) }
+            {
+              menu: categories.map { |cat|
+                {
+                  id:       cat.id,
+                  name:     cat.name,
+                  slug:     cat.slug,
+                  products: (products_by_category_id[cat.id] || []).map { |p| serialize_product(p) }
+                }
               }
             }
-          )
+          end)
         end
 
         # GET /api/v1/public/:company_slug/products/:id
@@ -62,31 +66,80 @@ module Api
 
         # GET /api/v1/public/:company_slug/banners
         def banners
-          banners = current_company.app_banners.active.ordered
-          render_ok(banners: serialize_banners(banners))
+          render_ok(public_cache(:banners) do
+            { banners: serialize_banners(current_company.app_banners.active.ordered) }
+          end)
         end
 
         # GET /api/v1/public/:company_slug/business_hours
         def business_hours
-          hours      = current_company.business_hours.ordered
-          exceptions = current_company.business_hour_exceptions.upcoming
+          render_ok(public_cache(:business_hours) do
+            hours      = current_company.business_hours.ordered
+            exceptions = current_company.business_hour_exceptions.upcoming
 
-          render_ok(
-            business_hours: serialize_business_hours(hours),
-            exceptions: serialize_business_hour_exceptions(exceptions)
-          )
+            {
+              business_hours: serialize_business_hours(hours),
+              exceptions: serialize_business_hour_exceptions(exceptions)
+            }
+          end)
         end
 
         # GET /api/v1/public/:company_slug/delivery_zones
         def delivery_zones
-          zones = current_company.delivery_zones.active.by_priority
-          render_ok(delivery_zones: serialize_delivery_zones(zones))
+          render_ok(public_cache(:delivery_zones) do
+            { delivery_zones: serialize_delivery_zones(current_company.delivery_zones.active.by_priority) }
+          end)
         end
 
         private
 
         def set_public_cache_headers
           expires_in PUBLIC_CACHE_TTL, public: true
+          response.set_header("Cache-Control", "public, max-age=#{PUBLIC_CACHE_TTL.to_i}, stale-while-revalidate=30")
+        end
+
+        def public_cache(endpoint, &block)
+          PublicResponseCache.fetch(
+            company: current_company,
+            endpoint: endpoint,
+            version: public_cache_version(endpoint),
+            expires_in: PUBLIC_CACHE_TTL,
+            &block
+          )
+        end
+
+        def public_cache_version(endpoint)
+          case endpoint.to_sym
+          when :menu
+            [
+              current_company.categories.maximum(:updated_at),
+              current_company.products.maximum(:updated_at),
+              ProductOptionGroup.where(company_id: current_company.id).maximum(:updated_at),
+              ProductOptionItem.where(company_id: current_company.id).maximum(:updated_at),
+              current_company.categories.count,
+              current_company.products.count
+            ]
+          when :delivery_zones
+            [current_company.delivery_zones.maximum(:updated_at), current_company.delivery_zones.count]
+          when :banners
+            [current_company.app_banners.maximum(:updated_at), current_company.app_banners.count]
+          when :business_hours
+            [
+              current_company.business_hours.maximum(:updated_at),
+              current_company.business_hour_exceptions.maximum(:updated_at),
+              current_company.business_hours.count,
+              current_company.business_hour_exceptions.count
+            ]
+          else
+            [
+              current_company.updated_at,
+              current_company.store_setting&.updated_at,
+              current_company.app_banners.maximum(:updated_at),
+              current_company.delivery_zones.maximum(:updated_at),
+              current_company.business_hours.maximum(:updated_at),
+              current_company.business_hour_exceptions.maximum(:updated_at)
+            ]
+          end.compact.map { |value| value.respond_to?(:to_i) ? value.to_i : value }.join("-")
         end
 
         def serialize_store(s, include_media: true)

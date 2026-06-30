@@ -5,6 +5,7 @@ import { groupFromPath } from "./navigation.js";
 import { Sidebar as SidebarView } from "./Sidebar.jsx";
 import { Topbar } from "./Topbar.jsx";
 import { api } from "../../services/api.js";
+import { scheduleAdaptivePoll } from "../../utils/adaptivePolling.js";
 
 export function AppLayout({ children, toast, user, onLogout }) {
   const location = useLocation();
@@ -37,8 +38,13 @@ export function AppLayout({ children, toast, user, onLogout }) {
       }
     };
     loadNotifications();
-    const timer = setInterval(loadNotifications, 60000);
-    return () => { alive = false; clearInterval(timer); };
+    const stopPolling = scheduleAdaptivePoll({
+      run: loadNotifications,
+      visibleMs: 60000,
+      hiddenMs: 300000,
+      maxMs: 300000,
+    });
+    return () => { alive = false; stopPolling(); };
   }, []);
 
   useEffect(() => {

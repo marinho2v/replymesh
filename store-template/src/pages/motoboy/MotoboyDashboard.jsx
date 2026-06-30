@@ -23,6 +23,7 @@ import {
 } from '../../services/motoboyApi'
 import { formatCurrency } from '../../utils/currency'
 import { formatDateTime } from '../../utils/formatDate'
+import { scheduleAdaptivePoll } from '../../utils/adaptivePolling'
 import MotoboyLayout from './MotoboyLayout'
 
 const statusLabels = {
@@ -131,8 +132,13 @@ const MotoboyDashboard = () => {
 
   useEffect(() => {
     loadData()
-    const timer = window.setInterval(() => loadData({ silent: true }), 15000)
-    return () => window.clearInterval(timer)
+    const stopPolling = scheduleAdaptivePoll({
+      run: () => loadData({ silent: true }),
+      visibleMs: 15000,
+      hiddenMs: 60000,
+      maxMs: 120000,
+    })
+    return () => stopPolling()
   }, [loadData])
 
   const activeDeliveries = useMemo(

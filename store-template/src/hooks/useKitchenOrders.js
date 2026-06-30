@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getKitchenOrders } from '../services/storeApi'
+import { scheduleAdaptivePoll } from '../utils/adaptivePolling'
 
 const KITCHEN_STATUSES = ['pending', 'accepted', 'preparing', 'ready']
 const KITCHEN_ORDER_LIMIT = 60
 const KITCHEN_POLL_INTERVAL = 4000
+const KITCHEN_HIDDEN_POLL_INTERVAL = 30000
 
 const isKitchenStatus = (status) => KITCHEN_STATUSES.includes(status)
 
@@ -59,9 +61,14 @@ export const useKitchenOrders = (options = {}) => {
 
   useEffect(() => {
     fetchOrders()
-    const pollId = window.setInterval(() => fetchOrders({ silent: true }), KITCHEN_POLL_INTERVAL)
+    const stopPolling = scheduleAdaptivePoll({
+      run: () => fetchOrders({ silent: true }),
+      visibleMs: KITCHEN_POLL_INTERVAL,
+      hiddenMs: KITCHEN_HIDDEN_POLL_INTERVAL,
+      maxMs: 60000,
+    })
 
-    return () => window.clearInterval(pollId)
+    return () => stopPolling()
   }, [fetchOrders])
 
   const updateOrderLocally = useCallback((updatedOrder) => {
