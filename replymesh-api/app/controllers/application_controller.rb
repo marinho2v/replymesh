@@ -21,8 +21,16 @@ class ApplicationController < ActionController::API
       next if payload[:cached]
       next if payload[:name].to_s.match?(/\A(?:SCHEMA|TRANSACTION)\z/)
 
+      elapsed_ms = (finished - started) * 1000
       query_count += 1
-      sql_ms += (finished - started) * 1000
+      sql_ms += elapsed_ms
+      PerformanceMonitorService.track_slow_query(
+        endpoint: "#{request.request_method} #{controller_path}##{action_name}",
+        company_id: performance_company_id,
+        duration_ms: elapsed_ms,
+        sql: payload[:sql],
+        rows: payload[:row_count]
+      )
     end
 
     ActiveSupport::Notifications.instrument(
@@ -42,7 +50,8 @@ class ApplicationController < ActionController::API
         sql_ms: sql_ms,
         render_ms: [duration_ms - sql_ms, 0].max,
         query_count: query_count,
-        payload_bytes: response&.body.to_s.bytesize
+        payload_bytes: response&.body.to_s.bytesize,
+        request_payload_bytes: request.content_length.to_i
       )
     end
   end

@@ -92,7 +92,7 @@ class MercadoPagoPixService
     extra_headers.each { |k, v| request[k] = v }
     request.body = body.to_json
 
-    response = http.request(request)
+    response = PerformanceMonitorService.instrument_external("mercado_pago") { http.request(request) }
     parse_response(response)
   end
 
@@ -107,7 +107,7 @@ class MercadoPagoPixService
     request['Authorization'] = "Bearer #{@access_token}"
     request['Accept']        = 'application/json'
 
-    response = http.request(request)
+    response = PerformanceMonitorService.instrument_external("mercado_pago") { http.request(request) }
     parse_response(response)
   end
 

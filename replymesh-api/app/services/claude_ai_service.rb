@@ -14,18 +14,20 @@ class ClaudeAiService
   def chat(system_prompt:, user_message:, max_tokens: 700)
     return Result.new(success?: false, error: "Claude API key nao configurada") if @api_key.blank?
 
-    response = Net::HTTP.start(API_URL.host, API_URL.port, use_ssl: true, open_timeout: 8, read_timeout: 30) do |http|
-      request = Net::HTTP::Post.new(API_URL)
-      request["Content-Type"] = "application/json"
-      request["anthropic-version"] = "2023-06-01"
-      request["x-api-key"] = @api_key
-      request.body = {
-        model: @model,
-        max_tokens: max_tokens,
-        system: system_prompt,
-        messages: [{ role: "user", content: user_message }]
-      }.to_json
-      http.request(request)
+    response = PerformanceMonitorService.instrument_external("ai") do
+      Net::HTTP.start(API_URL.host, API_URL.port, use_ssl: true, open_timeout: 8, read_timeout: 30) do |http|
+        request = Net::HTTP::Post.new(API_URL)
+        request["Content-Type"] = "application/json"
+        request["anthropic-version"] = "2023-06-01"
+        request["x-api-key"] = @api_key
+        request.body = {
+          model: @model,
+          max_tokens: max_tokens,
+          system: system_prompt,
+          messages: [{ role: "user", content: user_message }]
+        }.to_json
+        http.request(request)
+      end
     end
 
     payload = JSON.parse(response.body)

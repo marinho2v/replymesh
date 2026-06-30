@@ -180,8 +180,10 @@ class EvolutionGoClient
   end
 
   def perform_request(uri, req)
-    Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", read_timeout: 20, open_timeout: 8) do |http|
-      http.request(req)
+    PerformanceMonitorService.instrument_external("evolution") do
+      Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", read_timeout: 20, open_timeout: 8) do |http|
+        http.request(req)
+      end
     end
   end
 

@@ -16,20 +16,22 @@ class OpenAiCompatibleChatService
     return Result.new(success?: false, error: "#{@provider_name} model nao configurado") if @model.blank?
 
     uri = URI("#{@base_url}/chat/completions")
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 8, read_timeout: 30) do |http|
-      request = Net::HTTP::Post.new(uri)
-      request["Content-Type"] = "application/json"
-      request["Authorization"] = "Bearer #{@api_key}"
-      request.body = {
-        model: @model,
-        max_tokens: max_tokens,
-        temperature: 0.3,
-        messages: [
-          { role: "system", content: system_prompt },
-          { role: "user", content: user_message }
-        ]
-      }.to_json
-      http.request(request)
+    response = PerformanceMonitorService.instrument_external("ai") do
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 8, read_timeout: 30) do |http|
+        request = Net::HTTP::Post.new(uri)
+        request["Content-Type"] = "application/json"
+        request["Authorization"] = "Bearer #{@api_key}"
+        request.body = {
+          model: @model,
+          max_tokens: max_tokens,
+          temperature: 0.3,
+          messages: [
+            { role: "system", content: system_prompt },
+            { role: "user", content: user_message }
+          ]
+        }.to_json
+        http.request(request)
+      end
     end
 
     payload = JSON.parse(response.body)

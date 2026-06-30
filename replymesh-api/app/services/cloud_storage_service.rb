@@ -48,14 +48,16 @@ class CloudStorageService
       key = build_key(company: company, profile: profile)
       processed = process_image!(bytes, profile)
 
-      client.put_object(
-        bucket: bucket,
-        key: key,
-        body: processed,
-        content_type: OUTPUT_CONTENT_TYPE,
-        cache_control: CACHE_CONTROL,
-        metadata: metadata_for(company: company, media_type: media_type, owner: owner)
-      )
+      PerformanceMonitorService.instrument_external("cloudflare_r2", company_id: company&.id) do
+        client.put_object(
+          bucket: bucket,
+          key: key,
+          body: processed,
+          content_type: OUTPUT_CONTENT_TYPE,
+          cache_control: CACHE_CONTROL,
+          metadata: metadata_for(company: company, media_type: media_type, owner: owner)
+        )
+      end
 
       {
         storage_key: key,
@@ -78,7 +80,9 @@ class CloudStorageService
       ensure_safe_key!(storage_key, company: company)
       return false unless configured?
 
-      client.delete_object(bucket: bucket, key: storage_key)
+      PerformanceMonitorService.instrument_external("cloudflare_r2", company_id: company&.id) do
+        client.delete_object(bucket: bucket, key: storage_key)
+      end
       true
     rescue Aws::S3::Errors::NoSuchKey, Aws::S3::Errors::NotFound
       false
@@ -89,7 +93,9 @@ class CloudStorageService
       ensure_configured!
       ensure_safe_key!(storage_key)
 
-      response = client.get_object(bucket: bucket, key: storage_key.to_s)
+      response = PerformanceMonitorService.instrument_external("cloudflare_r2") do
+        client.get_object(bucket: bucket, key: storage_key.to_s)
+      end
       {
         body: response.body.read,
         content_type: response.content_type.presence || OUTPUT_CONTENT_TYPE,

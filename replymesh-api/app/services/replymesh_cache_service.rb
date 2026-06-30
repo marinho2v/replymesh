@@ -123,7 +123,8 @@ class ReplymeshCacheService
         company_id: company_id(company),
         endpoint: endpoint || group,
         group: group,
-        duration_ms: elapsed_ms
+        duration_ms: elapsed_ms,
+        ttl_seconds: ttl_for(group).to_i
       ) if defined?(PerformanceMonitorService)
 
       return unless cache_logging_enabled?
