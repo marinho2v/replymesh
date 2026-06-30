@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  get "media/:token", to: "api/v1/public/media#show", constraints: { token: /[^\/]+/ }
 
   namespace :api do
     namespace :v1 do
