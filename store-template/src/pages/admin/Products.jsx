@@ -20,11 +20,11 @@ import { toast } from 'sonner'
 import CloudImageUploader from '../../components/media/CloudImageUploader'
 import {
   buildPizzaOptionGroups,
+  cleanPizzaOptionName,
   defaultAdvancedPizzaConfig,
+  isPizzaTechnicalGroup,
   parsePizzaConfigFromOptionGroups,
 } from '../../utils/pizzaProduct'
-
-const pizzaGroupNames = ['Tamanho', 'Sabores', 'Borda', 'Massa']
 
 const toSelectId = (value) => (value == null ? '' : String(value))
 
@@ -52,9 +52,27 @@ const addPizzaCollectionItem = (config, collection, item) => ({
   [collection]: [...(config[collection] || []), item],
 })
 
+const hasPizzaMetadata = (groups = []) => (
+  groups.some(group => (
+    isPizzaTechnicalGroup(group) ||
+    (group.items || []).some(item => /\s\[pizza:(size|flavor):[^\]]+\]$/.test(String(item.name || '')))
+  ))
+)
+
+const sanitizeCustomOptionGroups = (groups = []) => (
+  (groups || [])
+    .filter(group => !isPizzaTechnicalGroup(group))
+    .map(group => ({
+      ...group,
+      items: (group.items || []).map(item => ({
+        ...item,
+        name: cleanPizzaOptionName(item.name),
+      })),
+    }))
+)
+
 const inferProductType = (product, groups = []) => {
-  const names = groups.map(group => group.name)
-  if (names.some(name => pizzaGroupNames.includes(name))) return 'pizza'
+  if (hasPizzaMetadata(groups)) return 'pizza'
   return product?.is_customizable ? 'customizable' : 'simple'
 }
 
@@ -144,6 +162,43 @@ const Products = () => {
     },
   ]
 
+  const variationOptionGroups = [
+    {
+      name: 'Tamanho / Variacao',
+      type: 'single',
+      required: true,
+      min_select: 1,
+      max_select: 1,
+      sort_order: 0,
+      items: [
+        { name: 'Pequeno', additional_price: 0 },
+        { name: 'Medio', additional_price: 5 },
+        { name: 'Grande', additional_price: 10 },
+      ].map((item, index) => ({
+        ...item,
+        is_active: true,
+        sort_order: index,
+      })),
+    },
+    {
+      name: 'Adicionais',
+      type: 'multiple',
+      required: false,
+      min_select: 0,
+      max_select: 5,
+      sort_order: 1,
+      items: [
+        { name: 'Queijo extra', additional_price: 3 },
+        { name: 'Bacon', additional_price: 5 },
+        { name: 'Catupiry', additional_price: 4 },
+      ].map((item, index) => ({
+        ...item,
+        is_active: true,
+        sort_order: index,
+      })),
+    },
+  ]
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -169,7 +224,7 @@ const Products = () => {
       const resolvedPizzaBasePrice = Number.isFinite(pizzaBasePrice) ? pizzaBasePrice : Number(formData.price)
       const groupsToSave = productType === 'pizza'
         ? buildPizzaOptionGroups(pizzaConfig, resolvedPizzaBasePrice, optionGroups)
-        : optionGroups
+        : sanitizeCustomOptionGroups(optionGroups)
       const data = {
         ...formData,
         is_customizable: productType !== 'simple',
@@ -364,6 +419,7 @@ const Products = () => {
   }
 
   const updateProductType = (productType) => {
+    const previousType = formData.product_type || 'simple'
     setFormData(prev => ({
       ...prev,
       product_type: productType,
@@ -372,17 +428,48 @@ const Products = () => {
 
     if (productType === 'simple') {
       setOptionGroups([])
-      return
-    }
-
-    if (productType === 'pizza' && optionGroups.length === 0) {
       setPizzaConfig(emptyPizzaConfig())
       return
     }
 
-    if (productType === 'pizza') {
-      setPizzaConfig(parsePizzaConfigFromOptionGroups(optionGroups, formData.price || 0))
+    if (productType === 'customizable') {
+      setPizzaConfig(emptyPizzaConfig())
+      setOptionGroups(prev => {
+        if (previousType === 'pizza' || hasPizzaMetadata(prev)) return []
+        return sanitizeCustomOptionGroups(prev)
+      })
+      return
     }
+
+    if (productType === 'pizza') {
+      setPizzaConfig(prev => {
+        if (hasPizzaMetadata(optionGroups)) {
+          return parsePizzaConfigFromOptionGroups(optionGroups, formData.price || 0)
+        }
+        return prev || emptyPizzaConfig()
+      })
+      setOptionGroups([])
+    }
+  }
+
+  const applyVariationModel = () => {
+    setFormData(prev => ({
+      ...prev,
+      product_type: 'customizable',
+      is_customizable: true,
+    }))
+    setPizzaConfig(emptyPizzaConfig())
+    setOptionGroups(variationOptionGroups)
+  }
+
+  const applyPastelModel = () => {
+    setFormData(prev => ({
+      ...prev,
+      product_type: 'customizable',
+      is_customizable: true,
+    }))
+    setPizzaConfig(emptyPizzaConfig())
+    setOptionGroups(pastelOptionGroups)
   }
 
   const categoryOptions = useMemo(() => (
@@ -1164,7 +1251,9 @@ const Products = () => {
                     </div>
                   </div>
                 ) : formData.product_type === 'customizable' ? (
-                  <p>Produtos customizaveis abrem um modal para o cliente escolher opcoes antes de adicionar ao carrinho.</p>
+                  <p>
+                    Produto customizavel permite criar variacoes de preco, tamanhos, sabores, adicionais e escolhas antes de adicionar ao carrinho.
+                  </p>
                 ) : (
                   <p>Produto simples entra direto no carrinho, sem tela de opcoes.</p>
                 )}
@@ -1179,7 +1268,10 @@ const Products = () => {
                     Grupos de opcoes
                   </h3>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setOptionGroups(pastelOptionGroups)}>
+                    <Button type="button" size="sm" variant="outline" onClick={applyVariationModel}>
+                      Modelo Variacoes
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={applyPastelModel}>
                       Modelo Pastel
                     </Button>
                     <Button type="button" size="sm" onClick={addOptionGroup}>
@@ -1191,7 +1283,7 @@ const Products = () => {
 
                 {optionGroups.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-dark-600 p-4 text-sm text-gray-400">
-                    Nenhum grupo configurado. Use o modelo de pizzaria, modelo de pastel ou crie um grupo manualmente.
+                    Nenhum grupo configurado. Use um modelo pronto ou crie grupos manuais para tamanhos, sabores, adicionais e variacoes de preco.
                   </div>
                 ) : (
                   optionGroups.map((group, groupIndex) => (
