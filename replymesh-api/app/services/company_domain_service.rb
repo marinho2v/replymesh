@@ -4,7 +4,7 @@ class CompanyDomainService
   API_HOST = ENV.fetch("REPLYMESH_API_HOST", "api.replymesh.cloud").freeze
   LANDING_HOST = ENV.fetch("REPLYMESH_LANDING_HOST", DEFAULT_DOMAIN).freeze
   RESERVED_SLUGS = %w[
-    admin api app www mail ftp root support master suporte replymesh painel login
+    admin api app cdn www mail ftp root support master suporte replymesh painel login
     dashboard dev staging test teste
   ].freeze
   DOMAIN_STATUSES = %w[pending verified active failed dns_error inactive].freeze

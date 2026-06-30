@@ -154,6 +154,9 @@ class CloudStorageService
       configured = ENV["REPLYMESH_MEDIA_PROXY_BASE_URL"].presence
       return configured.to_s.delete_suffix("/") if configured.present?
 
+      cdn_host = ENV["REPLYMESH_CDN_HOST"].presence
+      return "https://#{cdn_host.to_s.delete_prefix("https://").delete_prefix("http://").delete_suffix("/")}/media" if cdn_host.present?
+
       api_base_url = ENV["API_BASE_URL"].presence
       return if api_base_url.blank?
 

@@ -8,7 +8,7 @@ DOMAINS=$(
   docker exec replymesh-rails-api bin/rails runner '
     reserved = %w[
       api.replymesh.cloud app.replymesh.cloud infra.replymesh.cloud marinho.replymesh.cloud
-      create.replymesh.cloud www.replymesh.cloud replymesh.cloud
+      cdn.replymesh.cloud create.replymesh.cloud www.replymesh.cloud replymesh.cloud
     ]
     company_domains = Company.where(status: "active").map do |company|
       raw = company.subdomain.presence || company.slug
