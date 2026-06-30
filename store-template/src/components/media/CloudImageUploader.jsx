@@ -7,7 +7,7 @@ const MAX_SIZE = 10 * 1024 * 1024
 
 const CloudImageUploader = ({
   label,
-  helper = 'Envie PNG, JPG ou WEBP. O sistema converte para WEBP otimizado.',
+  helper = 'Envie PNG, JPG ou WEBP. O sistema otimiza automaticamente.',
   mediaType,
   ownerType,
   ownerId,
@@ -65,7 +65,7 @@ const CloudImageUploader = ({
         </div>
         {storageKey && (
           <span className="rounded-full border border-green-800 bg-green-900/30 px-2 py-1 text-[10px] font-semibold text-green-200">
-            R2
+            Imagem salva
           </span>
         )}
       </div>
@@ -102,7 +102,7 @@ const CloudImageUploader = ({
             }`}
           >
             {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-            {uploading ? 'Otimizando e enviando...' : 'Enviar imagem para Cloud R2'}
+            {uploading ? 'Otimizando imagem...' : 'Enviar imagem'}
           </button>
           <input
             ref={inputRef}
