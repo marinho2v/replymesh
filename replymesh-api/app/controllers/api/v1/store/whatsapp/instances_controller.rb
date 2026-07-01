@@ -19,6 +19,7 @@ module Api
           def ensure
             if (instance = primary_instance)
               remote = sync_remote_for!(instance)
+              remote ||= recreate_remote_instance!(instance, reason: "remote_missing_on_ensure")
               ensure_evolution_webhooks!(instance, remote: remote)
               return render_ok(instance: instance.reload.safe_json)
             end
@@ -37,6 +38,15 @@ module Api
             ensure_evolution_webhooks!(@instance, remote: response)
             render_ok(instance: @instance.reload.safe_json)
           rescue EvolutionGoClient::Error => e
+            if recoverable_evolution_instance_error?(e)
+              mark_instance_remote_missing!(@instance, e)
+              return render_ok(
+                instance: @instance.reload.safe_json,
+                recoverable: true,
+                message: "Instancia desconectada ou removida na Evolution. Gere um novo QR Code para reconectar."
+              )
+            end
+
             render_error(e.message, status: :bad_gateway)
           end
 
@@ -58,6 +68,23 @@ module Api
               pairing_code: response[:pairing_code]
             )
           rescue EvolutionGoClient::Error => e
+            if recoverable_evolution_instance_error?(e)
+              remote = recreate_remote_instance!(@instance, reason: "remote_missing_on_qrcode")
+              ensure_evolution_webhooks!(@instance, remote: remote)
+              response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+              @instance.update!(
+                qr_code: response.dig(:qrcode, :value),
+                status: response[:status].presence || "connecting"
+              )
+
+              return render_ok(
+                instance: @instance.reload.safe_json.slice(:id, :instance_name, :status, :remote_status),
+                qrcode: response[:qrcode],
+                pairing_code: response[:pairing_code],
+                recovered: true
+              )
+            end
+
             render_error(e.message, status: :bad_gateway)
           end
 
@@ -145,6 +172,79 @@ module Api
             instance.status = remote[:status].presence || instance.status
             instance.save!
             remote
+          end
+
+          def recreate_remote_instance!(instance, reason:)
+            now = Time.current
+            token = SecureRandom.hex(32)
+            response = client.create_instance(instance.instance_name, token: token)
+            remote_after_create = remote_instance_by_name(instance.instance_name) || response
+
+            instance.instance_token = token
+            instance.provider = "evolution_go"
+            instance.base_url = response[:base_url].presence || ENV["EVOLUTION_GO_BASE_URL"].presence
+            instance.status = remote_after_create[:status].presence || response[:status].presence || "created"
+            instance.qr_code = nil
+            assign_remote_attrs(instance, remote_after_create, now)
+            instance.save!
+
+            log_recovery!(instance, reason: reason, remote: remote_after_create)
+            remote_after_create
+          end
+
+          def recoverable_evolution_instance_error?(error)
+            status = error.status.to_i
+            message = error.message.to_s.downcase
+            payload = error.payload.to_s.downcase
+
+            return true if [401, 403, 404, 410].include?(status)
+
+            [
+              "not authorized",
+              "unauthorized",
+              "forbidden",
+              "not found",
+              "nao encontrado",
+              "não encontrado",
+              "instance not found",
+              "instancia nao encontrada",
+              "instância não encontrada",
+              "does not exist"
+            ].any? { |term| message.include?(term) || payload.include?(term) }
+          end
+
+          def mark_instance_remote_missing!(instance, error)
+            instance.update!(
+              status: "disconnected",
+              remote_status: "remote_missing",
+              remote_data: scrub_secret({
+                error: error.message,
+                status: error.status,
+                recovered: false
+              }),
+              qr_code: nil,
+              last_disconnected_at: Time.current,
+              last_remote_sync_at: Time.current
+            )
+          end
+
+          def log_recovery!(instance, reason:, remote:)
+            ActivityLog.create!(
+              company: instance.company,
+              user: current_user,
+              action: "whatsapp_instance_recreated",
+              message: "Instancia WhatsApp recriada automaticamente para gerar novo QR Code",
+              metadata: {
+                source: "store_whatsapp_instances",
+                reason: reason,
+                whatsapp_instance_id: instance.id,
+                instance_name: instance.instance_name,
+                remote_status: remote[:status],
+                remote_mode: remote[:mode]
+              }
+            )
+          rescue StandardError => e
+            Rails.logger.warn("WhatsApp instance recovery log failed: #{e.class}")
           end
 
           def ensure_evolution_webhooks!(instance, remote: nil)
