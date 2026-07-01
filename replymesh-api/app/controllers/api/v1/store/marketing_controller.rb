@@ -107,10 +107,15 @@ module Api
           render_ok(result: result, metrics: sales_recovery_metrics)
         end
 
+        def simulate_sales_recovery
+          result = SalesRecoveryEngine.simulate(company: current_company, cart_id: params[:cart_id])
+          render_ok(result)
+        end
+
         private
 
         def require_marketing_feature!
-          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name == "run_sales_recovery" ? "sales_recovery" : "marketing_whatsapp"
+          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery]) ? "sales_recovery" : "marketing_whatsapp"
           require_feature!(feature)
         end
 
@@ -137,6 +142,7 @@ module Api
             :recent_response_minutes, :min_cart_total_cents, :quiet_hours_enabled,
             :quiet_window_start, :quiet_window_end, :message_template,
             coupon_rules_json: {},
+            metadata_json: {},
             allowed_weekdays: []
           )
         end
@@ -165,6 +171,14 @@ module Api
           sent = current_company.sales_recovery_events.where(status: %w[sent recovered])
           blocked = current_company.sales_recovery_events.where(status: "skipped")
           average_score = current_company.sales_recovery_events.where(status: %w[queued sent recovered skipped]).average(:recovery_score)
+          recent_events = current_company.sales_recovery_events.where("created_at >= ?", 30.days.ago)
+          eligible = recent_events.where(status: %w[queued sent recovered]).where("recovery_score >= ?", SalesRecoveryIntelligence::AUTO_SEND_MIN_SCORE)
+          blocked_recent = recent_events.where(status: "skipped")
+          potential_lost_cents = recent_events.where(status: %w[queued sent skipped failed]).sum(:cart_total_cents)
+          potential_recoverable_cents = eligible.sum(:cart_total_cents)
+          top_reason = blocked_recent.where.not(block_reason: [nil, ""]).group(:block_reason).count.max_by { |_reason, count| count }
+          top_hour = recent_events.group(Arel.sql("EXTRACT(HOUR FROM created_at)")).count.max_by { |_hour, count| count }
+          top_category = top_category_from_events(recent_events.limit(300))
           top_coupon = recovered.where.not(coupon_id: nil).joins(:coupon).group("coupons.code").count.max_by { |_code, count| count }
           top_products = current_company.sales_recovery_events
             .where(status: %w[sent recovered])
@@ -211,6 +225,14 @@ module Api
             paused_customers: paused_customers,
             queued: current_company.sales_recovery_events.queued.count,
             failed: current_company.sales_recovery_events.where(status: "failed").count,
+            eligible_carts: eligible.count,
+            blocked_carts: blocked_recent.count,
+            potential_lost_cents: potential_lost_cents,
+            potential_recoverable_cents: potential_recoverable_cents,
+            top_abandonment_reason: top_reason ? { reason: top_reason[0], count: top_reason[1] } : nil,
+            top_abandonment_hour: top_hour ? { hour: top_hour[0].to_i, count: top_hour[1] } : nil,
+            top_abandoned_category: top_category,
+            score_classifications: classification_counts(recent_events),
             top_products: top_products,
             ranking: ranking,
             insights: SalesRecoveryIntelligence.new(company: current_company, setting: SalesRecoverySetting.for_company(current_company)).insights,
@@ -237,6 +259,10 @@ module Api
             customer_segment: event.customer_segment,
             benefit_decision: event.benefit_decision,
             benefit_reason: event.benefit_reason,
+            recovery_classification: event.metadata_json.to_h["recovery_classification"],
+            score_reasons: event.metadata_json.to_h["score_reasons"] || [],
+            score_breakdown: event.metadata_json.to_h["score_breakdown"] || [],
+            timeline: recovery_timeline(event),
             conversion_minutes: event.conversion_minutes,
             abandoned_minutes: event.abandoned_minutes,
             delivery_strategy: event.delivery_strategy,
@@ -263,8 +289,38 @@ module Api
             cart_total_cents: event.cart_total_cents,
             benefit_decision: event.benefit_decision,
             benefit_reason: event.benefit_reason,
+            recovery_classification: event.metadata_json.to_h["recovery_classification"],
+            score_reasons: event.metadata_json.to_h["score_reasons"] || [],
             status: event.status
           }
+        end
+
+        def classification_counts(scope)
+          rows = scope.map { |event| event.metadata_json.to_h["recovery_classification"].presence || SalesRecoveryIntelligence.new(company: current_company, setting: SalesRecoverySetting.for_company(current_company)).classification_for(event.recovery_score) }
+          rows.group_by(&:itself).map { |name, items| { name: name, total: items.size } }.sort_by { |row| -row[:total] }
+        end
+
+        def top_category_from_events(scope)
+          grouped = scope.flat_map { |event| Array(event.cart_snapshot.to_h["categories"]) }
+            .compact_blank
+            .group_by(&:itself)
+            .map { |name, rows| { name: name, count: rows.size } }
+            .sort_by { |row| -row[:count] }
+          grouped.first
+        end
+
+        def recovery_timeline(event)
+          cart = event.store_ai_cart
+          rows = []
+          rows << { label: "Carrinho criado", at: cart.created_at, status: "cart_created" } if cart&.created_at
+          rows << { label: "IA vendeu", at: cart.store_ai_conversation&.created_at, status: "ai_started" } if cart&.store_ai_conversation
+          rows << { label: "Cliente saiu", at: cart&.updated_at, status: "abandoned" } if cart&.updated_at
+          rows << { label: "Recovery gerado", at: event.created_at, status: "recovery_created" } if event.created_at
+          rows << { label: "Cupom criado", at: event.coupon.created_at, status: "coupon_created" } if event.coupon
+          rows << { label: "Mensagem enviada", at: event.sent_at, status: "message_sent" } if event.sent_at
+          rows << { label: "Cliente respondeu", at: event.responded_at, status: "customer_replied" } if event.responded_at
+          rows << { label: "Pedido concluido", at: event.recovered_at, status: "order_recovered" } if event.recovered_at
+          rows.sort_by { |row| row[:at] || Time.zone.at(0) }
         end
 
         def conversion_group(scope, column)

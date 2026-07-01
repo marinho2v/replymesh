@@ -9,6 +9,7 @@ import {
   formatMoney,
   getSalesRecoveryAutomation,
   runSalesRecoveryEngine,
+  simulateSalesRecoveryEngine,
   updateSalesRecoverySettings,
 } from '../../services/marketingWhatsapp'
 
@@ -67,6 +68,8 @@ export default function SalesRecovery() {
   const [settings, setSettings] = useState(defaultSettings)
   const [metrics, setMetrics] = useState({})
   const [logs, setLogs] = useState([])
+  const [simulation, setSimulation] = useState(null)
+  const [simulating, setSimulating] = useState(false)
 
   const loadAutomation = async () => {
     try {
@@ -122,6 +125,23 @@ export default function SalesRecovery() {
     }
   }
 
+  const simulateEngine = async () => {
+    try {
+      setSimulating(true)
+      const payload = await simulateSalesRecoveryEngine()
+      setSimulation(payload.preview || null)
+      if (payload.status === 'no_cart') {
+        toast.info('Nenhum carrinho elegivel para simular agora')
+      } else {
+        toast.success('Simulacao gerada sem enviar mensagem')
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSimulating(false)
+    }
+  }
+
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -132,6 +152,7 @@ export default function SalesRecovery() {
       <div className="flex gap-2">
         <Button variant="secondary" onClick={loadAutomation}><RefreshCw size={16} className="mr-2" />Atualizar</Button>
         <Button variant="secondary" onClick={runEngine}><Play size={16} className="mr-2" />Executar teste seguro</Button>
+        <Button variant="secondary" onClick={simulateEngine} disabled={simulating}><Sparkles size={16} className="mr-2" />{simulating ? 'Simulando...' : 'Simular Recovery'}</Button>
         <Button onClick={saveSettings} disabled={saving}>{saving ? 'Salvando...' : 'Salvar automacao'}</Button>
       </div>
     </div>
@@ -171,7 +192,43 @@ export default function SalesRecovery() {
       <Metric icon={ShieldCheck} label="Clientes pausados" value={metrics.paused_customers || 0} />
       <Metric icon={Gift} label="Cupom mais usado" value={metrics.top_coupon?.code || '-'} />
       <Metric icon={TrendingUp} label="Ticket recuperado medio" value={formatMoney(metrics.average_recovered_value_cents || 0)} />
+      <Metric icon={Sparkles} label="Carrinhos elegiveis" value={metrics.eligible_carts || 0} />
+      <Metric icon={ShieldCheck} label="Carrinhos bloqueados" value={metrics.blocked_carts || 0} />
+      <Metric icon={TrendingUp} label="Potencial recuperavel" value={formatMoney(metrics.potential_recoverable_cents || 0)} />
+      <Metric icon={Clock} label="Horario com mais abandono" value={metrics.top_abandonment_hour ? `${String(metrics.top_abandonment_hour.hour).padStart(2, '0')}h` : '-'} />
+      <Metric icon={Gift} label="Categoria abandonada" value={metrics.top_abandoned_category?.name || '-'} />
+      <Metric icon={ShieldCheck} label="Motivo mais comum" value={blockReasonLabel(metrics.top_abandonment_reason?.reason)} />
     </div>
+
+    {simulation && <Card className="border-primary-500/30">
+      <CardContent className="grid gap-5 p-5 lg:grid-cols-[360px_1fr]">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-400">Simulacao sem envio</p>
+          <h3 className="mt-2 text-2xl font-black text-white">Score {simulation.recovery_score} - {simulation.recovery_classification}</h3>
+          <p className="mt-1 text-sm text-gray-400">{simulation.recovery_chance} para {simulation.customer}</p>
+          <div className="mt-4 grid gap-2 text-sm">
+            <span className="rounded-xl border border-dark-700 bg-dark-900 p-3 text-gray-200">Carrinho: {formatMoney(simulation.cart_total_cents || 0)}</span>
+            <span className="rounded-xl border border-dark-700 bg-dark-900 p-3 text-gray-200">Beneficio: {benefitLabel(simulation.benefit_decision)}</span>
+            <span className="rounded-xl border border-dark-700 bg-dark-900 p-3 text-gray-200">Cupom: {simulation.coupon_suggested?.code || 'sem cupom'}</span>
+            <span className={`rounded-xl border p-3 ${simulation.auto_sendable ? 'border-green-500/30 bg-green-500/10 text-green-200' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'}`}>
+              {simulation.auto_sendable ? 'Pode enviar automaticamente' : `Nao envia automatico: ${blockReasonLabel(simulation.block_reason || 'low_recovery_score')}`}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-sm font-black text-white">Motivos do score</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {(simulation.score_reasons || []).map((reason) => <span key={reason} className="rounded-xl border border-dark-700 bg-dark-900 px-3 py-2 text-sm text-gray-200">✓ {reason}</span>)}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-black text-white">Mensagem sugerida</p>
+            <pre className="whitespace-pre-wrap rounded-2xl border border-dark-700 bg-dark-950 p-4 text-sm text-gray-200">{simulation.message_suggested}</pre>
+          </div>
+        </div>
+      </CardContent>
+    </Card>}
 
     <Card><CardContent className="space-y-6 p-5">
       <div className="grid gap-4 lg:grid-cols-3">
@@ -229,11 +286,12 @@ export default function SalesRecovery() {
         <h3 className="mb-4 text-lg font-black text-white">Logs de recuperacao</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Score</th><th>Perfil</th><th>Beneficio</th><th>Total</th><th>Motivo</th><th>Data</th></tr></thead>
+            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Score</th><th>Classe</th><th>Perfil</th><th>Beneficio</th><th>Total</th><th>Motivo</th><th>Data</th></tr></thead>
             <tbody>{logs.map((log) => <tr key={log.id} className="border-t border-dark-700 text-gray-200">
               <td className="py-3"><div className="font-bold">{log.customer || 'Cliente'}</div><div className="text-xs text-gray-500">{log.phone}</div></td>
               <td><span className="rounded-full bg-dark-800 px-2 py-1 text-xs">{statusLabel[log.status] || log.status}</span></td>
               <td><div className="font-bold text-primary-300">{log.recovery_score ?? '-'}</div><div className="text-xs text-gray-500">{log.recovery_chance || '-'}</div></td>
+              <td><div className="font-bold text-white">{log.recovery_classification || '-'}</div><div className="max-w-xs truncate text-xs text-gray-500">{(log.score_reasons || []).join(' | ')}</div></td>
               <td><div>{segmentLabel(log.customer_segment)}</div><div className="text-xs text-gray-500">{log.customer_value_score ?? 0}</div></td>
               <td><div>{benefitLabel(log.benefit_decision)}</div><div className="text-xs text-gray-500">{log.coupon || '-'}</div></td>
               <td>{formatMoney(log.recovered_value_cents || log.cart_total_cents || 0)}</td>
@@ -251,7 +309,7 @@ export default function SalesRecovery() {
             {(metrics.ranking || []).map((item, index) => <div key={item.id} className="rounded-xl border border-dark-700 bg-dark-900 p-3">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-bold text-white">{index + 1}. {item.customer}</span>
-                <span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-black text-primary-300">Score {item.recovery_score}</span>
+                <span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-black text-primary-300">Score {item.recovery_score} - {item.recovery_classification || item.recovery_chance}</span>
               </div>
               <div className="mt-2 grid gap-1 text-xs text-gray-400">
                 <span>{item.recovery_chance} • {segmentLabel(item.customer_segment)} • {formatMoney(item.cart_total_cents || 0)}</span>
@@ -340,3 +398,20 @@ const segmentLabel = (value) => ({
 }[value] || 'Novo')
 
 const weekdayName = (value) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][Number(value)] || value
+
+const blockReasonLabel = (value) => ({
+  low_recovery_score: 'Score baixo',
+  customer_paused: 'Cliente pausado',
+  cart_below_minimum: 'Carrinho abaixo do minimo',
+  outside_window: 'Fora da janela',
+  quiet_hours: 'Horario de silencio',
+  store_closed: 'Loja fechada',
+  order_already_created: 'Pedido ja criado',
+  recent_customer_reply: 'Cliente respondeu agora',
+  active_conversation: 'Conversa ativa',
+  cooldown_active: 'Cooldown ativo',
+  daily_limit_reached: 'Limite diario',
+  customer_limit_reached: 'Limite por cliente',
+  empty_cart: 'Carrinho vazio',
+  already_recovered: 'Ja recuperado',
+}[value] || value || '-')

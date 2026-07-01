@@ -30,9 +30,14 @@ class SalesRecoveryEngine
   ].freeze
 
   FINAL_STATUSES = %w[queued sent recovered].freeze
+  CouponPreview = Struct.new(:code, :title, :discount_type, :discount_value, :rule, keyword_init: true)
 
   def self.call(company:, now: Time.current, dry_run: false)
     new(company: company, now: now, dry_run: dry_run).call
+  end
+
+  def self.simulate(company:, cart_id: nil, now: Time.current)
+    new(company: company, now: now, dry_run: true).simulate(cart_id: cart_id)
   end
 
   def self.deliver(event:)
@@ -53,7 +58,7 @@ class SalesRecoveryEngine
     return result("disabled") unless @setting.enabled?
     return result("outside_window") unless allowed_delivery_window?
 
-    candidates.each_with_index do |cart, index|
+    prioritized_candidates.each_with_index do |cart, index|
       @stats[:scanned] += 1
       if (reason = block_reason_for(cart))
         skip_cart!(cart, reason)
@@ -69,6 +74,52 @@ class SalesRecoveryEngine
     end
 
     result("ok")
+  end
+
+  def simulate(cart_id: nil)
+    cart = if cart_id.present?
+             @company.store_ai_carts.includes(:store_ai_conversation).find_by(id: cart_id)
+           else
+             prioritized_candidates.first
+           end
+    return { status: "no_cart", preview: nil } unless cart
+
+    customer = find_customer(cart.customer_phone)
+    customer_value = @intelligence.customer_value(customer)
+    analysis = @intelligence.recovery_analysis(cart, customer, customer_value: customer_value)
+    benefit = @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: analysis[:score])
+    coupon_preview = preview_coupon(cart, customer, benefit)
+    message, strategy = build_message(
+      cart: cart,
+      customer: customer,
+      coupon: coupon_preview.present? ? CouponPreview.new(**coupon_preview.symbolize_keys) : nil,
+      score: analysis[:score],
+      customer_value: customer_value,
+      benefit: benefit
+    )
+    block_reason = block_reason_for(cart)
+
+    {
+      status: "ok",
+      preview: {
+        cart_id: cart.id,
+        customer: customer&.full_name.presence || "Cliente",
+        cart_total_cents: cart.total_cents.to_i,
+        recovery_score: analysis[:score],
+        recovery_classification: analysis[:classification],
+        recovery_chance: @intelligence.chance_label(analysis[:score]),
+        auto_sendable: analysis[:auto_sendable] && block_reason.blank?,
+        block_reason: block_reason,
+        score_reasons: analysis[:reasons],
+        score_breakdown: analysis[:factors],
+        coupon_suggested: coupon_preview,
+        benefit_decision: benefit[:kind],
+        benefit_reason: benefit[:reason],
+        message_suggested: message,
+        delivery_strategy: strategy,
+        timeline: timeline_for(nil, cart)
+      }
+    }
   end
 
   def deliver_event(event)
@@ -96,12 +147,36 @@ class SalesRecoveryEngine
       .limit(50)
   end
 
+  def prioritized_candidates
+    candidates.to_a.sort_by { |cart| recovery_priority_for(cart) }
+  end
+
+  def recovery_priority_for(cart)
+    customer = find_customer(cart.customer_phone)
+    customer_value = @intelligence.customer_value(customer)
+    analysis = @intelligence.recovery_analysis(cart, customer, customer_value: customer_value)
+    [
+      -analysis[:score].to_i,
+      -cart.total_cents.to_i,
+      -abandoned_minutes(cart),
+      customer.present? && customer.total_orders.to_i.positive? ? 0 : 1,
+      cart.updated_at.to_i
+    ]
+  rescue StandardError
+    [999, 0, 0, 1, cart.updated_at.to_i]
+  end
+
   def queue_event_for(cart, index)
     event = @company.sales_recovery_events.find_or_initialize_by(store_ai_cart: cart)
     customer = find_customer(cart.customer_phone)
     customer_value = @intelligence.customer_value(customer)
-    score = @intelligence.recovery_score(cart, customer, customer_value: customer_value)
+    analysis = @intelligence.recovery_analysis(cart, customer, customer_value: customer_value)
+    score = analysis[:score]
     benefit = @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
+    unless analysis[:auto_sendable]
+      skip_cart!(cart, "low_recovery_score", customer: customer, customer_value: customer_value, analysis: analysis, benefit: benefit)
+      return @company.sales_recovery_events.find_by(store_ai_cart: cart)
+    end
     coupon = event.coupon || (@setting.auto_coupon? ? build_coupon(cart, customer, benefit) : nil)
     message, strategy = build_message(cart: cart, customer: customer, coupon: coupon, score: score, customer_value: customer_value, benefit: benefit)
     event.assign_attributes(
@@ -132,6 +207,12 @@ class SalesRecoveryEngine
         "cooldown_hours" => @setting.cooldown_hours,
         "cart_items_count" => cart_items_count(cart),
         "chance" => @intelligence.chance_label(score),
+        "recovery_classification" => analysis[:classification],
+        "score_reasons" => analysis[:reasons],
+        "score_breakdown" => analysis[:factors],
+        "score_weights" => analysis[:weights],
+        "top_category" => analysis[:top_category],
+        "product_categories" => analysis[:product_categories],
         "benefit_rule" => benefit[:rule],
         "coupon_discount_type" => coupon&.discount_type,
         "coupon_discount_value" => coupon&.discount_value&.to_f
@@ -211,6 +292,19 @@ class SalesRecoveryEngine
               end.clamp(1, 30)
 
     { title: "Cupom especial para finalizar", discount_type: "percentage", discount_value: percent, rule: decision&.dig(:rule).presence || "percentage_by_profile" }
+  end
+
+  def preview_coupon(cart, customer, decision)
+    return nil if decision[:kind] == "none"
+
+    benefit = coupon_benefit_for(cart, customer, decision)
+    {
+      code: "SIMULACAO",
+      title: benefit[:title],
+      discount_type: benefit[:discount_type],
+      discount_value: benefit[:discount_value],
+      rule: benefit[:rule]
+    }
   end
 
   def free_delivery_benefit(rule)
@@ -318,8 +412,15 @@ class SalesRecoveryEngine
   end
 
   def cart_snapshot(cart)
+    product_ids = Array(cart.items).filter_map { |item| item["product_id"].presence || item["id"].presence }.map(&:to_i).uniq
+    categories = if product_ids.any?
+                   @company.products.includes(:category).where(id: product_ids).filter_map { |product| product.category&.name }.uniq
+                 else
+                   []
+                 end
     {
       "items" => Array(cart.items).map { |item| item.slice("product_id", "name", "product_name", "quantity", "total_cents") },
+      "categories" => categories,
       "stage" => cart.stage,
       "subtotal_cents" => cart.subtotal_cents,
       "delivery_fee_cents" => cart.delivery_fee_cents,
@@ -456,16 +557,17 @@ class SalesRecoveryEngine
     scope.count >= @setting.per_customer_daily_limit
   end
 
-  def skip_cart!(cart, reason)
+  def skip_cart!(cart, reason, customer: nil, customer_value: nil, analysis: nil, benefit: nil)
     @stats[:skipped] += 1
     @stats[:blocked] += 1
     event = @company.sales_recovery_events.find_or_initialize_by(store_ai_cart: cart)
     return if event.persisted? && FINAL_STATUSES.include?(event.status)
 
-    customer = find_customer(cart.customer_phone)
-    customer_value = @intelligence.customer_value(customer)
-    score = @intelligence.recovery_score(cart, customer, customer_value: customer_value)
-    benefit = @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
+    customer ||= find_customer(cart.customer_phone)
+    customer_value ||= @intelligence.customer_value(customer)
+    analysis ||= @intelligence.recovery_analysis(cart, customer, customer_value: customer_value)
+    score = analysis[:score]
+    benefit ||= @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
     event.assign_attributes(
       customer: customer,
       customer_phone: normalize_phone(cart.customer_phone),
@@ -482,7 +584,15 @@ class SalesRecoveryEngine
       abandoned_minutes: abandoned_minutes(cart),
       delivery_strategy: "blocked",
       cart_snapshot: cart_snapshot(cart),
-      metadata_json: event.metadata_json.to_h.merge("blocked_reason" => reason)
+      metadata_json: event.metadata_json.to_h.merge(
+        "blocked_reason" => reason,
+        "recovery_classification" => analysis[:classification],
+        "score_reasons" => analysis[:reasons],
+        "score_breakdown" => analysis[:factors],
+        "score_weights" => analysis[:weights],
+        "top_category" => analysis[:top_category],
+        "product_categories" => analysis[:product_categories]
+      )
     )
     event.save!
     Rails.logger.info("Sales recovery skipped cart #{cart.id}: #{reason}")
@@ -553,6 +663,20 @@ class SalesRecoveryEngine
       "paused" => !!data[:paused],
       "pause_reason" => data[:pause_reason]
     }
+  end
+
+  def timeline_for(event, cart = nil)
+    cart ||= event&.store_ai_cart
+    rows = []
+    rows << { label: "Carrinho criado", at: cart.created_at, status: "cart_created" } if cart&.created_at
+    rows << { label: "IA vendeu", at: cart.store_ai_conversation&.created_at, status: "ai_started" } if cart&.store_ai_conversation
+    rows << { label: "Cliente saiu", at: cart&.updated_at, status: "abandoned" } if cart&.updated_at
+    rows << { label: "Recovery gerado", at: event.created_at, status: "recovery_created" } if event&.created_at
+    rows << { label: "Cupom criado", at: event.coupon.created_at, status: "coupon_created" } if event&.coupon
+    rows << { label: "Mensagem enviada", at: event.sent_at, status: "message_sent" } if event&.sent_at
+    rows << { label: "Cliente respondeu", at: event.responded_at, status: "customer_replied" } if event&.responded_at
+    rows << { label: "Pedido concluido", at: event.recovered_at, status: "order_recovered" } if event&.recovered_at
+    rows.compact.sort_by { |row| row[:at] || Time.zone.at(0) }
   end
 
   def money(cents)

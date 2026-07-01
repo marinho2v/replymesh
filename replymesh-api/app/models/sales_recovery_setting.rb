@@ -59,6 +59,8 @@ class SalesRecoverySetting < ApplicationRecord
       quiet_window_start: quiet_window_start,
       quiet_window_end: quiet_window_end,
       coupon_rules_json: coupon_rules_json,
+      metadata_json: metadata_json,
+      score_weights: metadata_json.to_h["score_weights"].presence || SalesRecoveryIntelligence::DEFAULT_SCORE_WEIGHTS,
       message_template: message_template
     }
   end

@@ -2414,5 +2414,9 @@ Fora do escopo:
 - [x] Fase 1.6 adicionou decisao automatica de beneficio: sem desconto, cupom ou frete gratis.
 - [x] Fase 1.6 adicionou reputacao anti-spam e pausa automatica de clientes que ignoram recuperacoes.
 - [x] Fase 1.6 adicionou ranking `Quase comprando`, insights automaticos e metricas de conversao.
+- [x] Fase 1.7 adicionou Recovery Score V2 com pesos configuraveis.
+- [x] Fase 1.7 adicionou classificacao automatica e bloqueio de envio para score abaixo de Alta.
+- [x] Fase 1.7 adicionou motivos do score, fila priorizada e simulador sem envio.
+- [x] Fase 1.7 adicionou metricas de elegibilidade, bloqueio, potencial recuperavel, motivo, categoria e horario.
 - [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
 - [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.

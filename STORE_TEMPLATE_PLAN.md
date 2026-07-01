@@ -1517,3 +1517,17 @@ comercial para lojistas:
 
 A tela continua consumindo as APIs existentes do store-template, sem nova
 infraestrutura e sem quebrar compatibilidade.
+
+## DEV - Automacao Inteligente / Recovery Intelligence 1.7
+
+A pagina recebeu uma camada mais operacional para decisao e simulacao:
+
+- cards de carrinhos elegiveis, carrinhos bloqueados e potencial recuperavel;
+- top motivo de abandono, top categoria abandonada e horario de maior abandono;
+- botao `Simular Recovery`, que mostra score, cupom sugerido, mensagem sugerida
+  e decisao sem enviar WhatsApp;
+- logs com classificacao do score e motivos resumidos;
+- ranking `Quase comprando` exibindo classificacao junto do score.
+
+O envio automatico segue protegido: apenas classificacoes `Alta` e `Muito Alta`
+podem sair automaticamente; scores menores ficam registrados para analise.

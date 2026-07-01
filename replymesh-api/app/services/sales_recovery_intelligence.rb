@@ -4,6 +4,20 @@ class SalesRecoveryIntelligence
   LOW_CART_CENTS = 4_000
   HIGH_CART_CENTS = 10_000
   FREE_DELIVERY_CART_CENTS = 15_000
+  AUTO_SEND_MIN_SCORE = 70
+  DEFAULT_SCORE_WEIGHTS = {
+    "tempo_parado" => 1.0,
+    "valor_carrinho" => 1.0,
+    "quantidade_itens" => 1.0,
+    "perfil_cliente" => 1.0,
+    "recencia_cliente" => 1.0,
+    "conversa" => 1.0,
+    "origem_atendimento" => 1.0,
+    "produto" => 1.0,
+    "uso_cupom" => 1.0,
+    "reputacao" => 1.0,
+    "horario" => 1.0
+  }.freeze
 
   def initialize(company:, setting:, now: Time.current)
     @company = company
@@ -59,15 +73,42 @@ class SalesRecoveryIntelligence
   end
 
   def recovery_score(cart, customer, customer_value:)
+    recovery_analysis(cart, customer, customer_value: customer_value)[:score]
+  end
+
+  def recovery_analysis(cart, customer, customer_value:)
     reputation = customer_value[:reputation] || reputation(customer: customer, phone: cart.customer_phone)
-    score = 0
-    score += cart_value_score(cart.total_cents.to_i)
-    score += item_count_score(cart)
-    score += abandoned_time_score(cart)
-    score += customer_profile_score(customer, customer_value[:score].to_i)
-    score += timing_score
-    score -= reputation_penalty(reputation)
-    score.clamp(0, 100)
+    conversation = conversation_profile(cart)
+    product = product_profile(cart)
+    weights = score_weights
+    factors = []
+
+    add_factor(factors, "valor_carrinho", "Valor do carrinho", cart_value_score(cart.total_cents.to_i), weights, reason_for_cart_value(cart.total_cents.to_i))
+    add_factor(factors, "quantidade_itens", "Quantidade de itens", item_count_score(cart), weights, "#{cart_items_count(cart)} item(ns) no carrinho")
+    add_factor(factors, "tempo_parado", "Tempo parado", abandoned_time_score(cart), weights, "Carrinho parado ha #{abandoned_minutes(cart)} minuto(s)")
+    add_factor(factors, "perfil_cliente", "Perfil do cliente", customer_profile_score(customer, customer_value[:score].to_i), weights, customer_value[:label])
+    add_factor(factors, "recencia_cliente", "Ultima compra", customer_recency_score(customer), weights, customer_recency_reason(customer))
+    add_factor(factors, "conversa", "Conversa", conversation_score(conversation), weights, conversation[:reason])
+    add_factor(factors, "origem_atendimento", "Origem", channel_score(conversation[:channel]), weights, "Origem: #{conversation[:channel] || 'desconhecida'}")
+    add_factor(factors, "produto", "Produto", product_score(product), weights, product[:reason])
+    add_factor(factors, "uso_cupom", "Uso anterior de cupom", coupon_usage_score(customer), weights, coupon_usage_reason(customer))
+    add_factor(factors, "horario", "Horario e dia", timing_score, weights, timing_reason)
+
+    reputation_points = -reputation_penalty(reputation)
+    add_factor(factors, "reputacao", "Reputacao", reputation_points, weights, reputation_reason(reputation))
+
+    score = factors.sum { |factor| factor[:weighted_points] }.round.clamp(0, 100)
+    {
+      score: score,
+      classification: classification_for(score),
+      auto_sendable: auto_sendable?(score),
+      reasons: score_reasons(factors),
+      factors: factors,
+      weights: weights,
+      product_categories: product[:categories],
+      top_category: product[:categories].first,
+      conversation: conversation
+    }
   end
 
   def benefit_decision(cart, customer, customer_value:, recovery_score:)
@@ -88,6 +129,20 @@ class SalesRecoveryIntelligence
     return "Chance media" if value >= 45
 
     "Baixa chance"
+  end
+
+  def classification_for(score)
+    value = score.to_i
+    return "Muito Alta" if value >= 85
+    return "Alta" if value >= 70
+    return "Media" if value >= 45
+    return "Baixa" if value >= 25
+
+    "Muito Baixa"
+  end
+
+  def auto_sendable?(score)
+    score.to_i >= AUTO_SEND_MIN_SCORE
   end
 
   def insights
@@ -120,6 +175,36 @@ class SalesRecoveryIntelligence
   end
 
   private
+
+  def score_weights
+    configured = @setting.metadata_json.to_h["score_weights"].presence ||
+      @setting.coupon_rules_json.to_h["score_weights"].presence || {}
+    DEFAULT_SCORE_WEIGHTS.merge(configured.to_h.transform_values { |value| value.to_f.clamp(0.0, 3.0) })
+  end
+
+  def add_factor(factors, key, label, points, weights, reason)
+    weight = weights[key].presence || 1.0
+    factors << {
+      key: key,
+      label: label,
+      points: points.to_i,
+      weight: weight.to_f,
+      weighted_points: (points.to_f * weight.to_f).round(1),
+      reason: reason
+    }
+  end
+
+  def score_reasons(factors)
+    positives = factors.select { |factor| factor[:weighted_points].positive? }
+      .sort_by { |factor| -factor[:weighted_points] }
+      .first(5)
+      .map { |factor| factor[:reason] }
+    negatives = factors.select { |factor| factor[:weighted_points].negative? }
+      .sort_by { |factor| factor[:weighted_points] }
+      .first(2)
+      .map { |factor| factor[:reason] }
+    (positives + negatives).compact_blank
+  end
 
   def anonymous_customer_value
     { score: 12, segment: "new", label: "Cliente novo", reputation: reputation(customer: nil, phone: nil) }
@@ -193,9 +278,20 @@ class SalesRecoveryIntelligence
     ((cents.to_f / FREE_DELIVERY_CART_CENTS) * 22).round
   end
 
+  def reason_for_cart_value(cents)
+    return "Carrinho alto" if cents >= FREE_DELIVERY_CART_CENTS
+    return "Carrinho medio" if cents >= LOW_CART_CENTS
+
+    "Carrinho baixo"
+  end
+
   def item_count_score(cart)
     count = Array(cart.items).sum { |item| item["quantity"].to_i.nonzero? || 1 }
     [count * 7, 21].min
+  end
+
+  def cart_items_count(cart)
+    Array(cart.items).sum { |item| item["quantity"].to_i.nonzero? || 1 }
   end
 
   def abandoned_time_score(cart)
@@ -206,12 +302,117 @@ class SalesRecoveryIntelligence
     [minutes / 30, 16].min
   end
 
+  def abandoned_minutes(cart)
+    [((@now - cart.updated_at) / 60).floor, 0].max
+  end
+
   def customer_profile_score(customer, value_score)
     return 6 unless customer
 
     bonus = value_score >= 80 ? 18 : value_score >= 55 ? 12 : value_score >= 30 ? 8 : 4
     bonus += 4 if customer.total_orders.to_i.zero?
     bonus
+  end
+
+  def customer_recency_score(customer)
+    return 2 unless customer&.last_order_at
+
+    recency_score(((@now - customer.last_order_at) / 1.day).floor)
+  end
+
+  def customer_recency_reason(customer)
+    return "Cliente ainda sem compra anterior" unless customer&.last_order_at
+
+    days = [((@now - customer.last_order_at) / 1.day).floor, 0].max
+    "Ultima compra ha #{days} dia(s)"
+  end
+
+  def conversation_profile(cart)
+    conversation = cart.store_ai_conversation
+    return { channel: nil, messages_count: 0, user_messages_count: 0, total_minutes: 0, reason: "Sem conversa registrada" } unless conversation
+
+    messages = conversation.store_ai_messages
+    first_message_at = messages.minimum(:created_at)
+    last_message_at = conversation.last_message_at || messages.maximum(:created_at) || conversation.updated_at
+    total_minutes = first_message_at ? [((last_message_at - first_message_at) / 60).floor, 0].max : 0
+    user_messages = messages.where(role: "user").count
+    {
+      channel: conversation.channel,
+      messages_count: messages.count,
+      user_messages_count: user_messages,
+      total_minutes: total_minutes,
+      reason: "#{user_messages} mensagem(ns) do cliente em #{total_minutes} minuto(s)"
+    }
+  rescue StandardError
+    { channel: nil, messages_count: 0, user_messages_count: 0, total_minutes: 0, reason: "Conversa indisponivel" }
+  end
+
+  def conversation_score(profile)
+    score = [profile[:user_messages_count].to_i * 2, 8].min
+    score += [profile[:total_minutes].to_i / 5, 6].min
+    score
+  end
+
+  def channel_score(channel)
+    case channel
+    when "whatsapp" then 6
+    when "web" then 4
+    else 2
+    end
+  end
+
+  def product_profile(cart)
+    ids = Array(cart.items).filter_map { |item| item["product_id"].presence || item["id"].presence }.map(&:to_i).uniq
+    products = ids.any? ? @company.products.includes(:category).where(id: ids).to_a : []
+    categories = products.filter_map { |product| product.category&.name }.uniq
+    premium = products.any? { |product| product.is_featured? || product.price_cents.to_i >= HIGH_CART_CENTS }
+    promotional = products.any?(&:is_promotional?)
+    {
+      premium: premium,
+      promotional: promotional,
+      categories: categories,
+      reason: product_reason(premium, promotional, categories)
+    }
+  rescue StandardError
+    { premium: false, promotional: false, categories: [], reason: "Produto sem metrica adicional" }
+  end
+
+  def product_score(profile)
+    score = 0
+    score += 8 if profile[:premium]
+    score += 5 if profile[:promotional]
+    score += 3 if profile[:categories].present?
+    score
+  end
+
+  def product_reason(premium, promotional, categories)
+    return "Produto premium em #{categories.first}" if premium && categories.present?
+    return "Produto promocional" if promotional
+    return "Categoria #{categories.first}" if categories.present?
+
+    "Produto sem categoria identificada"
+  end
+
+  def coupon_usage_score(customer)
+    return 2 unless customer
+
+    orders = customer.total_orders.to_i
+    return 4 if orders.zero?
+
+    coupon_orders = customer.orders.where.not(coupon_id: nil).or(customer.orders.where.not(coupon_code: [nil, ""])).count
+    ratio = coupon_orders.to_f / orders
+    return -4 if ratio >= 0.7
+    return 2 if ratio.positive?
+
+    5
+  end
+
+  def coupon_usage_reason(customer)
+    return "Cliente novo sem historico de cupom" unless customer
+
+    orders = customer.total_orders.to_i
+    coupon_orders = orders.positive? ? customer.orders.where.not(coupon_id: nil).or(customer.orders.where.not(coupon_code: [nil, ""])).count : 0
+    "Uso anterior de cupom: #{coupon_orders} pedido(s)"
   end
 
   def timing_score
@@ -222,11 +423,24 @@ class SalesRecoveryIntelligence
     score
   end
 
+  def timing_reason
+    local = @now.in_time_zone(@company.timezone.presence || "America/Sao_Paulo")
+    "Abandono em #{local.strftime('%H:%M')} no dia #{local.wday}"
+  end
+
   def reputation_penalty(reputation)
     penalty = reputation[:ignored].to_i * 10
     penalty += 20 if reputation[:paused]
     penalty += 5 if reputation[:failed].to_i >= 2
     penalty
+  end
+
+  def reputation_reason(reputation)
+    return "Cliente pausado por ignorar recuperacoes" if reputation[:paused]
+    return "#{reputation[:ignored]} recuperacao(oes) ignorada(s)" if reputation[:ignored].to_i.positive?
+    return "Cliente costuma voltar apos mensagem" if reputation[:recovered].to_i.positive?
+
+    "Sem historico negativo de recuperacao"
   end
 
   def decision(kind, reason, rule)

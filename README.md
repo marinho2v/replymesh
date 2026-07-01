@@ -1210,3 +1210,24 @@ Principais pontos:
 Relatorio:
 
 - `REPLYMESH_DEV_RECOVERY_INTELLIGENCE_PHASE_1_6_REPORT.md`
+
+## Fase DEV - Recovery Intelligence 1.7
+
+A fase 1.7 tornou o Recovery mais seletivo e explicavel, sem criar novo fluxo e
+sem alterar Evolution, IA de atendimento, VPS ou producao.
+
+Principais pontos:
+
+- Recovery Score V2 com pesos configuraveis via JSON de configuracao;
+- classificacao automatica `Muito Alta`, `Alta`, `Media`, `Baixa` e
+  `Muito Baixa`;
+- somente scores `Alta` e `Muito Alta` podem gerar envio automatico;
+- motivos do score salvos no log para o lojista entender a decisao;
+- fila priorizada por score, valor, tempo parado e cliente recorrente;
+- simulador de Recovery sem envio real;
+- novos indicadores: carrinhos elegiveis, bloqueados, potencial recuperavel,
+  motivo, categoria e horario de abandono.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_PHASE_1_7_REPORT.md`

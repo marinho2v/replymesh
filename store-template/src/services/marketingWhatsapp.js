@@ -51,6 +51,10 @@ export const runSalesRecoveryEngine = () => request('/store/sales_recovery/run',
   method: 'POST', headers: headers(),
 })
 
+export const simulateSalesRecoveryEngine = (cartId = null) => request('/store/sales_recovery/simulate', {
+  method: 'POST', body: cartId ? { cart_id: cartId } : {}, headers: headers(),
+})
+
 export const formatMoney = (cents) => (Number(cents || 0) / 100).toLocaleString('pt-BR', {
   style: 'currency', currency: 'BRL',
 })
