@@ -133,7 +133,10 @@ module Api
           params.require(:settings).permit(
             :enabled, :delay_minutes, :daily_limit, :window_start, :window_end, :use_ai,
             :auto_coupon, :default_discount_percent, :free_delivery, :coupon_validity_hours,
-            :per_customer_daily_limit, :queue_spacing_minutes, :message_template,
+            :per_customer_daily_limit, :queue_spacing_minutes, :cooldown_hours,
+            :recent_response_minutes, :min_cart_total_cents, :quiet_hours_enabled,
+            :quiet_window_start, :quiet_window_end, :message_template,
+            coupon_rules_json: {},
             allowed_weekdays: []
           )
         end
@@ -160,6 +163,9 @@ module Api
           today = current_company.sales_recovery_events.today_for(current_company)
           recovered = current_company.sales_recovery_events.recovered
           sent = current_company.sales_recovery_events.where(status: %w[sent recovered])
+          blocked = current_company.sales_recovery_events.where(status: "skipped")
+          average_score = current_company.sales_recovery_events.where(status: %w[queued sent recovered skipped]).average(:recovery_score)
+          top_coupon = recovered.where.not(coupon_id: nil).joins(:coupon).group("coupons.code").count.max_by { |_code, count| count }
           top_products = current_company.sales_recovery_events
             .where(status: %w[sent recovered])
             .order(created_at: :desc)
@@ -177,6 +183,10 @@ module Api
             messages_sent: sent.count,
             recovery_rate_percent: sent.count.positive? ? ((recovered.count.to_f / sent.count) * 100).round(1) : 0,
             coupons_used: recovered.where.not(coupon_id: nil).count,
+            blocked_messages: blocked.count,
+            average_recovery_score: average_score.to_f.round(1),
+            top_coupon: top_coupon ? { code: top_coupon[0], count: top_coupon[1] } : nil,
+            average_recovered_value_cents: recovered.count.positive? ? (recovered.sum(:recovered_value_cents) / recovered.count) : 0,
             queued: current_company.sales_recovery_events.queued.count,
             failed: current_company.sales_recovery_events.where(status: "failed").count,
             top_products: top_products
@@ -192,6 +202,10 @@ module Api
             status: event.status,
             message: event.message,
             coupon: event.coupon&.code,
+            block_reason: event.block_reason,
+            recovery_score: event.recovery_score,
+            abandoned_minutes: event.abandoned_minutes,
+            delivery_strategy: event.delivery_strategy,
             response: event.responded_at.present? ? "respondeu" : nil,
             purchase: event.recovered_order_id.present?,
             ignored: event.status == "ignored",

@@ -165,3 +165,77 @@ Implementacao realizada na branch `dev`, sem alterar `main`, producao ou VPS.
 ## Hash do commit
 
 `feecef8` — Replymesh Add AI Sales Recovery Automation Engine
+
+---
+
+# Phase 1.5 — Inteligencia e Seguranca do Recovery Engine
+
+## Status
+
+Consolidacao feita somente na branch `dev`, sem iniciar Phase 2, sem alterar `main`, sem deploy e sem mexer na VPS/producao.
+
+## Auditoria da base Phase 1
+
+- `SalesRecoveryEngine` revisado para manter o fluxo existente de carrinho abandonado, cupom, IA/template, fila e envio.
+- `SalesRecoveryEngineJob` e `SalesRecoveryDeliveryJob` preservados sem criar scheduler novo.
+- `SalesRecoverySetting` e `SalesRecoveryEvent` foram expandidos com campos de controle, sem remover campos existentes.
+- Integracoes existentes com Evolution, IA, cupons e `MarketingMessageService` foram reaproveitadas.
+- Tela da loja em `Marketing > Automacao Inteligente` foi mantida e ampliada com configuracoes e metricas simples.
+
+## Melhorias implementadas
+
+- Deteccao de abandono mais segura considerando carrinho com itens, valor minimo, conversa ativa, resposta recente do cliente, pedido ja criado, cooldown e limite por empresa/cliente.
+- Antispam com cooldown configuravel por cliente, bloqueio de duplicidade por carrinho e registro de motivo quando a recuperacao nao pode ser enviada.
+- Score interno de recuperacao de 0 a 100 baseado em valor, quantidade de itens, tempo parado, perfil do cliente e metodo de pagamento.
+- Cupons mais inteligentes com regras configuraveis para carrinho baixo, carrinho alto, primeira compra e cliente recorrente com frete gratis opcional.
+- IA recebe contexto ampliado: loja, cliente, itens, valor, beneficio real, cupom, historico resumido e link da loja.
+- Biblioteca sem IA ampliada para 20 templates, evitando repeticao constante.
+- Horarios protegidos: janela de envio, dias permitidos, horario de silencio e horario operacional da loja.
+- Logs ampliados com score, motivo de bloqueio, cupom, tempo parado, estrategia de envio, envio realizado/bloqueado e erros.
+- Dashboard ampliado com mensagens bloqueadas, score medio, cupom mais usado e ticket recuperado medio.
+- Revalidacao do job corrigida para nao bloquear o proprio evento `queued` por cooldown/duplicidade.
+
+## Seguranca multiempresa
+
+- Todas as consultas continuam partindo de `@company` ou `current_company`.
+- Eventos e configuracoes continuam vinculados a `company_id`.
+- Nenhuma empresa acessa eventos, cupons ou carrinhos de outra.
+- Nenhuma mensagem real foi disparada durante esta validacao local.
+
+## Performance
+
+- Candidatos limitados a 50 carrinhos por execucao.
+- Uso de `includes(:store_ai_conversation)` mantido no motor.
+- Logs da tela carregam relacoes principais com `includes(:coupon, :customer, :store_ai_cart)`.
+- Nenhum polling novo, Redis, Sidekiq ou infraestrutura extra foi criada.
+
+## Validacoes Phase 1.5
+
+- `ruby -c` executado nos arquivos Ruby alterados: OK.
+- `npm run build` em `store-template`: OK.
+- `npm run build` em `replymesh-frontend`: OK.
+- `git diff --check`: OK.
+- Auditoria de segredos no diff: sem chaves novas identificadas.
+- RSpec dedicado do Recovery Engine ainda nao existe; tentativa do spec relacionado foi bloqueada por gems locais ausentes (`puma`, `bcrypt`, `bootsnap`, entre outras).
+- A fase ficou validada por sintaxe, build, `git diff --check`, auditoria de segredos e revisao do fluxo.
+
+## Arquivos alterados na Phase 1.5
+
+- `replymesh-api/db/migrate/20260701093000_harden_sales_recovery_automation.rb`
+- `replymesh-api/db/schema.rb`
+- `replymesh-api/app/models/sales_recovery_setting.rb`
+- `replymesh-api/app/models/sales_recovery_event.rb`
+- `replymesh-api/app/services/sales_recovery_engine.rb`
+- `replymesh-api/app/controllers/api/v1/store/marketing_controller.rb`
+- `store-template/src/pages/admin/SalesRecovery.jsx`
+
+## Pendencias para Phase 2
+
+- Criar specs dedicados para cenarios completos do Recovery Engine.
+- Testar envio real em empresa QA com Evolution controlado.
+- Testar IA real em empresa QA com provedor configurado.
+- Medir conversao real por cupom apos pedidos reais de teste.
+
+## Hash do commit Phase 1.5
+
+`0c42a4e` — Replymesh Harden Sales Recovery Automation Engine

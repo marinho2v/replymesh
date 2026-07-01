@@ -12,7 +12,11 @@ class SalesRecoverySetting < ApplicationRecord
   validates :coupon_validity_hours, numericality: { only_integer: true, greater_than_or_equal_to: 24, less_than_or_equal_to: 168 }
   validates :per_customer_daily_limit, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 5 }
   validates :queue_spacing_minutes, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 30 }
+  validates :cooldown_hours, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 168 }
+  validates :recent_response_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 5, less_than_or_equal_to: 240 }
+  validates :min_cart_total_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :valid_window
+  validate :valid_quiet_window
   validate :valid_weekdays
 
   before_validation :normalize_weekdays
@@ -48,6 +52,13 @@ class SalesRecoverySetting < ApplicationRecord
       coupon_validity_hours: coupon_validity_hours,
       per_customer_daily_limit: per_customer_daily_limit,
       queue_spacing_minutes: queue_spacing_minutes,
+      cooldown_hours: cooldown_hours,
+      recent_response_minutes: recent_response_minutes,
+      min_cart_total_cents: min_cart_total_cents,
+      quiet_hours_enabled: quiet_hours_enabled,
+      quiet_window_start: quiet_window_start,
+      quiet_window_end: quiet_window_end,
+      coupon_rules_json: coupon_rules_json,
       message_template: message_template
     }
   end
@@ -69,6 +80,13 @@ class SalesRecoverySetting < ApplicationRecord
     parse_window_time(window_end, Time.zone.now)
   rescue ArgumentError
     errors.add(:base, "Janela de envio invalida")
+  end
+
+  def valid_quiet_window
+    parse_window_time(quiet_window_start, Time.zone.now)
+    parse_window_time(quiet_window_end, Time.zone.now)
+  rescue ArgumentError
+    errors.add(:base, "Horario de silencio invalido")
   end
 
   def parse_window_time(value, base_time)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1148,7 +1148,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
     t.string "status", default: "queued", null: false
     t.bigint "store_ai_cart_id"
     t.text "message"
+    t.integer "recovery_score", default: 0, null: false
+    t.string "block_reason"
+    t.datetime "blocked_at"
+    t.integer "abandoned_minutes", default: 0, null: false
+    t.string "delivery_strategy", default: "template", null: false
     t.datetime "updated_at", null: false
+    t.index ["company_id", "recovery_score"], name: "idx_sales_recovery_events_score"
+    t.index ["company_id", "status", "block_reason", "created_at"], name: "idx_sales_recovery_events_blocked"
     t.index ["company_id", "customer_phone", "created_at"], name: "idx_sales_recovery_events_customer"
     t.index ["company_id", "status", "scheduled_at"], name: "idx_sales_recovery_events_queue"
     t.index ["company_id", "store_ai_cart_id"], name: "idx_sales_recovery_events_unique_cart", unique: true, where: "(store_ai_cart_id IS NOT NULL)"
@@ -1175,6 +1182,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
     t.jsonb "metadata_json", default: {}, null: false
     t.integer "per_customer_daily_limit", default: 1, null: false
     t.integer "queue_spacing_minutes", default: 3, null: false
+    t.integer "cooldown_hours", default: 24, null: false
+    t.integer "recent_response_minutes", default: 30, null: false
+    t.integer "min_cart_total_cents", default: 0, null: false
+    t.boolean "quiet_hours_enabled", default: true, null: false
+    t.string "quiet_window_start", default: "22:00", null: false
+    t.string "quiet_window_end", default: "08:00", null: false
+    t.jsonb "coupon_rules_json", default: {}, null: false
     t.datetime "updated_at", null: false
     t.boolean "use_ai", default: true, null: false
     t.string "window_end", default: "21:00", null: false

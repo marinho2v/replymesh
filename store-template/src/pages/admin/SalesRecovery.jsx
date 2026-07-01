@@ -26,6 +26,19 @@ const defaultSettings = {
   coupon_validity_hours: 48,
   per_customer_daily_limit: 1,
   queue_spacing_minutes: 3,
+  cooldown_hours: 24,
+  recent_response_minutes: 30,
+  min_cart_total_cents: 0,
+  quiet_hours_enabled: true,
+  quiet_window_start: '22:00',
+  quiet_window_end: '08:00',
+  coupon_rules_json: {
+    high_cart_threshold_cents: 10000,
+    high_cart_discount_percent: 15,
+    low_cart_discount_percent: 5,
+    first_order_discount_percent: 10,
+    recurring_free_delivery: false,
+  },
   message_template: '',
 }
 
@@ -148,6 +161,10 @@ export default function SalesRecovery() {
       <Metric icon={MessageCircle} label="Mensagens enviadas" value={metrics.messages_sent || 0} />
       <Metric icon={ShieldCheck} label="Taxa recuperacao" value={`${metrics.recovery_rate_percent || 0}%`} />
       <Metric icon={Gift} label="Cupons usados" value={metrics.coupons_used || 0} />
+      <Metric icon={ShieldCheck} label="Mensagens bloqueadas" value={metrics.blocked_messages || 0} />
+      <Metric icon={Sparkles} label="Score medio" value={metrics.average_recovery_score || 0} />
+      <Metric icon={Gift} label="Cupom mais usado" value={metrics.top_coupon?.code || '-'} />
+      <Metric icon={TrendingUp} label="Ticket recuperado medio" value={formatMoney(metrics.average_recovered_value_cents || 0)} />
     </div>
 
     <Card><CardContent className="space-y-6 p-5">
@@ -174,6 +191,20 @@ export default function SalesRecovery() {
         <Field label="Intervalo da fila (min)" type="number" min="1" max="30" value={settings.queue_spacing_minutes} onChange={(e) => setField('queue_spacing_minutes', Number(e.target.value))} />
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Field label="Cooldown por cliente (h)" type="number" min="1" max="168" value={settings.cooldown_hours} onChange={(e) => setField('cooldown_hours', Number(e.target.value))} />
+        <Field label="Nao enviar se respondeu ha (min)" type="number" min="5" max="240" value={settings.recent_response_minutes} onChange={(e) => setField('recent_response_minutes', Number(e.target.value))} />
+        <Field label="Valor minimo do carrinho (R$)" type="number" min="0" value={Math.round((settings.min_cart_total_cents || 0) / 100)} onChange={(e) => setField('min_cart_total_cents', Number(e.target.value) * 100)} />
+        <ToggleCard title="Horario de silencio" description="Bloqueia envios fora de hora para reduzir risco de spam." checked={settings.quiet_hours_enabled} onChange={(value) => setField('quiet_hours_enabled', value)} icon={ShieldCheck} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Field label="Silencio inicia" type="time" value={settings.quiet_window_start} onChange={(e) => setField('quiet_window_start', e.target.value)} />
+        <Field label="Silencio termina" type="time" value={settings.quiet_window_end} onChange={(e) => setField('quiet_window_end', e.target.value)} />
+        <Field label="Desconto acima de R$100 (%)" type="number" min="1" max="30" value={settings.coupon_rules_json?.high_cart_discount_percent || 15} onChange={(e) => setField('coupon_rules_json', { ...(settings.coupon_rules_json || {}), high_cart_discount_percent: Number(e.target.value), high_cart_threshold_cents: settings.coupon_rules_json?.high_cart_threshold_cents || 10000 })} />
+        <Field label="Desconto carrinho menor (%)" type="number" min="1" max="30" value={settings.coupon_rules_json?.low_cart_discount_percent || 5} onChange={(e) => setField('coupon_rules_json', { ...(settings.coupon_rules_json || {}), low_cart_discount_percent: Number(e.target.value) })} />
+      </div>
+
       <div>
         <p className="mb-2 text-sm font-bold text-white">Dias permitidos</p>
         <div className="flex flex-wrap gap-2">
@@ -192,13 +223,14 @@ export default function SalesRecovery() {
         <h3 className="mb-4 text-lg font-black text-white">Logs de recuperacao</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Cupom</th><th>Total</th><th>Mensagem</th><th>Data</th></tr></thead>
+            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Score</th><th>Cupom</th><th>Total</th><th>Mensagem</th><th>Data</th></tr></thead>
             <tbody>{logs.map((log) => <tr key={log.id} className="border-t border-dark-700 text-gray-200">
               <td className="py-3"><div className="font-bold">{log.customer || 'Cliente'}</div><div className="text-xs text-gray-500">{log.phone}</div></td>
               <td><span className="rounded-full bg-dark-800 px-2 py-1 text-xs">{statusLabel[log.status] || log.status}</span></td>
+              <td>{log.recovery_score ?? '-'}</td>
               <td>{log.coupon || '-'}</td>
               <td>{formatMoney(log.recovered_value_cents || log.cart_total_cents || 0)}</td>
-              <td className="max-w-md truncate text-gray-400">{log.error || log.message || '-'}</td>
+              <td className="max-w-md truncate text-gray-400">{log.block_reason || log.error || log.message || '-'}</td>
               <td>{log.created_at ? new Date(log.created_at).toLocaleString('pt-BR') : '-'}</td>
             </tr>)}</tbody>
           </table>

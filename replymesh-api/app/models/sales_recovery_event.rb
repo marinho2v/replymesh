@@ -11,6 +11,8 @@ class SalesRecoveryEvent < ApplicationRecord
   validates :customer_phone, :status, :source, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :cart_total_cents, :recovered_value_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :recovery_score, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
+  validates :abandoned_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   scope :for_company, ->(company_id) { where(company_id: company_id) }
   scope :queued, -> { where(status: "queued") }
