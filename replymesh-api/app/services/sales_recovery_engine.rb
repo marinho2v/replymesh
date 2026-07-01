@@ -50,6 +50,7 @@ class SalesRecoveryEngine
     @dry_run = dry_run
     @setting = SalesRecoverySetting.for_company(company)
     @intelligence = SalesRecoveryIntelligence.new(company: company, setting: @setting, now: @now)
+    @company_context = CompanyContextBuilder.build(company)
     @stats = { scanned: 0, queued: 0, sent: 0, skipped: 0, failed: 0, recovered: 0, blocked: 0 }
   end
 
@@ -389,7 +390,7 @@ class SalesRecoveryEngine
     benefit ||= @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
     {
       nome: customer&.full_name.presence || "tudo bem",
-      loja: @company.name,
+      loja: @company_context[:store_name].presence || @company.name,
       itens: cart_items_label(cart),
       valor: money(cart.total_cents.to_i),
       beneficio: benefit_text(coupon),
@@ -398,6 +399,8 @@ class SalesRecoveryEngine
       chance: @intelligence.chance_label(score),
       decisao: "#{benefit[:kind]} - #{benefit[:reason]}",
       historico: customer_history(customer, customer_value),
+      produtos_destaque: Array(@company_context[:featured_products]).first(5).map { |item| item[:name] || item["name"] }.compact.join(", "),
+      promocoes_ativas: Array(@company_context[:active_promotions]).first(3).map { |item| item[:title] || item["title"] }.compact.join(", "),
       recovery_score: score,
       link_loja: public_store_url
     }

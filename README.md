@@ -4,6 +4,7 @@ Plataforma SaaS multi-tenant para lanchonetes, restaurantes, hamburguerias, pizz
 
 ## Status
 
+- Fase 1.9 AI Foundation: `CompanyContextBuilder` centraliza contexto de empresa para IA vendedora e Recovery Engine, com cache de 5 minutos, invalidacao por alteracoes da loja e metricas no Performance Monitor.
 - Fase 1: Backend Rails API concluido.
 - Fase 2: Frontend React/Vite convertido a partir do prototipo aprovado.
 - Fase 3: Modulo Empresas / Onboarding conectado ao backend Rails API.

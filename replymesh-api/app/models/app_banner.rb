@@ -2,7 +2,7 @@ class AppBanner < ApplicationRecord
   include CloudStorageBacked
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :banners, :store
+  invalidates_replymesh_cache :banners, :store, :ai_context
 
   belongs_to :company
 

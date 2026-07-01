@@ -19,6 +19,15 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-01 — Phase 1.9 Company Context Engine
+
+- Criado `CompanyContextBuilder` como fonte unica de contexto de empresa para modulos de IA.
+- IA vendedora e Sales Recovery passaram a consumir o mesmo contexto central sem mudar comportamento visivel.
+- Contexto inclui loja, horarios, pagamentos, entrega, categorias, produtos, destaques, cupons, campanhas, estoque e estatisticas de recuperacao.
+- Cache de 5 minutos via `ReplymeshCacheService`, com invalidacao em produtos, categorias, configuracoes, cupons, banners, campanhas, estoque, IA e Recovery.
+- Metricas de montagem do contexto alimentam o Performance Monitor como `company_context_builder`.
+- Proxima direcao: Delivery AI, Customer Intelligence, Sales AI Coach e Analytics Inteligente devem consumir este contexto central.
+
 **Fase atual:** FASE 15.11.3 - Auditoria Final do Mercado Pago + Jobs Pendentes - **CONCLUIDA EM 2026-06-06**  
 **Última atualização:** 2026-06-06  
 **Próxima tarefa recomendada:** FASE 16 - VPS E PRODUCAO, somente com confirmacao explicita. Nao iniciar deploy, banco de producao, Evolution real, webhook real, pagamento online, Flutter, IA ou marketing em massa sem confirmacao.

@@ -31,17 +31,18 @@ class StoreAiSalesService
     end
   end
 
-  def self.call(company:, user:, question:, phone:, settings:, global:, simulate: false)
-    new(company: company, user: user, question: question, phone: phone, settings: settings, global: global, simulate: simulate).call
+  def self.call(company:, user:, question:, phone:, settings:, global:, company_context: nil, simulate: false)
+    new(company: company, user: user, question: question, phone: phone, settings: settings, global: global, company_context: company_context, simulate: simulate).call
   end
 
-  def initialize(company:, user:, question:, phone:, settings:, global:, simulate: false)
+  def initialize(company:, user:, question:, phone:, settings:, global:, company_context: nil, simulate: false)
     @company = company
     @user = user
     @question = question.to_s.strip
     @phone = phone.to_s.gsub(/\D/, "").presence || "simulator"
     @settings = settings
     @global = global
+    @company_context = company_context.presence || CompanyContextBuilder.build(company)
     @simulate = simulate
   end
 
@@ -1485,12 +1486,14 @@ class StoreAiSalesService
   end
 
   def payment_methods_answer
+    payment_context = @company_context[:payment_methods].to_h
+    accepted = Array(payment_context[:accepted] || payment_context["accepted"])
     methods = []
-    methods << "Dinheiro" if @settings.offer_cash?
-    methods << "Pix" if pix_available? || store_settings&.pix_enabled?
-    methods << "Cartao de credito" if accepted_payment_method?("credit_card")
-    methods << "Cartao de debito" if accepted_payment_method?("debit_card")
-    methods << "Cartao na entrega" if methods.none? { |item| item.include?("Cartao") }
+    methods << "Dinheiro" if @settings.offer_cash? || accepted.include?("cash")
+    methods << "Pix" if pix_available? || payment_context[:pix] || payment_context["pix"]
+    methods << "Cartao de credito" if accepted.include?("credit_card") || accepted_payment_method?("credit_card")
+    methods << "Cartao de debito" if accepted.include?("debit_card") || accepted_payment_method?("debit_card")
+    methods << "Cartao na entrega" if payment_context[:card_on_delivery] || payment_context["card_on_delivery"] || methods.none? { |item| item.include?("Cartao") }
     "Aceitamos: #{methods.compact_blank.uniq.join(', ')}."
   end
 
@@ -1501,8 +1504,8 @@ class StoreAiSalesService
   def store_summary_answer
     settings = store_settings
     lines = [
-      settings&.store_name.presence || settings&.company_name.presence || @company.name,
-      settings&.address.present? ? "Endereco: #{[settings.address, settings.city, settings.state].compact_blank.join(', ')}." : nil,
+      @company_context[:store_name].presence || settings&.store_name.presence || settings&.company_name.presence || @company.name,
+      settings&.address.present? ? "Endereco: #{[settings.address, @company_context[:city].presence || settings.city, @company_context[:state].presence || settings.state].compact_blank.join(', ')}." : nil,
       settings&.whatsapp.present? ? "WhatsApp: #{settings.whatsapp}." : nil
     ]
     lines.compact_blank.join("\n")
