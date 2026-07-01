@@ -44,6 +44,7 @@ class SalesRecoveryEngine
     @now = now
     @dry_run = dry_run
     @setting = SalesRecoverySetting.for_company(company)
+    @intelligence = SalesRecoveryIntelligence.new(company: company, setting: @setting, now: @now)
     @stats = { scanned: 0, queued: 0, sent: 0, skipped: 0, failed: 0, recovered: 0, blocked: 0 }
   end
 
@@ -98,9 +99,11 @@ class SalesRecoveryEngine
   def queue_event_for(cart, index)
     event = @company.sales_recovery_events.find_or_initialize_by(store_ai_cart: cart)
     customer = find_customer(cart.customer_phone)
-    score = recovery_score(cart, customer)
-    coupon = event.coupon || (@setting.auto_coupon? ? build_coupon(cart, customer) : nil)
-    message, strategy = build_message(cart: cart, customer: customer, coupon: coupon, score: score)
+    customer_value = @intelligence.customer_value(customer)
+    score = @intelligence.recovery_score(cart, customer, customer_value: customer_value)
+    benefit = @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
+    coupon = event.coupon || (@setting.auto_coupon? ? build_coupon(cart, customer, benefit) : nil)
+    message, strategy = build_message(cart: cart, customer: customer, coupon: coupon, score: score, customer_value: customer_value, benefit: benefit)
     event.assign_attributes(
       customer: customer,
       coupon: coupon,
@@ -111,6 +114,11 @@ class SalesRecoveryEngine
       scheduled_at: @now + (index * @setting.queue_spacing_minutes).minutes,
       cart_total_cents: cart.total_cents.to_i,
       recovery_score: score,
+      customer_value_score: customer_value[:score].to_i,
+      customer_segment: customer_value[:segment],
+      benefit_decision: benefit[:kind],
+      benefit_reason: benefit[:reason],
+      reputation_snapshot: safe_reputation(customer_value[:reputation]),
       abandoned_minutes: abandoned_minutes(cart),
       delivery_strategy: strategy,
       cart_snapshot: cart_snapshot(cart),
@@ -123,6 +131,8 @@ class SalesRecoveryEngine
         "delay_minutes" => @setting.delay_minutes,
         "cooldown_hours" => @setting.cooldown_hours,
         "cart_items_count" => cart_items_count(cart),
+        "chance" => @intelligence.chance_label(score),
+        "benefit_rule" => benefit[:rule],
         "coupon_discount_type" => coupon&.discount_type,
         "coupon_discount_value" => coupon&.discount_value&.to_f
       }
@@ -153,9 +163,17 @@ class SalesRecoveryEngine
     @stats[:failed] += 1
   end
 
-  def build_coupon(cart, customer)
+  def build_coupon(cart, customer, decision = nil)
+    decision ||= @intelligence.benefit_decision(
+      cart,
+      customer,
+      customer_value: @intelligence.customer_value(customer),
+      recovery_score: recovery_score(cart, customer)
+    )
+    return nil if decision[:kind] == "none"
+
     code = unique_coupon_code
-    benefit = coupon_benefit_for(cart, customer)
+    benefit = coupon_benefit_for(cart, customer, decision)
     @company.coupons.create!(
       customer: customer,
       code: code,
@@ -168,11 +186,13 @@ class SalesRecoveryEngine
       max_uses: 1,
       starts_at: Time.current,
       expires_at: @setting.coupon_validity_hours.hours.from_now,
-      metadata_json: { "engine" => "sales_recovery", "customer_phone" => customer&.phone, "rule" => benefit[:rule] }
+      metadata_json: { "engine" => "sales_recovery", "rule" => benefit[:rule], "benefit_decision" => decision[:kind] }
     )
   end
 
-  def coupon_benefit_for(cart, customer)
+  def coupon_benefit_for(cart, customer, decision = nil)
+    return free_delivery_benefit(decision[:rule]) if decision&.dig(:kind) == "free_shipping"
+
     rules = @setting.coupon_rules_json.to_h
     recurring = customer.present? && customer.total_orders.to_i > 1
     return free_delivery_benefit("recurring_customer") if recurring && truthy?(rules["recurring_free_delivery"])
@@ -190,7 +210,7 @@ class SalesRecoveryEngine
                 low
               end.clamp(1, 30)
 
-    { title: "Cupom especial para finalizar", discount_type: "percentage", discount_value: percent, rule: "percentage_by_profile" }
+    { title: "Cupom especial para finalizar", discount_type: "percentage", discount_value: percent, rule: decision&.dig(:rule).presence || "percentage_by_profile" }
   end
 
   def free_delivery_benefit(rule)
@@ -204,8 +224,8 @@ class SalesRecoveryEngine
     end
   end
 
-  def build_message(cart:, customer:, coupon:, score:)
-    context = message_context(cart, customer, coupon, score)
+  def build_message(cart:, customer:, coupon:, score:, customer_value: nil, benefit: nil)
+    context = message_context(cart, customer, coupon, score, customer_value: customer_value, benefit: benefit)
     if @setting.use_ai?
       ai_message = ai_message_for(context)
       return [render_template(ai_message, context), "ai"] if ai_message.present?
@@ -230,6 +250,9 @@ class SalesRecoveryEngine
       Valor do carrinho: #{context[:valor]}
       Beneficio real: #{context[:beneficio]}
       Cupom real: #{context[:cupom].presence || "sem cupom"}
+      Perfil do cliente: #{context[:perfil_cliente]}
+      Chance de recuperacao: #{context[:chance]}
+      Decisao comercial: #{context[:decisao]}
       Historico resumido: #{context[:historico]}
       Link da loja: #{context[:link_loja]}
       Responda apenas a mensagem final.
@@ -263,7 +286,9 @@ class SalesRecoveryEngine
       .strip
   end
 
-  def message_context(cart, customer, coupon, score)
+  def message_context(cart, customer, coupon, score, customer_value: nil, benefit: nil)
+    customer_value ||= @intelligence.customer_value(customer)
+    benefit ||= @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
     {
       nome: customer&.full_name.presence || "tudo bem",
       loja: @company.name,
@@ -271,7 +296,10 @@ class SalesRecoveryEngine
       valor: money(cart.total_cents.to_i),
       beneficio: benefit_text(coupon),
       cupom: coupon&.code.to_s,
-      historico: customer_history(customer),
+      perfil_cliente: customer_value[:label],
+      chance: @intelligence.chance_label(score),
+      decisao: "#{benefit[:kind]} - #{benefit[:reason]}",
+      historico: customer_history(customer, customer_value),
       recovery_score: score,
       link_loja: public_store_url
     }
@@ -305,6 +333,10 @@ class SalesRecoveryEngine
   def block_reason_for(cart, current_event: nil)
     return "already_recovered" if recovered_before?(cart, current_event: current_event)
     return "empty_cart" if cart_items_count(cart).zero?
+    customer = find_customer(cart.customer_phone)
+    customer_value = @intelligence.customer_value(customer)
+    return "customer_paused" if customer_value.dig(:reputation, :paused)
+
     return "cart_below_minimum" if cart.total_cents.to_i < @setting.min_cart_total_cents.to_i
     return "outside_window" unless @setting.allowed_today?(@now) && @setting.within_window?(@now)
     return "quiet_hours" if quiet_hours?
@@ -382,14 +414,7 @@ class SalesRecoveryEngine
   end
 
   def recovery_score(cart, customer)
-    score = 0
-    score += [[cart.total_cents.to_i / 100, 35].min, 0].max
-    score += [cart_items_count(cart) * 8, 24].min
-    score += [[abandoned_minutes(cart) / 10, 20].min, 0].max
-    score += 12 if customer&.total_orders.to_i > 1
-    score += 6 if customer&.total_orders.to_i.zero?
-    score += 3 if cart.payment_method.present?
-    score.clamp(0, 100)
+    @intelligence.recovery_score(cart, customer, customer_value: @intelligence.customer_value(customer))
   end
 
   def cart_items_count(cart)
@@ -438,6 +463,9 @@ class SalesRecoveryEngine
     return if event.persisted? && FINAL_STATUSES.include?(event.status)
 
     customer = find_customer(cart.customer_phone)
+    customer_value = @intelligence.customer_value(customer)
+    score = @intelligence.recovery_score(cart, customer, customer_value: customer_value)
+    benefit = @intelligence.benefit_decision(cart, customer, customer_value: customer_value, recovery_score: score)
     event.assign_attributes(
       customer: customer,
       customer_phone: normalize_phone(cart.customer_phone),
@@ -445,7 +473,12 @@ class SalesRecoveryEngine
       block_reason: reason,
       blocked_at: @now,
       cart_total_cents: cart.total_cents.to_i,
-      recovery_score: recovery_score(cart, customer),
+      recovery_score: score,
+      customer_value_score: customer_value[:score].to_i,
+      customer_segment: customer_value[:segment],
+      benefit_decision: benefit[:kind],
+      benefit_reason: benefit[:reason],
+      reputation_snapshot: safe_reputation(customer_value[:reputation]),
       abandoned_minutes: abandoned_minutes(cart),
       delivery_strategy: "blocked",
       cart_snapshot: cart_snapshot(cart),
@@ -480,7 +513,8 @@ class SalesRecoveryEngine
         status: "recovered",
         recovered_at: order.created_at,
         recovered_order: order,
-        recovered_value_cents: order.total_cents.to_i
+        recovered_value_cents: order.total_cents.to_i,
+        conversion_minutes: event.sent_at.present? ? [((order.created_at - event.sent_at) / 60).floor, 0].max : nil
       )
       @stats[:recovered] += 1
     end
@@ -499,11 +533,26 @@ class SalesRecoveryEngine
     base_time.change(hour: hour, min: minute, sec: 0)
   end
 
-  def customer_history(customer)
+  def customer_history(customer, customer_value = nil)
     return "cliente ainda sem historico de compras" unless customer
+    customer_value ||= @intelligence.customer_value(customer)
+    return "#{customer_value[:label]} com #{customer.total_orders} pedidos" if customer_value[:segment] == "vip"
     return "cliente recorrente com #{customer.total_orders} pedidos" if customer.total_orders.to_i > 1
 
     "cliente novo ou com poucas compras"
+  end
+
+  def safe_reputation(reputation)
+    data = reputation.to_h
+    {
+      "sent" => data[:sent].to_i,
+      "recovered" => data[:recovered].to_i,
+      "ignored" => data[:ignored].to_i,
+      "blocked" => data[:blocked].to_i,
+      "conversion_rate" => data[:conversion_rate].to_f,
+      "paused" => !!data[:paused],
+      "pause_reason" => data[:pause_reason]
+    }
   end
 
   def money(cents)

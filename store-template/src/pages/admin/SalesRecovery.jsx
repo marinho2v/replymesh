@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bot, Gift, MessageCircle, Play, RefreshCw, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
+import { Bot, Clock, Gift, MessageCircle, Play, RefreshCw, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
@@ -158,11 +158,17 @@ export default function SalesRecovery() {
       <Metric icon={TrendingUp} label="Hoje recuperados" value={metrics.today_recovered || 0} />
       <Metric icon={Users} label="Carrinhos recuperados" value={metrics.recovered_carts || 0} />
       <Metric icon={Gift} label="Valor recuperado" value={formatMoney(metrics.recovered_value_cents || 0)} />
+      <Metric icon={TrendingUp} label="Valor perdido" value={formatMoney(metrics.lost_value_cents || 0)} />
       <Metric icon={MessageCircle} label="Mensagens enviadas" value={metrics.messages_sent || 0} />
       <Metric icon={ShieldCheck} label="Taxa recuperacao" value={`${metrics.recovery_rate_percent || 0}%`} />
       <Metric icon={Gift} label="Cupons usados" value={metrics.coupons_used || 0} />
+      <Metric icon={Gift} label="Frete gratis usado" value={metrics.free_delivery_used || 0} />
       <Metric icon={ShieldCheck} label="Mensagens bloqueadas" value={metrics.blocked_messages || 0} />
       <Metric icon={Sparkles} label="Score medio" value={metrics.average_recovery_score || 0} />
+      <Metric icon={Users} label="Customer Value medio" value={metrics.average_customer_value_score || 0} />
+      <Metric icon={Users} label="Clientes recuperados" value={metrics.customers_recovered || 0} />
+      <Metric icon={Clock} label="Tempo medio ate compra" value={`${metrics.average_conversion_minutes || 0} min`} />
+      <Metric icon={ShieldCheck} label="Clientes pausados" value={metrics.paused_customers || 0} />
       <Metric icon={Gift} label="Cupom mais usado" value={metrics.top_coupon?.code || '-'} />
       <Metric icon={TrendingUp} label="Ticket recuperado medio" value={formatMoney(metrics.average_recovered_value_cents || 0)} />
     </div>
@@ -218,36 +224,72 @@ export default function SalesRecovery() {
       <Textarea label="Mensagem personalizada opcional" rows={4} value={settings.message_template || ''} onChange={(e) => setField('message_template', e.target.value)} placeholder="Use {nome}, {loja}, {itens}, {beneficio}, {cupom}, {link_loja}. Se vazio, a Replymesh gera ou escolhe a mensagem automaticamente." />
     </CardContent></Card>
 
-    <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+    <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
       <Card><CardContent className="p-5">
         <h3 className="mb-4 text-lg font-black text-white">Logs de recuperacao</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Score</th><th>Cupom</th><th>Total</th><th>Mensagem</th><th>Data</th></tr></thead>
+            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Score</th><th>Perfil</th><th>Beneficio</th><th>Total</th><th>Motivo</th><th>Data</th></tr></thead>
             <tbody>{logs.map((log) => <tr key={log.id} className="border-t border-dark-700 text-gray-200">
               <td className="py-3"><div className="font-bold">{log.customer || 'Cliente'}</div><div className="text-xs text-gray-500">{log.phone}</div></td>
               <td><span className="rounded-full bg-dark-800 px-2 py-1 text-xs">{statusLabel[log.status] || log.status}</span></td>
-              <td>{log.recovery_score ?? '-'}</td>
-              <td>{log.coupon || '-'}</td>
+              <td><div className="font-bold text-primary-300">{log.recovery_score ?? '-'}</div><div className="text-xs text-gray-500">{log.recovery_chance || '-'}</div></td>
+              <td><div>{segmentLabel(log.customer_segment)}</div><div className="text-xs text-gray-500">{log.customer_value_score ?? 0}</div></td>
+              <td><div>{benefitLabel(log.benefit_decision)}</div><div className="text-xs text-gray-500">{log.coupon || '-'}</div></td>
               <td>{formatMoney(log.recovered_value_cents || log.cart_total_cents || 0)}</td>
-              <td className="max-w-md truncate text-gray-400">{log.block_reason || log.error || log.message || '-'}</td>
+              <td className="max-w-md truncate text-gray-400">{log.block_reason || log.benefit_reason || log.error || '-'}</td>
               <td>{log.created_at ? new Date(log.created_at).toLocaleString('pt-BR') : '-'}</td>
             </tr>)}</tbody>
           </table>
           {!logs.length && <p className="py-8 text-center text-gray-400">{loading ? 'Carregando...' : 'Nenhum log de recuperacao ainda.'}</p>}
         </div>
       </CardContent></Card>
-      <Card><CardContent className="p-5">
-        <h3 className="mb-4 text-lg font-black text-white">Produtos mais recuperados</h3>
-        <div className="space-y-3">
-          {(metrics.top_products || []).map((item, index) => <div key={item.name} className="flex items-center justify-between rounded-xl border border-dark-700 bg-dark-900 p-3">
-            <span className="text-sm text-white">{index + 1}. {item.name}</span>
-            <span className="text-xs font-bold text-primary-300">{item.count}x</span>
-          </div>)}
-          {!(metrics.top_products || []).length && <p className="text-sm text-gray-400">Sem dados suficientes ainda.</p>}
-        </div>
-      </CardContent></Card>
+      <div className="space-y-4">
+        <Card><CardContent className="p-5">
+          <h3 className="mb-4 text-lg font-black text-white">Quase comprando</h3>
+          <div className="space-y-3">
+            {(metrics.ranking || []).map((item, index) => <div key={item.id} className="rounded-xl border border-dark-700 bg-dark-900 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-bold text-white">{index + 1}. {item.customer}</span>
+                <span className="rounded-full bg-primary-500/15 px-2 py-1 text-xs font-black text-primary-300">Score {item.recovery_score}</span>
+              </div>
+              <div className="mt-2 grid gap-1 text-xs text-gray-400">
+                <span>{item.recovery_chance} • {segmentLabel(item.customer_segment)} • {formatMoney(item.cart_total_cents || 0)}</span>
+                <span>{benefitLabel(item.benefit_decision)} — {item.benefit_reason || 'sem decisao registrada'}</span>
+              </div>
+            </div>)}
+            {!(metrics.ranking || []).length && <p className="text-sm text-gray-400">Sem carrinhos ranqueados ainda.</p>}
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="p-5">
+          <h3 className="mb-4 text-lg font-black text-white">Insights automaticos</h3>
+          <div className="space-y-3">
+            {(metrics.insights || []).map((item, index) => <div key={item} className="rounded-xl border border-dark-700 bg-dark-900 p-3 text-sm text-gray-200">
+              {index + 1}. {item}
+            </div>)}
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="p-5">
+          <h3 className="mb-4 text-lg font-black text-white">Produtos mais recuperados</h3>
+          <div className="space-y-3">
+            {(metrics.top_products || []).map((item, index) => <div key={item.name} className="flex items-center justify-between rounded-xl border border-dark-700 bg-dark-900 p-3">
+              <span className="text-sm text-white">{index + 1}. {item.name}</span>
+              <span className="text-xs font-bold text-primary-300">{item.count}x</span>
+            </div>)}
+            {!(metrics.top_products || []).length && <p className="text-sm text-gray-400">Sem dados suficientes ainda.</p>}
+          </div>
+        </CardContent></Card>
+      </div>
     </div>
+
+    <Card><CardContent className="p-5">
+      <h3 className="mb-4 text-lg font-black text-white">Conversao por decisao</h3>
+      <div className="grid gap-4 md:grid-cols-3">
+        <ConversionList title="Beneficio" rows={metrics.conversion_by_benefit || []} labelFn={benefitLabel} />
+        <ConversionList title="Mensagem" rows={metrics.conversion_by_strategy || []} labelFn={(value) => value === 'ai' ? 'IA' : value === 'template' ? 'Template' : value} />
+        <ConversionList title="Dia da semana" rows={metrics.conversion_by_weekday || []} labelFn={weekdayName} />
+      </div>
+    </CardContent></Card>
 
   </div>
 }
@@ -272,3 +314,29 @@ const Field = ({ label, ...props }) => <label className="block">
   <span className="mb-2 block text-sm font-bold text-white">{label}</span>
   <input {...props} className="w-full rounded-xl border border-dark-700 bg-dark-950 px-4 py-3 text-white outline-none focus:border-primary-500" />
 </label>
+
+const ConversionList = ({ title, rows, labelFn }) => <div className="rounded-2xl border border-dark-700 bg-dark-900 p-4">
+  <p className="mb-3 text-sm font-black text-white">{title}</p>
+  <div className="space-y-2">
+    {rows.map((row) => <div key={`${title}-${row.name}`} className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-gray-300">{labelFn(row.name)}</span>
+      <span className="font-bold text-primary-300">{row.rate}%</span>
+    </div>)}
+    {!rows.length && <p className="text-sm text-gray-500">Sem dados suficientes.</p>}
+  </div>
+</div>
+
+const benefitLabel = (value) => ({
+  none: 'Lembrete sem desconto',
+  percentage: 'Cupom percentual',
+  free_shipping: 'Frete gratis',
+}[value] || value || '-')
+
+const segmentLabel = (value) => ({
+  vip: 'VIP',
+  recurring: 'Recorrente',
+  active: 'Ativo',
+  new: 'Novo',
+}[value] || 'Novo')
+
+const weekdayName = (value) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][Number(value)] || value

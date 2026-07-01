@@ -389,6 +389,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.text "email"
     t.datetime "first_order_at"
     t.text "full_name", null: false
+    t.string "customer_segment", default: "new", null: false
+    t.integer "customer_value_score", default: 0, null: false
+    t.datetime "customer_value_score_calculated_at"
     t.boolean "is_recurring", default: false, null: false
     t.datetime "last_marketing_sent_at"
     t.datetime "last_order_at"
@@ -397,11 +400,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.string "legacy_table"
     t.text "notes"
     t.text "phone", null: false
+    t.jsonb "recovery_reputation_json", default: {}, null: false
     t.integer "total_orders", default: 0, null: false
     t.integer "total_spent_cents", default: 0, null: false
     t.datetime "updated_at", null: false
     t.text "whatsapp"
     t.index ["company_id", "created_at"], name: "idx_customers_company_created"
+    t.index ["company_id", "customer_value_score"], name: "idx_customers_company_value_score"
     t.index ["company_id", "is_recurring"], name: "index_customers_on_company_id_and_is_recurring"
     t.index ["company_id", "phone"], name: "index_customers_on_company_id_and_phone", unique: true
     t.index ["company_id"], name: "index_customers_on_company_id"
@@ -1135,6 +1140,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.bigint "coupon_id"
     t.bigint "customer_id"
     t.string "customer_phone", null: false
+    t.string "benefit_decision", default: "none", null: false
+    t.string "benefit_reason"
+    t.string "customer_segment"
+    t.integer "customer_value_score", default: 0, null: false
+    t.integer "conversion_minutes"
     t.text "error_message"
     t.bigint "marketing_message_log_id"
     t.jsonb "metadata_json", default: {}, null: false
@@ -1142,6 +1152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.bigint "recovered_order_id"
     t.integer "recovered_value_cents", default: 0, null: false
     t.datetime "responded_at"
+    t.jsonb "reputation_snapshot", default: {}, null: false
     t.datetime "scheduled_at"
     t.datetime "sent_at"
     t.string "source", default: "store_ai_cart", null: false
@@ -1154,6 +1165,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.integer "abandoned_minutes", default: 0, null: false
     t.string "delivery_strategy", default: "template", null: false
     t.datetime "updated_at", null: false
+    t.index ["company_id", "benefit_decision", "status"], name: "idx_sales_recovery_events_benefit"
+    t.index ["company_id", "customer_value_score"], name: "idx_sales_recovery_events_customer_value"
     t.index ["company_id", "recovery_score"], name: "idx_sales_recovery_events_score"
     t.index ["company_id", "status", "block_reason", "created_at"], name: "idx_sales_recovery_events_blocked"
     t.index ["company_id", "customer_phone", "created_at"], name: "idx_sales_recovery_events_customer"

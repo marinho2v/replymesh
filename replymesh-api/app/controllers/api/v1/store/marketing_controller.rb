@@ -175,21 +175,49 @@ module Api
             .map { |name, rows| { name: name, count: rows.size } }
             .sort_by { |row| -row[:count] }
             .first(5)
+          customer_value_average = current_company.customers.average(:customer_value_score).to_f.round(1)
+          conversion_minutes_average = recovered.where.not(conversion_minutes: nil).average(:conversion_minutes).to_f.round(1)
+          value_lost_cents = current_company.sales_recovery_events.where(status: %w[queued sent skipped failed]).sum(:cart_total_cents)
+          customers_recovered = recovered.where.not(customer_id: nil).distinct.count(:customer_id)
+          paused_customers = current_company.customers.where("recovery_reputation_json ->> 'paused' = ?", "true").count
+          benefit_conversion = conversion_group(sent, :benefit_decision)
+          strategy_conversion = conversion_group(sent, :delivery_strategy)
+          hour_conversion = conversion_by_time(sent, "hour")
+          weekday_conversion = conversion_by_time(sent, "dow")
+          ranking = current_company.sales_recovery_events
+            .where(status: %w[queued sent skipped])
+            .where("created_at >= ?", 7.days.ago)
+            .includes(:customer)
+            .order(recovery_score: :desc, cart_total_cents: :desc)
+            .limit(8)
+            .map { |event| serialize_recovery_ranking(event) }
 
           {
             today_recovered: today.recovered.count,
             recovered_carts: recovered.count,
             recovered_value_cents: recovered.sum(:recovered_value_cents),
+            lost_value_cents: value_lost_cents,
             messages_sent: sent.count,
             recovery_rate_percent: sent.count.positive? ? ((recovered.count.to_f / sent.count) * 100).round(1) : 0,
             coupons_used: recovered.where.not(coupon_id: nil).count,
+            free_delivery_used: recovered.where(benefit_decision: "free_shipping").count,
             blocked_messages: blocked.count,
             average_recovery_score: average_score.to_f.round(1),
+            average_customer_value_score: customer_value_average,
             top_coupon: top_coupon ? { code: top_coupon[0], count: top_coupon[1] } : nil,
             average_recovered_value_cents: recovered.count.positive? ? (recovered.sum(:recovered_value_cents) / recovered.count) : 0,
+            average_conversion_minutes: conversion_minutes_average,
+            customers_recovered: customers_recovered,
+            paused_customers: paused_customers,
             queued: current_company.sales_recovery_events.queued.count,
             failed: current_company.sales_recovery_events.where(status: "failed").count,
-            top_products: top_products
+            top_products: top_products,
+            ranking: ranking,
+            insights: SalesRecoveryIntelligence.new(company: current_company, setting: SalesRecoverySetting.for_company(current_company)).insights,
+            conversion_by_benefit: benefit_conversion,
+            conversion_by_strategy: strategy_conversion,
+            conversion_by_hour: hour_conversion,
+            conversion_by_weekday: weekday_conversion
           }
         end
 
@@ -204,6 +232,12 @@ module Api
             coupon: event.coupon&.code,
             block_reason: event.block_reason,
             recovery_score: event.recovery_score,
+            recovery_chance: SalesRecoveryIntelligence.new(company: current_company, setting: SalesRecoverySetting.for_company(current_company)).chance_label(event.recovery_score),
+            customer_value_score: event.customer_value_score,
+            customer_segment: event.customer_segment,
+            benefit_decision: event.benefit_decision,
+            benefit_reason: event.benefit_reason,
+            conversion_minutes: event.conversion_minutes,
             abandoned_minutes: event.abandoned_minutes,
             delivery_strategy: event.delivery_strategy,
             response: event.responded_at.present? ? "respondeu" : nil,
@@ -216,6 +250,36 @@ module Api
             recovered_value_cents: event.recovered_value_cents,
             created_at: event.created_at
           }
+        end
+
+        def serialize_recovery_ranking(event)
+          {
+            id: event.id,
+            customer: event.customer&.full_name.presence || "Cliente",
+            recovery_score: event.recovery_score,
+            recovery_chance: SalesRecoveryIntelligence.new(company: current_company, setting: SalesRecoverySetting.for_company(current_company)).chance_label(event.recovery_score),
+            customer_value_score: event.customer_value_score,
+            customer_segment: event.customer_segment,
+            cart_total_cents: event.cart_total_cents,
+            benefit_decision: event.benefit_decision,
+            benefit_reason: event.benefit_reason,
+            status: event.status
+          }
+        end
+
+        def conversion_group(scope, column)
+          scope.group(column).count.map do |name, total|
+            recovered_count = scope.where(column => name, status: "recovered").count
+            { name: name.presence || "indefinido", total: total, recovered: recovered_count, rate: total.positive? ? ((recovered_count.to_f / total) * 100).round(1) : 0 }
+          end.sort_by { |row| -row[:total] }
+        end
+
+        def conversion_by_time(scope, part)
+          expression = part == "hour" ? "EXTRACT(HOUR FROM sent_at)" : "EXTRACT(DOW FROM sent_at)"
+          scope.where.not(sent_at: nil).group(Arel.sql(expression)).count.map do |name, total|
+            recovered_count = scope.where(status: "recovered").where(Arel.sql("#{expression} = #{name.to_i}")).count
+            { name: name.to_i, total: total, recovered: recovered_count, rate: total.positive? ? ((recovered_count.to_f / total) * 100).round(1) : 0 }
+          end.sort_by { |row| row[:name] }
         end
 
         def personalize(template, customer, coupon)

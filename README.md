@@ -1185,3 +1185,28 @@ ter a base da Automacao Inteligente para recuperacao segura de carrinhos:
 Relatorio:
 
 - `REPLYMESH_DEV_AUTOMATION_ENGINE_PHASE1_REPORT.md`
+
+## Fase DEV - Recovery Intelligence 1.6
+
+O Sales Recovery evoluiu para um motor de decisao comercial, mantendo Rails,
+ActiveJob, PostgreSQL, Evolution, IA existente e `Rails.cache`, sem nova
+infraestrutura.
+
+Principais pontos:
+
+- Customer Value Score por cliente, com segmento `novo`, `ativo`, `recorrente`
+  ou `VIP`;
+- Recovery Score do carrinho considerando valor, itens, abandono, horario,
+  perfil do cliente e reputacao recente;
+- decisao automatica de beneficio: lembrar sem desconto, cupom percentual ou
+  frete gratis;
+- reputacao anti-spam por cliente para pausar recuperacao quando houver muitas
+  mensagens ignoradas;
+- metricas e ranking `Quase comprando` na tela da loja;
+- insights automaticos de conversao por beneficio, IA/template, horario e dia;
+- logs enriquecidos sem adicionar telefone, tokens, Pix, cartao, prompts ou
+  respostas de IA aos novos campos.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_INTELLIGENCE_PHASE_1_6_REPORT.md`

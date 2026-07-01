@@ -1501,3 +1501,19 @@ slug do hostname e chama a API Rails filtrando pela empresa correta.
 
 Dominios proprios ficam preparados no banco, mas verificacao DNS/SSL e ativacao
 real permanecem para a Fase 16.
+
+## DEV - Automacao Inteligente / Recovery Intelligence 1.6
+
+A pagina `Marketing > Automacao Inteligente` agora exibe o Recovery como produto
+comercial para lojistas:
+
+- indicadores de valor recuperado, valor perdido, clientes recuperados e
+  clientes pausados;
+- Customer Value medio e Recovery Score medio;
+- ranking `Quase comprando`, ordenado por score;
+- insights automaticos sobre cupom, frete gratis, IA/template, horario e dia;
+- logs com perfil do cliente, chance de recuperacao e decisao comercial;
+- conversao por beneficio, por tipo de mensagem e por dia da semana.
+
+A tela continua consumindo as APIs existentes do store-template, sem nova
+infraestrutura e sem quebrar compatibilidade.

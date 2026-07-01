@@ -2409,5 +2409,10 @@ Fora do escopo:
 - [x] Envio reaproveita Evolution via `MarketingMessageService`.
 - [x] Logs e metricas por empresa criados.
 - [x] UI da loja criada em Marketing > Automacao Inteligente.
+- [x] Fase 1.6 adicionou Customer Value Score por cliente.
+- [x] Fase 1.6 adicionou Recovery Score inteligente por carrinho.
+- [x] Fase 1.6 adicionou decisao automatica de beneficio: sem desconto, cupom ou frete gratis.
+- [x] Fase 1.6 adicionou reputacao anti-spam e pausa automatica de clientes que ignoram recuperacoes.
+- [x] Fase 1.6 adicionou ranking `Quase comprando`, insights automaticos e metricas de conversao.
 - [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
 - [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.
