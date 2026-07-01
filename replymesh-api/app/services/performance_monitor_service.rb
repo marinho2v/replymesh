@@ -483,10 +483,34 @@ class PerformanceMonitorService
       second = read_cpu_times
       total_delta = second[:total] - first[:total]
       idle_delta = second[:idle] - first[:idle]
-      used = total_delta.positive? ? 100.0 * (total_delta - idle_delta) / total_delta : nil
-      { used_percent: used&.round(2), sample_ms: 50 }
+      sample_percent = total_delta.positive? ? 100.0 * (total_delta - idle_delta) / total_delta : nil
+      load_percent = cpu_load_percent
+      {
+        used_percent: (load_percent || sample_percent)&.round(2),
+        sample_percent: sample_percent&.round(2),
+        load_percent: load_percent&.round(2),
+        cores: cpu_core_count,
+        sample_ms: 50
+      }
     rescue StandardError
       { used_percent: nil }
+    end
+
+    def cpu_load_percent
+      load = load_average.first
+      cores = cpu_core_count
+      return nil if load.blank? || cores.to_i <= 0
+
+      [[(load.to_f / cores.to_f) * 100.0, 0].max, 100].min
+    rescue StandardError
+      nil
+    end
+
+    def cpu_core_count
+      require "etc"
+      Etc.nprocessors
+    rescue StandardError
+      1
     end
 
     def read_cpu_times

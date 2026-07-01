@@ -114,12 +114,16 @@ function ResourceCard({ icon, title, resource, warn, critical }) {
 }
 
 function ServiceCard({ id, data }) {
-  const tone = number(data?.errors) > 0 ? "red" : toneForMs(data?.average_ms, id === "ai" ? 1200 : 800, id === "ai" ? 2000 : 2000);
+  const calls = number(data?.calls);
+  const hasCalls = calls > 0;
+  const tone = number(data?.errors) > 0 ? "red" : hasCalls ? toneForMs(data?.average_ms, id === "ai" ? 1200 : 800, id === "ai" ? 2000 : 2000) : "green";
+  const value = hasCalls ? ms(data?.average_ms) : "Sem chamadas ainda";
+  const subtitle = hasCalls ? `${count(data?.calls)} chamadas / ${count(data?.errors)} erros` : "Monitor aguardando o primeiro uso";
   return (
-    <MetricCard icon={id === "ai" ? "Bot" : id === "cloudflare_r2" ? "Globe" : id === "mercado_pago" ? "CreditCard" : "MessageCircle"} title={serviceLabels[id]} value={ms(data?.average_ms)} subtitle={`${count(data?.calls)} chamadas / ${count(data?.errors)} erros`} tone={tone}>
+    <MetricCard icon={id === "ai" ? "Bot" : id === "cloudflare_r2" ? "Globe" : id === "mercado_pago" ? "CreditCard" : "MessageCircle"} title={serviceLabels[id]} value={value} subtitle={subtitle} tone={tone}>
       <div className="perf-mini-grid">
-        <span>Maior <b>{ms(data?.max_ms)}</b></span>
-        <span>Menor <b>{ms(data?.min_ms)}</b></span>
+        <span>Maior <b>{hasCalls ? ms(data?.max_ms) : "Aguardando"}</b></span>
+        <span>Menor <b>{hasCalls ? ms(data?.min_ms) : "Aguardando"}</b></span>
       </div>
     </MetricCard>
   );
@@ -261,6 +265,7 @@ export function Performance() {
   const topPayloads = endpoints.top_by_payload || [];
   const topRequestPayloads = endpoints.top_by_request_payload || [];
   const topLoad = companies.top_load || [];
+  const monitorActive = data?.enabled || data?.status === "observing";
   const slowTotalPages = Math.max(1, Math.ceil(slowQueries.length / SLOW_QUERY_PAGE_SIZE));
   const indexTotalPages = Math.max(1, Math.ceil(indexes.length / INDEX_PAGE_SIZE));
   const visibleSlowQueries = slowQueries.slice((slowPage - 1) * SLOW_QUERY_PAGE_SIZE, slowPage * SLOW_QUERY_PAGE_SIZE);
@@ -285,20 +290,20 @@ export function Performance() {
       <div className="perf-hero card">
         <div>
           <span className="eyebrow">Status da plataforma</span>
-          <h2>{data?.enabled ? "Observabilidade ativa" : "Monitor em espera"}</h2>
+          <h2>{monitorActive ? "Observabilidade ativa" : "Coleta aguardando ativacao"}</h2>
           <p>
-            Endpoint unico: <span className="mono">/api/v1/master/performance</span>. Atualizacao {hidden ? "reduzida porque a aba esta oculta" : "automatica a cada 5 segundos"}.
+            Endpoint unico: <span className="mono">/api/v1/master/performance</span>. {monitorActive ? "As metricas sao preenchidas conforme o sistema e as integracoes sao usadas." : "Ative a coleta no ambiente para registrar eventos operacionais."} Atualizacao {hidden ? "reduzida porque a aba esta oculta" : "automatica a cada 5 segundos"}.
           </p>
         </div>
         <div className="perf-status-stack">
-          <HealthBadge tone={error ? "red" : data?.enabled ? "green" : "amber"}>{error ? "Offline" : data?.enabled ? "Online" : "Pendente"}</HealthBadge>
+          <HealthBadge tone={error ? "red" : monitorActive ? "green" : "amber"}>{error ? "Offline" : monitorActive ? "Online" : "Pendente"}</HealthBadge>
           <span>Ultima atualizacao: <b>{lastUpdated ? dtf.format(lastUpdated) : EMPTY}</b></span>
           <span>Janela: <b>{count(data?.window_size)} eventos</b></span>
         </div>
       </div>
 
       <div className="perf-grid-main">
-        <MetricCard icon="Cpu" title="CPU" value={pct(system.cpu?.used_percent)} subtitle={`Load average: ${(system.load_average || []).join(" / ") || EMPTY}`} tone={toneForPercent(system.cpu?.used_percent, 80, 90)}>
+        <MetricCard icon="Cpu" title="CPU" value={pct(system.cpu?.used_percent)} subtitle={`Load average: ${(system.load_average || []).join(" / ") || EMPTY}${system.cpu?.cores ? ` / ${system.cpu.cores} CPU` : ""}`} tone={toneForPercent(system.cpu?.used_percent, 80, 90)}>
           <ProgressBar value={system.cpu?.used_percent} warn={80} critical={90} />
         </MetricCard>
         <ResourceCard icon="Activity" title="RAM" resource={system.memory} warn={85} critical={95} />
