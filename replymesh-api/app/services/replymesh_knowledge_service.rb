@@ -49,7 +49,7 @@ class ReplymeshKnowledgeService
     /conect|desconect|qrcode|qr code/ => ["QR Code WhatsApp", "WhatsApp / Evolution", "WhatsApp e Evolution Go"],
     /mensagem|template|texto automatic/ => ["Templates WhatsApp"],
     /campanha|marketing|disparo/ => ["Marketing WhatsApp"],
-    /recuperador|recuperacao|carrinho abandonado/ => ["Recuperador de vendas"],
+    /recuperador|recuperacao|carrinho abandonado|automacao inteligente/ => ["Automacao Inteligente"],
     /aceit|cancel|status do pedido|pedido/ => ["Pedidos"],
     /cozinha|kds|preparo/ => ["KDS / Cozinha", "Pedidos"],
     /relatorio|faturamento|indicador/ => ["Relatorios"],

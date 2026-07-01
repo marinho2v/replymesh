@@ -53,6 +53,8 @@ class Company < ApplicationRecord
   has_many :app_banners,               dependent: :destroy
   has_many :marketing_campaigns,       dependent: :destroy
   has_many :marketing_message_logs,    dependent: :destroy
+  has_one  :sales_recovery_setting,     dependent: :destroy
+  has_many :sales_recovery_events,      dependent: :destroy
   has_one  :android_app_request,        dependent: :destroy
   has_many :whatsapp_message_logs,     dependent: :destroy
   has_many :support_tickets,           dependent: :destroy

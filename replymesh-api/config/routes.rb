@@ -290,6 +290,10 @@ Rails.application.routes.draw do
         post "marketing/send_individual", to: "marketing#send_individual"
         post "marketing/campaigns/:id/send", to: "marketing#send_campaign"
         get  "sales_recovery/customers", to: "marketing#recovery_customers"
+        get  "sales_recovery", to: "marketing#sales_recovery"
+        get  "sales_recovery/settings", to: "marketing#sales_recovery_settings"
+        patch "sales_recovery/settings", to: "marketing#update_sales_recovery_settings"
+        post "sales_recovery/run", to: "marketing#run_sales_recovery"
 
         get  "android_app", to: "android_apps#show"
         post "android_app", to: "android_apps#create"

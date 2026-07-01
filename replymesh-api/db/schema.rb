@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_30_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1127,6 +1127,61 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_033000) do
     t.index ["stock_item_id"], name: "index_products_on_stock_item_id"
   end
 
+  create_table "sales_recovery_events", force: :cascade do |t|
+    t.integer "cart_total_cents", default: 0, null: false
+    t.jsonb "cart_snapshot", default: {}, null: false
+    t.bigint "company_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "coupon_id"
+    t.bigint "customer_id"
+    t.string "customer_phone", null: false
+    t.text "error_message"
+    t.bigint "marketing_message_log_id"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.datetime "recovered_at"
+    t.bigint "recovered_order_id"
+    t.integer "recovered_value_cents", default: 0, null: false
+    t.datetime "responded_at"
+    t.datetime "scheduled_at"
+    t.datetime "sent_at"
+    t.string "source", default: "store_ai_cart", null: false
+    t.string "status", default: "queued", null: false
+    t.bigint "store_ai_cart_id"
+    t.text "message"
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "customer_phone", "created_at"], name: "idx_sales_recovery_events_customer"
+    t.index ["company_id", "status", "scheduled_at"], name: "idx_sales_recovery_events_queue"
+    t.index ["company_id", "store_ai_cart_id"], name: "idx_sales_recovery_events_unique_cart", unique: true, where: "(store_ai_cart_id IS NOT NULL)"
+    t.index ["company_id"], name: "index_sales_recovery_events_on_company_id"
+    t.index ["coupon_id"], name: "index_sales_recovery_events_on_coupon_id"
+    t.index ["customer_id"], name: "index_sales_recovery_events_on_customer_id"
+    t.index ["marketing_message_log_id"], name: "index_sales_recovery_events_on_marketing_message_log_id"
+    t.index ["recovered_order_id"], name: "index_sales_recovery_events_on_recovered_order_id"
+    t.index ["store_ai_cart_id"], name: "index_sales_recovery_events_on_store_ai_cart_id"
+  end
+
+  create_table "sales_recovery_settings", force: :cascade do |t|
+    t.integer "allowed_weekdays", default: [], null: false, array: true
+    t.boolean "auto_coupon", default: true, null: false
+    t.bigint "company_id", null: false
+    t.integer "coupon_validity_hours", default: 48, null: false
+    t.datetime "created_at", null: false
+    t.integer "daily_limit", default: 20, null: false
+    t.integer "default_discount_percent", default: 10, null: false
+    t.integer "delay_minutes", default: 60, null: false
+    t.boolean "enabled", default: false, null: false
+    t.boolean "free_delivery", default: false, null: false
+    t.text "message_template"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.integer "per_customer_daily_limit", default: 1, null: false
+    t.integer "queue_spacing_minutes", default: 3, null: false
+    t.datetime "updated_at", null: false
+    t.boolean "use_ai", default: true, null: false
+    t.string "window_end", default: "21:00", null: false
+    t.string "window_start", default: "08:00", null: false
+    t.index ["company_id"], name: "index_sales_recovery_settings_on_company_id", unique: true
+  end
+
   create_table "smtp_settings", force: :cascade do |t|
     t.string "authentication", default: "login", null: false
     t.text "confirmation_email_intro"
@@ -1725,6 +1780,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_033000) do
   add_foreign_key "products", "categories", on_delete: :restrict
   add_foreign_key "products", "companies", on_delete: :cascade
   add_foreign_key "products", "inventory_items", column: "stock_item_id", on_delete: :nullify
+  add_foreign_key "sales_recovery_events", "companies"
+  add_foreign_key "sales_recovery_events", "coupons"
+  add_foreign_key "sales_recovery_events", "customers"
+  add_foreign_key "sales_recovery_events", "marketing_message_logs"
+  add_foreign_key "sales_recovery_events", "store_ai_carts"
+  add_foreign_key "sales_recovery_settings", "companies"
   add_foreign_key "store_ai_carts", "companies"
   add_foreign_key "store_ai_carts", "store_ai_conversations"
   add_foreign_key "store_ai_conversations", "companies"

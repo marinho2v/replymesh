@@ -2395,3 +2395,19 @@ Fora do escopo:
 - [ ] DNS wildcard `*.replymesh.cloud` fica para VPS.
 - [ ] Traefik/Nginx e SSL real ficam para VPS.
 - [ ] Fase 16 nao iniciada.
+
+# DEV - Automacao Inteligente de Vendas / Recovery Engine AI Fase 1
+
+- [x] Auditoria do recuperador manual, Evolution, cupons, IA da loja, carrinhos e multiempresa.
+- [x] Recuperador manual preservado na nova pagina de Automacao Inteligente.
+- [x] Configuracao por empresa criada para ativar/pausar a automacao.
+- [x] Motor `SalesRecoveryEngine` criado para localizar carrinhos abandonados da IA.
+- [x] Limites diarios, janela de horario, dias permitidos e limite por cliente aplicados.
+- [x] Cupons unicos `VOLTA-XXXXX` criados automaticamente quando habilitado.
+- [x] Mensagens com IA usam provider global da loja quando configurado.
+- [x] Fallback sem IA usa templates variados e nao envia em massa.
+- [x] Envio reaproveita Evolution via `MarketingMessageService`.
+- [x] Logs e metricas por empresa criados.
+- [x] UI da loja criada em Marketing > Automacao Inteligente.
+- [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
+- [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.

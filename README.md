@@ -1166,3 +1166,22 @@ SSL e roteamento real ficam para a Fase 16/VPS.
 Auditoria completa:
 
 - `REPLYMESH_PHASE_15_23_DOMAINS_DEPLOY_READINESS.md`
+
+## Fase DEV - Automacao Inteligente de Vendas
+
+O antigo Recuperador de Vendas manual foi preservado e a tela da loja passou a
+ter a base da Automacao Inteligente para recuperacao segura de carrinhos:
+
+- configuracao por empresa, com janela de envio, dias permitidos e limite diario;
+- deteccao de carrinhos da IA com produtos e sem finalizacao;
+- fila gradual via ActiveJob padrao do Rails, sem Redis ou Sidekiq;
+- cupons unicos por cliente/carrinho, com validade configuravel;
+- mensagens por IA quando o provider da loja estiver configurado, com fallback
+  para templates humanos variados;
+- envio reaproveitando o `MarketingMessageService` e Evolution existentes;
+- logs por empresa com status, cupom, mensagem, erro e conversao;
+- dashboard da pagina com valor recuperado, mensagens, taxa e produtos.
+
+Relatorio:
+
+- `REPLYMESH_DEV_AUTOMATION_ENGINE_PHASE1_REPORT.md`

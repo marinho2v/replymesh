@@ -1,98 +1,242 @@
-import { useEffect, useState } from 'react'
-import { MessageCircle, RefreshCw, Send, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Bot, Gift, MessageCircle, Play, RefreshCw, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Select } from '../../components/ui/Select'
 import { Textarea } from '../../components/ui/Textarea'
 import {
-  createMarketingCampaign,
   formatMoney,
-  getSalesRecoveryCustomers,
-  sendIndividualMarketingMessage,
+  getSalesRecoveryAutomation,
+  runSalesRecoveryEngine,
+  updateSalesRecoverySettings,
 } from '../../services/marketingWhatsapp'
 
-const templates = {
-  missing: 'Ola, {nome}! Sentimos sua falta. Que tal fazer um novo pedido hoje? {link_loja}',
-  coupon: 'Ola, {nome}! Preparamos um cupom de retorno para voce: {cupom}. Aproveite em {link_loja}',
-  free_shipping: 'Ola, {nome}! Hoje temos uma condicao especial de frete gratis. Confira: {link_loja}',
-  special: 'Ola, {nome}! Tem promocao especial esperando por voce. Veja o cardapio: {link_loja}',
-  vip: 'Ola, {nome}! Voce e cliente VIP e temos uma oferta especial para seu proximo pedido: {link_loja}',
+const defaultSettings = {
+  enabled: false,
+  delay_minutes: 60,
+  daily_limit: 20,
+  window_start: '08:00',
+  window_end: '21:00',
+  allowed_weekdays: [1, 2, 3, 4, 5, 6, 0],
+  use_ai: true,
+  auto_coupon: true,
+  default_discount_percent: 10,
+  free_delivery: false,
+  coupon_validity_hours: 48,
+  per_customer_daily_limit: 1,
+  queue_spacing_minutes: 3,
+  message_template: '',
+}
+
+const weekdays = [
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sab' },
+  { value: 0, label: 'Dom' },
+]
+
+const statusLabel = {
+  queued: 'Na fila',
+  sent: 'Enviada',
+  failed: 'Falhou',
+  recovered: 'Recuperado',
+  ignored: 'Ignorado',
+  skipped: 'Ignorado',
 }
 
 export default function SalesRecovery() {
-  const [days, setDays] = useState('30')
-  const [customers, setCustomers] = useState([])
-  const [selected, setSelected] = useState(new Set())
-  const [template, setTemplate] = useState('missing')
-  const [message, setMessage] = useState(templates.missing)
-  const load = async () => {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [settings, setSettings] = useState(defaultSettings)
+  const [metrics, setMetrics] = useState({})
+  const [logs, setLogs] = useState([])
+
+  const loadAutomation = async () => {
     try {
-      setCustomers(await getSalesRecoveryCustomers(days))
-      setSelected(new Set())
-    } catch (error) { toast.error(error.message) }
+      setLoading(true)
+      const payload = await getSalesRecoveryAutomation()
+      setSettings({ ...defaultSettings, ...(payload.settings || {}) })
+      setMetrics(payload.metrics || {})
+      setLogs(payload.logs || [])
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
   }
-  useEffect(() => { load() }, [days])
-  const allSelected = customers.length > 0 && selected.size === customers.length
-  const selectAll = () => setSelected(allSelected ? new Set() : new Set(customers.map((customer) => customer.id)))
-  const toggle = (id) => setSelected((current) => {
-    const next = new Set(current)
-    next.has(id) ? next.delete(id) : next.add(id)
-    return next
-  })
-  const chooseTemplate = (value) => {
-    setTemplate(value)
-    setMessage(templates[value])
+
+  useEffect(() => { loadAutomation() }, [])
+
+  const headline = useMemo(() => (
+    `Replymesh recuperou ${formatMoney(metrics.recovered_value_cents || 0)} em carrinhos`
+  ), [metrics.recovered_value_cents])
+
+  const setField = (field, value) => setSettings((current) => ({ ...current, [field]: value }))
+
+  const toggleWeekday = (day) => {
+    setSettings((current) => {
+      const daysSet = new Set(current.allowed_weekdays || [])
+      daysSet.has(day) ? daysSet.delete(day) : daysSet.add(day)
+      return { ...current, allowed_weekdays: [...daysSet] }
+    })
   }
-  const sendIndividual = async (customer) => {
-    if (!confirm(`Enviar mensagem agora para ${customer.full_name}?`)) return
+
+  const saveSettings = async () => {
     try {
-      const personalized = message
-        .replaceAll('{nome}', customer.full_name)
-        .replaceAll('{cupom}', '')
-      await sendIndividualMarketingMessage(customer.phone, personalized)
-      toast.success('Mensagem individual enviada e registrada')
-    } catch (error) { toast.error(error.message) }
+      setSaving(true)
+      const saved = await updateSalesRecoverySettings(settings)
+      setSettings({ ...defaultSettings, ...saved })
+      toast.success('Automacao salva com sucesso')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSaving(false)
+    }
   }
-  const createCampaign = async () => {
-    if (!selected.size) return toast.error('Selecione pelo menos um cliente')
-    if (!confirm(`Criar campanha para ${selected.size} cliente(s)? Nenhuma mensagem sera enviada automaticamente.`)) return
+
+  const runEngine = async () => {
     try {
-      await createMarketingCampaign({
-        campaign: {
-          title: `Recuperacao ${days} dias - ${new Date().toLocaleDateString('pt-BR')}`,
-          message_template: message,
-          pause_seconds: 45,
-          daily_limit: 100,
-        },
-        customer_ids: [...selected],
-      })
-      toast.success('Campanha criada. Revise e envie pelo Marketing WhatsApp.')
-    } catch (error) { toast.error(error.message) }
+      const payload = await runSalesRecoveryEngine()
+      setMetrics(payload.metrics || metrics)
+      toast.success(`Motor executado: ${payload.result?.stats?.sent || 0} mensagem(ns) enviadas`)
+      await loadAutomation()
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
+
   return <div className="space-y-6">
-    <div><h1 className="text-3xl font-bold text-white">Recuperador de Vendas</h1><p className="text-gray-400">Encontre clientes que pararam de comprar.</p></div>
-    <Card><CardContent className="p-5">
-      <div className="flex flex-wrap items-end gap-3 mb-5"><div className="w-64"><Select label="Periodo sem comprar" value={days} onChange={(e) => setDays(e.target.value)} options={[7,15,30,60,90].map((value) => ({ value: String(value), label: `${value} dias` }))} /></div><Button variant="secondary" onClick={load}><RefreshCw size={16} className="mr-2" />Atualizar</Button><Button variant="secondary" onClick={selectAll}><Users size={16} className="mr-2" />{allSelected ? 'Limpar selecao' : 'Selecionar todos filtrados'}</Button></div>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-400"><th></th><th>Cliente</th><th>Telefone</th><th>Ultimo pedido</th><th>Dias</th><th>Pedidos</th><th>Total</th><th>Ticket medio</th><th>Acao</th></tr></thead>
-        <tbody>{customers.map((customer) => <tr key={customer.id} className="border-t border-dark-700 text-gray-200"><td className="py-3"><input type="checkbox" checked={selected.has(customer.id)} onChange={() => toggle(customer.id)} /></td><td>{customer.full_name}</td><td>{customer.phone}</td><td>{new Date(customer.last_order_at).toLocaleDateString('pt-BR')}</td><td>{customer.days_without_order}</td><td>{customer.total_orders}</td><td>{formatMoney(customer.total_spent_cents)}</td><td>{formatMoney(customer.average_ticket_cents)}</td><td><Button size="sm" variant="secondary" onClick={() => sendIndividual(customer)}><MessageCircle size={14} className="mr-1" />Enviar</Button></td></tr>)}</tbody>
-      </table>{!customers.length && <p className="py-8 text-center text-gray-400">Nenhum cliente encontrado neste periodo.</p>}</div>
-    </CardContent></Card>
-    <Card><CardContent className="p-5 space-y-4">
-      <div className="grid gap-4 md:grid-cols-[260px_1fr]">
-        <Select label="Template pronto" value={template} onChange={(event) => chooseTemplate(event.target.value)} options={[
-          { value: 'missing', label: 'Sentimos sua falta' },
-          { value: 'coupon', label: 'Cupom de retorno' },
-          { value: 'free_shipping', label: 'Frete gratis' },
-          { value: 'special', label: 'Promocao especial' },
-          { value: 'vip', label: 'Cliente VIP' },
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-400">Marketing & Automacao</p>
+        <h1 className="mt-2 text-3xl font-black text-white">Automacao Inteligente</h1>
+        <p className="text-gray-400">Recupere carrinhos abandonados com IA, cupons e WhatsApp sem envio em massa.</p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="secondary" onClick={loadAutomation}><RefreshCw size={16} className="mr-2" />Atualizar</Button>
+        <Button variant="secondary" onClick={runEngine}><Play size={16} className="mr-2" />Executar teste seguro</Button>
+        <Button onClick={saveSettings} disabled={saving}>{saving ? 'Salvando...' : 'Salvar automacao'}</Button>
+      </div>
+    </div>
+
+    <Card className="border-primary-500/30 bg-gradient-to-br from-primary-500/15 to-dark-900">
+      <CardContent className="grid gap-4 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div>
+          <div className="flex items-center gap-3">
+            <span className="rounded-2xl bg-primary-500 p-3 text-dark-950"><Sparkles size={22} /></span>
+            <div>
+              <h2 className="text-2xl font-black text-white">{headline}</h2>
+              <p className="text-sm text-gray-300">A engine trabalha com limites, janela de horario e isolamento por empresa.</p>
+            </div>
+          </div>
+        </div>
+        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dark-700 bg-dark-950/70 px-4 py-3 text-white">
+          <input type="checkbox" checked={settings.enabled} onChange={(event) => setField('enabled', event.target.checked)} />
+          <span className="font-bold">{settings.enabled ? 'Recuperador ativo' : 'Recuperador pausado'}</span>
+        </label>
+      </CardContent>
+    </Card>
+
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <Metric icon={TrendingUp} label="Hoje recuperados" value={metrics.today_recovered || 0} />
+      <Metric icon={Users} label="Carrinhos recuperados" value={metrics.recovered_carts || 0} />
+      <Metric icon={Gift} label="Valor recuperado" value={formatMoney(metrics.recovered_value_cents || 0)} />
+      <Metric icon={MessageCircle} label="Mensagens enviadas" value={metrics.messages_sent || 0} />
+      <Metric icon={ShieldCheck} label="Taxa recuperacao" value={`${metrics.recovery_rate_percent || 0}%`} />
+      <Metric icon={Gift} label="Cupons usados" value={metrics.coupons_used || 0} />
+    </div>
+
+    <Card><CardContent className="space-y-6 p-5">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ToggleCard title="Usar IA nas mensagens" description="Gera textos naturais com contexto do carrinho." checked={settings.use_ai} onChange={(value) => setField('use_ai', value)} icon={Bot} />
+        <ToggleCard title="Gerar cupom automatico" description="Cria cupom unico para cada recuperacao." checked={settings.auto_coupon} onChange={(value) => setField('auto_coupon', value)} icon={Gift} />
+        <ToggleCard title="Frete gratis como beneficio" description="Troca desconto percentual por frete gratis." checked={settings.free_delivery} onChange={(value) => setField('free_delivery', value)} icon={ShieldCheck} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Select label="Tempo sem finalizar" value={String(settings.delay_minutes)} onChange={(e) => setField('delay_minutes', Number(e.target.value))} options={[
+          { value: '30', label: '30 minutos' }, { value: '60', label: '1 hora' }, { value: '120', label: '2 horas' },
+          { value: '240', label: '4 horas' }, { value: '720', label: '12 horas' }, { value: '1440', label: '24 horas' },
         ]} />
-        <Textarea label="Mensagem" rows={5} value={message} onChange={(event) => setMessage(event.target.value)} />
+        <Select label="Limite diario" value={String(settings.daily_limit)} onChange={(e) => setField('daily_limit', Number(e.target.value))} options={[10, 20, 30, 50, 100].map((value) => ({ value: String(value), label: `${value} mensagens/dia` }))} />
+        <Select label="Desconto padrao" value={String(settings.default_discount_percent)} onChange={(e) => setField('default_discount_percent', Number(e.target.value))} options={[5, 10, 15].map((value) => ({ value: String(value), label: `${value}%` }))} />
+        <Select label="Cupom valido por" value={String(settings.coupon_validity_hours)} onChange={(e) => setField('coupon_validity_hours', Number(e.target.value))} options={[24, 48, 72].map((value) => ({ value: String(value), label: `${value} horas` }))} />
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-amber-300">A campanha sera criada como rascunho. O envio em massa exige confirmacao no Marketing WhatsApp.</p>
-        <Button onClick={createCampaign}><Send size={16} className="mr-2" />Criar campanha ({selected.size})</Button>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Field label="Inicio da janela" type="time" value={settings.window_start} onChange={(e) => setField('window_start', e.target.value)} />
+        <Field label="Fim da janela" type="time" value={settings.window_end} onChange={(e) => setField('window_end', e.target.value)} />
+        <Field label="Limite por cliente/dia" type="number" min="1" max="5" value={settings.per_customer_daily_limit} onChange={(e) => setField('per_customer_daily_limit', Number(e.target.value))} />
+        <Field label="Intervalo da fila (min)" type="number" min="1" max="30" value={settings.queue_spacing_minutes} onChange={(e) => setField('queue_spacing_minutes', Number(e.target.value))} />
       </div>
+
+      <div>
+        <p className="mb-2 text-sm font-bold text-white">Dias permitidos</p>
+        <div className="flex flex-wrap gap-2">
+          {weekdays.map((day) => {
+            const active = (settings.allowed_weekdays || []).includes(day.value)
+            return <button key={day.value} type="button" onClick={() => toggleWeekday(day.value)} className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${active ? 'border-primary-500 bg-primary-500 text-dark-950' : 'border-dark-700 bg-dark-900 text-gray-300'}`}>{day.label}</button>
+          })}
+        </div>
+      </div>
+
+      <Textarea label="Mensagem personalizada opcional" rows={4} value={settings.message_template || ''} onChange={(e) => setField('message_template', e.target.value)} placeholder="Use {nome}, {loja}, {itens}, {beneficio}, {cupom}, {link_loja}. Se vazio, a Replymesh gera ou escolhe a mensagem automaticamente." />
     </CardContent></Card>
+
+    <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+      <Card><CardContent className="p-5">
+        <h3 className="mb-4 text-lg font-black text-white">Logs de recuperacao</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-gray-400"><th>Cliente</th><th>Status</th><th>Cupom</th><th>Total</th><th>Mensagem</th><th>Data</th></tr></thead>
+            <tbody>{logs.map((log) => <tr key={log.id} className="border-t border-dark-700 text-gray-200">
+              <td className="py-3"><div className="font-bold">{log.customer || 'Cliente'}</div><div className="text-xs text-gray-500">{log.phone}</div></td>
+              <td><span className="rounded-full bg-dark-800 px-2 py-1 text-xs">{statusLabel[log.status] || log.status}</span></td>
+              <td>{log.coupon || '-'}</td>
+              <td>{formatMoney(log.recovered_value_cents || log.cart_total_cents || 0)}</td>
+              <td className="max-w-md truncate text-gray-400">{log.error || log.message || '-'}</td>
+              <td>{log.created_at ? new Date(log.created_at).toLocaleString('pt-BR') : '-'}</td>
+            </tr>)}</tbody>
+          </table>
+          {!logs.length && <p className="py-8 text-center text-gray-400">{loading ? 'Carregando...' : 'Nenhum log de recuperacao ainda.'}</p>}
+        </div>
+      </CardContent></Card>
+      <Card><CardContent className="p-5">
+        <h3 className="mb-4 text-lg font-black text-white">Produtos mais recuperados</h3>
+        <div className="space-y-3">
+          {(metrics.top_products || []).map((item, index) => <div key={item.name} className="flex items-center justify-between rounded-xl border border-dark-700 bg-dark-900 p-3">
+            <span className="text-sm text-white">{index + 1}. {item.name}</span>
+            <span className="text-xs font-bold text-primary-300">{item.count}x</span>
+          </div>)}
+          {!(metrics.top_products || []).length && <p className="text-sm text-gray-400">Sem dados suficientes ainda.</p>}
+        </div>
+      </CardContent></Card>
+    </div>
+
   </div>
 }
+
+const Metric = ({ icon: Icon, label, value }) => <Card><CardContent className="p-4">
+  <Icon size={20} className="mb-3 text-primary-400" />
+  <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+  <p className="mt-1 text-2xl font-black text-white">{value}</p>
+</CardContent></Card>
+
+const ToggleCard = ({ icon: Icon, title, description, checked, onChange }) => <button type="button" onClick={() => onChange(!checked)} className={`rounded-2xl border p-4 text-left transition ${checked ? 'border-primary-500 bg-primary-500/10' : 'border-dark-700 bg-dark-900'}`}>
+  <div className="flex items-start gap-3">
+    <span className={`rounded-xl p-2 ${checked ? 'bg-primary-500 text-dark-950' : 'bg-dark-800 text-gray-400'}`}><Icon size={18} /></span>
+    <span>
+      <span className="block font-black text-white">{title}</span>
+      <span className="mt-1 block text-sm text-gray-400">{description}</span>
+    </span>
+  </div>
+</button>
+
+const Field = ({ label, ...props }) => <label className="block">
+  <span className="mb-2 block text-sm font-bold text-white">{label}</span>
+  <input {...props} className="w-full rounded-xl border border-dark-700 bg-dark-950 px-4 py-3 text-white outline-none focus:border-primary-500" />
+</label>

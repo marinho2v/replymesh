@@ -33,7 +33,7 @@ class FeatureCatalog
     ["store_ai", "IA da Loja", "pro", "ia_automacao", "Atendimento automatico da loja no WhatsApp."],
     ["whatsapp_templates", "Templates WhatsApp", "pro", "ia_automacao", "Edicao de templates de mensagens."],
     ["marketing_whatsapp", "Marketing WhatsApp", "pro", "ia_automacao", "Campanhas de WhatsApp."],
-    ["sales_recovery", "Recuperador de vendas", "pro", "ia_automacao", "Recuperacao de clientes inativos."],
+    ["sales_recovery", "Automacao Inteligente", "pro", "ia_automacao", "Recuperacao automatica de carrinhos e clientes."],
     ["coupons", "Cupons", "pro", "fidelizacao", "Cupons e descontos."],
     ["roulette", "Roleta premiada", "pro", "fidelizacao", "Roleta de premios."],
     ["inventory", "Controle de estoque", "pro", "estoque", "Itens e saldo de estoque."],

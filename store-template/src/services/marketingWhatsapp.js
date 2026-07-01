@@ -39,6 +39,18 @@ export const getSalesRecoveryCustomers = (days = 30) => request('/store/sales_re
   params: { days }, headers: headers(),
 }).then((payload) => payload.customers || [])
 
+export const getSalesRecoveryAutomation = () => request('/store/sales_recovery', {
+  headers: headers(),
+})
+
+export const updateSalesRecoverySettings = (settings) => request('/store/sales_recovery/settings', {
+  method: 'PATCH', body: { settings }, headers: headers(),
+}).then((payload) => payload.settings)
+
+export const runSalesRecoveryEngine = () => request('/store/sales_recovery/run', {
+  method: 'POST', headers: headers(),
+})
+
 export const formatMoney = (cents) => (Number(cents || 0) / 100).toLocaleString('pt-BR', {
   style: 'currency', currency: 'BRL',
 })

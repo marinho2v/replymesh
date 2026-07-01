@@ -7,6 +7,7 @@ class StoreAiCart < ApplicationRecord
 
   belongs_to :company
   belongs_to :store_ai_conversation
+  has_one :sales_recovery_event, dependent: :nullify
 
   validates :customer_phone, presence: true
   validates :stage, inclusion: { in: STAGES }
@@ -16,6 +17,7 @@ class StoreAiCart < ApplicationRecord
   scope :active, -> { where("expires_at > ?", Time.current).where.not(stage: %w[completed handoff]) }
 
   before_validation :set_default_expiration, on: :create
+  after_commit :schedule_sales_recovery, on: %i[create update]
 
   def expired?
     expires_at.present? && expires_at.past?
@@ -46,5 +48,15 @@ class StoreAiCart < ApplicationRecord
 
   def set_default_expiration
     self.expires_at ||= 2.hours.from_now
+  end
+
+  def schedule_sales_recovery
+    return if stage.in?(%w[completed handoff])
+    return if Array(items).blank? || customer_phone.blank?
+    return unless company&.sales_recovery_setting&.enabled?
+
+    SalesRecoveryEngineJob.set(wait: company.sales_recovery_setting.delay_minutes.minutes).perform_later(company.id)
+  rescue StandardError => e
+    Rails.logger.warn("Sales recovery schedule skipped for cart #{id}: #{e.class} #{e.message}")
   end
 end

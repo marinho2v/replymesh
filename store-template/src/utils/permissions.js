@@ -78,6 +78,7 @@ export const canAccessRoute = (userRole, route) => {
     '/admin/settings': ['admin'],
     '/admin/whatsapp-templates': ['admin'],
     '/admin/marketing-whatsapp': ['admin'],
+    '/admin/sales-recovery': ['admin'],
     '/admin/motoboys': ['admin', 'attendant'],
     '/admin/users': ['admin'],
     '/kitchen': ['kitchen'],
@@ -125,6 +126,7 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/settings', label: 'Configurações' },
       { path: '/admin/whatsapp-templates', label: 'Templates WhatsApp' },
       { path: '/admin/marketing-whatsapp', label: 'Marketing WhatsApp' },
+      { path: '/admin/sales-recovery', label: 'Automacao Inteligente' },
       { path: '/admin/users', label: 'Usuários' },
     ],
     attendant: [

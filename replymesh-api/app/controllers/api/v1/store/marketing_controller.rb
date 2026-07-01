@@ -80,10 +80,37 @@ module Api
           render_ok(customers: customers.order(last_order_at: :asc).limit(500).map { |customer| serialize_customer(customer).merge(days_without_order: ((Time.current - customer.last_order_at) / 1.day).floor, average_ticket_cents: customer.total_orders.positive? ? customer.total_spent_cents / customer.total_orders : 0) })
         end
 
+        def sales_recovery
+          setting = SalesRecoverySetting.for_company(current_company)
+          render_ok(
+            settings: setting.as_json_safe,
+            metrics: sales_recovery_metrics,
+            logs: current_company.sales_recovery_events.includes(:coupon, :customer, :store_ai_cart)
+              .order(created_at: :desc).limit(80).map { |event| serialize_recovery_event(event) }
+          )
+        end
+
+        def sales_recovery_settings
+          render_ok(settings: SalesRecoverySetting.for_company(current_company).as_json_safe)
+        end
+
+        def update_sales_recovery_settings
+          setting = SalesRecoverySetting.for_company(current_company)
+          setting.update!(sales_recovery_setting_params)
+          render_ok(settings: setting.as_json_safe)
+        rescue ActiveRecord::RecordInvalid => e
+          render_record_errors(e.record)
+        end
+
+        def run_sales_recovery
+          result = SalesRecoveryEngine.call(company: current_company)
+          render_ok(result: result, metrics: sales_recovery_metrics)
+        end
+
         private
 
         def require_marketing_feature!
-          feature = action_name == "recovery_customers" ? "sales_recovery" : "marketing_whatsapp"
+          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name == "run_sales_recovery" ? "sales_recovery" : "marketing_whatsapp"
           require_feature!(feature)
         end
 
@@ -102,6 +129,15 @@ module Api
           params.require(:campaign).permit(:title, :message_template, :coupon_code, :pause_seconds, :daily_limit)
         end
 
+        def sales_recovery_setting_params
+          params.require(:settings).permit(
+            :enabled, :delay_minutes, :daily_limit, :window_start, :window_end, :use_ai,
+            :auto_coupon, :default_discount_percent, :free_delivery, :coupon_validity_hours,
+            :per_customer_daily_limit, :queue_spacing_minutes, :message_template,
+            allowed_weekdays: []
+          )
+        end
+
         def serialize_customer(customer)
           address = customer.customer_addresses.first
           { id: customer.id, full_name: customer.full_name, phone: customer.whatsapp.presence || customer.phone,
@@ -118,6 +154,54 @@ module Api
 
         def serialize_log(log)
           { id: log.id, phone: log.phone, status: log.status, sent_at: log.sent_at, provider: log.provider }
+        end
+
+        def sales_recovery_metrics
+          today = current_company.sales_recovery_events.today_for(current_company)
+          recovered = current_company.sales_recovery_events.recovered
+          sent = current_company.sales_recovery_events.where(status: %w[sent recovered])
+          top_products = current_company.sales_recovery_events
+            .where(status: %w[sent recovered])
+            .order(created_at: :desc)
+            .limit(200)
+            .flat_map { |event| Array(event.cart_snapshot["items"]) }
+            .group_by { |item| item["name"].presence || item["product_name"].presence || "Produto" }
+            .map { |name, rows| { name: name, count: rows.size } }
+            .sort_by { |row| -row[:count] }
+            .first(5)
+
+          {
+            today_recovered: today.recovered.count,
+            recovered_carts: recovered.count,
+            recovered_value_cents: recovered.sum(:recovered_value_cents),
+            messages_sent: sent.count,
+            recovery_rate_percent: sent.count.positive? ? ((recovered.count.to_f / sent.count) * 100).round(1) : 0,
+            coupons_used: recovered.where.not(coupon_id: nil).count,
+            queued: current_company.sales_recovery_events.queued.count,
+            failed: current_company.sales_recovery_events.where(status: "failed").count,
+            top_products: top_products
+          }
+        end
+
+        def serialize_recovery_event(event)
+          {
+            id: event.id,
+            customer: event.customer&.full_name,
+            phone: event.customer_phone,
+            cart_id: event.store_ai_cart_id,
+            status: event.status,
+            message: event.message,
+            coupon: event.coupon&.code,
+            response: event.responded_at.present? ? "respondeu" : nil,
+            purchase: event.recovered_order_id.present?,
+            ignored: event.status == "ignored",
+            error: event.error_message,
+            sent_at: event.sent_at,
+            recovered_at: event.recovered_at,
+            cart_total_cents: event.cart_total_cents,
+            recovered_value_cents: event.recovered_value_cents,
+            created_at: event.created_at
+          }
         end
 
         def personalize(template, customer, coupon)
