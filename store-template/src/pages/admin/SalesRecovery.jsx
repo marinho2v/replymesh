@@ -230,6 +230,42 @@ export default function SalesRecovery() {
       </CardContent>
     </Card>}
 
+    <Card className="border-primary-500/20 bg-dark-950/70">
+      <CardContent className="space-y-5 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-400">Recovery Insights</p>
+            <h3 className="mt-1 text-2xl font-black text-white">Aprendizado automatico de recuperacao</h3>
+            <p className="text-sm text-gray-400">A Replymesh compara mensagens, horarios, cupons e categorias que mais viram pedido nesta empresa.</p>
+          </div>
+          <span className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-black text-primary-300">
+            Taxa geral {metrics.learning?.overall_rate_percent || 0}%
+          </span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Insight label="Melhor estrategia" value={metrics.learning?.best_strategy?.label || '-'} helper={metrics.learning?.best_strategy?.insight} />
+          <Insight label="Melhor horario" value={metrics.learning?.best_hour?.label || '-'} helper={`${metrics.learning?.best_hour?.rate_percent || 0}% de conversao`} />
+          <Insight label="Melhor dia" value={metrics.learning?.best_day?.label || '-'} helper={`${metrics.learning?.best_day?.rate_percent || 0}% de conversao`} />
+          <Insight label="Cupom campeao" value={metrics.learning?.best_coupon?.label || '-'} helper={`${metrics.learning?.best_coupon?.recovered || 0} recuperados`} />
+          <Insight label="IA converteu" value={`${metrics.learning?.ai_conversion_percent || 0}%`} helper="comparado aos recoveries com IA" />
+          <Insight label="Template converteu" value={`${metrics.learning?.template_conversion_percent || 0}%`} helper="comparado aos templates prontos" />
+          <Insight label="Categoria recuperada" value={metrics.learning?.top_recovered_category?.name || '-'} helper={`${metrics.learning?.top_recovered_category?.total || 0} recuperacoes`} />
+          <Insight label="Tendencia" value={metrics.learning?.trend || 'Aguardando dados'} helper="ultimos 7 dias vs periodo anterior" />
+        </div>
+        <div className="rounded-2xl border border-dark-700 bg-dark-900 p-4">
+          <p className="mb-3 text-sm font-black text-white">Top 5 estrategias</p>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+            {(metrics.learning?.top_strategies || []).map((item, index) => <div key={`${item.name}-${index}`} className="rounded-xl bg-dark-950 p-3">
+              <p className="text-xs text-gray-500">{index + 1}. {item.label}</p>
+              <p className="mt-1 text-lg font-black text-primary-300">{item.rate_percent}%</p>
+              <p className="text-xs text-gray-500">{item.recovered}/{item.sent} recuperados</p>
+            </div>)}
+            {!(metrics.learning?.top_strategies || []).length && <p className="text-sm text-gray-500">Ainda sem dados suficientes.</p>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
     <Card><CardContent className="space-y-6 p-5">
       <div className="grid gap-4 lg:grid-cols-3">
         <ToggleCard title="Usar IA nas mensagens" description="Gera textos naturais com contexto do carrinho." checked={settings.use_ai} onChange={(value) => setField('use_ai', value)} icon={Bot} />
@@ -372,6 +408,12 @@ const Field = ({ label, ...props }) => <label className="block">
   <span className="mb-2 block text-sm font-bold text-white">{label}</span>
   <input {...props} className="w-full rounded-xl border border-dark-700 bg-dark-950 px-4 py-3 text-white outline-none focus:border-primary-500" />
 </label>
+
+const Insight = ({ label, value, helper }) => <div className="rounded-2xl border border-dark-700 bg-dark-900 p-4">
+  <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+  <p className="mt-1 text-lg font-black text-white">{value}</p>
+  {helper && <p className="mt-1 text-xs text-gray-500">{helper}</p>}
+</div>
 
 const ConversionList = ({ title, rows, labelFn }) => <div className="rounded-2xl border border-dark-700 bg-dark-900 p-4">
   <p className="mb-3 text-sm font-black text-white">{title}</p>

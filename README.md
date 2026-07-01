@@ -1231,3 +1231,25 @@ Principais pontos:
 Relatorio:
 
 - `REPLYMESH_DEV_RECOVERY_PHASE_1_7_REPORT.md`
+
+## Fase DEV - Recovery Learning Engine 1.8
+
+A fase 1.8 adicionou aprendizado estatistico ao Recovery, usando somente
+PostgreSQL, ActiveRecord e `Rails.cache`.
+
+Principais pontos:
+
+- registro automatico de recovery enviado, ignorado, respondido sem compra e
+  convertido;
+- deteccao de pedido recuperado com cupom e sem cupom;
+- calculo de tempo ate responder e tempo ate comprar;
+- comparacao de estrategias por template, IA, cupom, frete gratis, horario,
+  dia e categoria;
+- endpoint `GET /api/v1/store/recovery/insights`;
+- card `Recovery Insights` na tela `Marketing > Automacao Inteligente`;
+- sem armazenar mensagens completas, prompts, tokens, Pix, cartao ou
+  credenciais.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_LEARNING_PHASE18.md`

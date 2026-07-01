@@ -2418,5 +2418,10 @@ Fora do escopo:
 - [x] Fase 1.7 adicionou classificacao automatica e bloqueio de envio para score abaixo de Alta.
 - [x] Fase 1.7 adicionou motivos do score, fila priorizada e simulador sem envio.
 - [x] Fase 1.7 adicionou metricas de elegibilidade, bloqueio, potencial recuperavel, motivo, categoria e horario.
+- [x] Fase 1.8 adicionou Recovery Learning Engine estatistico por empresa.
+- [x] Fase 1.8 registra enviado, ignorado, respondido sem compra e convertido.
+- [x] Fase 1.8 detecta pedido recuperado com cupom e sem cupom.
+- [x] Fase 1.8 criou `GET /api/v1/store/recovery/insights`.
+- [x] Fase 1.8 adicionou card `Recovery Insights` na tela de Automacao Inteligente.
 - [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
 - [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.

@@ -112,10 +112,14 @@ module Api
           render_ok(result)
         end
 
+        def recovery_insights
+          render_ok(insights: recovery_learning_insights)
+        end
+
         private
 
         def require_marketing_feature!
-          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery]) ? "sales_recovery" : "marketing_whatsapp"
+          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery recovery_insights]) ? "sales_recovery" : "marketing_whatsapp"
           require_feature!(feature)
         end
 
@@ -239,8 +243,13 @@ module Api
             conversion_by_benefit: benefit_conversion,
             conversion_by_strategy: strategy_conversion,
             conversion_by_hour: hour_conversion,
-            conversion_by_weekday: weekday_conversion
+            conversion_by_weekday: weekday_conversion,
+            learning: recovery_learning_insights
           }
+        end
+
+        def recovery_learning_insights
+          @recovery_learning_insights ||= SalesRecoveryLearningEngine.new(company: current_company).insights
         end
 
         def serialize_recovery_event(event)

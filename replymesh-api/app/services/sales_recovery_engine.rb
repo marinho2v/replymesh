@@ -236,7 +236,11 @@ class SalesRecoveryEngine
       status: "sent",
       sent_at: Time.current,
       marketing_message_log: log,
-      metadata_json: event.metadata_json.merge("provider" => log.provider)
+      metadata_json: event.metadata_json.to_h.merge(learning_metadata_for(event).merge(
+        "provider" => log.provider,
+        "learning_outcome" => "sent",
+        "recovery_sent" => true
+      ))
     )
     @stats[:sent] += 1
   rescue StandardError => e
@@ -611,23 +615,99 @@ class SalesRecoveryEngine
   end
 
   def refresh_recovered_events!
-    @company.sales_recovery_events.sent.where(recovered_at: nil).where.not(coupon_id: nil).includes(:coupon).find_each do |event|
-      order = @company.orders.where("created_at >= ?", event.sent_at || event.created_at)
-        .where("coupon_id = ? OR coupon_code = ?", event.coupon_id, event.coupon&.code)
-        .where.not(status: "cancelled")
-        .order(created_at: :asc)
-        .first
-      next unless order
+    @company.sales_recovery_events.sent.where(recovered_at: nil).includes(:coupon, store_ai_cart: { store_ai_conversation: :store_ai_messages }).find_each do |event|
+      refresh_response_for!(event)
+      order = recovered_order_for(event)
+      if order.blank?
+        mark_ignored_if_stale!(event)
+        next
+      end
 
       event.update!(
         status: "recovered",
         recovered_at: order.created_at,
         recovered_order: order,
         recovered_value_cents: order.total_cents.to_i,
-        conversion_minutes: event.sent_at.present? ? [((order.created_at - event.sent_at) / 60).floor, 0].max : nil
+        conversion_minutes: event.sent_at.present? ? [((order.created_at - event.sent_at) / 60).floor, 0].max : nil,
+        metadata_json: event.metadata_json.to_h.merge(
+          "learning_outcome" => "converted",
+          "recovery_converted" => true,
+          "recovery_order_created" => true,
+          "converted_with_coupon" => event.coupon_id.present? && (order.coupon_id == event.coupon_id || order.coupon_code.to_s.casecmp?(event.coupon&.code.to_s)),
+          "converted_without_coupon" => event.coupon_id.blank? || !(order.coupon_id == event.coupon_id || order.coupon_code.to_s.casecmp?(event.coupon&.code.to_s)),
+          "time_to_buy_minutes" => event.sent_at.present? ? [((order.created_at - event.sent_at) / 60).floor, 0].max : nil
+        ).compact
       )
       @stats[:recovered] += 1
     end
+  end
+
+  def refresh_response_for!(event)
+    return if event.responded_at.present?
+
+    message = event.store_ai_cart&.store_ai_conversation&.store_ai_messages
+      &.where(role: "user")
+      &.where("created_at >= ?", event.sent_at || event.created_at)
+      &.order(created_at: :asc)
+      &.first
+    return unless message
+
+    event.update!(
+      responded_at: message.created_at,
+      metadata_json: event.metadata_json.to_h.merge(
+        "learning_outcome" => "responded_no_purchase",
+        "recovery_responded" => true,
+        "time_to_response_minutes" => event.sent_at.present? ? [((message.created_at - event.sent_at) / 60).floor, 0].max : nil
+      ).compact
+    )
+  end
+
+  def mark_ignored_if_stale!(event)
+    return if event.responded_at.present?
+    return unless event.sent_at.present? && event.sent_at <= 24.hours.ago
+
+    event.update!(
+      status: "ignored",
+      metadata_json: event.metadata_json.to_h.merge(
+        "learning_outcome" => "ignored",
+        "recovery_ignored" => true,
+        "time_to_abandon_again_minutes" => 24 * 60
+      )
+    )
+  end
+
+  def recovered_order_for(event)
+    base = @company.orders.where("created_at >= ?", event.sent_at || event.created_at)
+      .where.not(status: "cancelled")
+
+    if event.coupon_id.present? || event.coupon&.code.present?
+      coupon_order = base.where("coupon_id = ? OR coupon_code = ?", event.coupon_id, event.coupon&.code)
+        .order(created_at: :asc)
+        .first
+      return coupon_order if coupon_order
+    end
+
+    phone = normalize_phone(event.customer_phone)
+    local_phone = phone.sub(/\A55/, "")
+    base.where("regexp_replace(coalesce(customer_phone, customer_whatsapp, ''), '\\D', '', 'g') IN (?)", [phone, local_phone])
+      .order(created_at: :asc)
+      .first
+  end
+
+  def learning_metadata_for(event)
+    sent_time = @now.in_time_zone(@company.timezone.presence || "America/Sao_Paulo")
+    {
+      "learning_template" => event.delivery_strategy == "ai" ? "ai" : Digest::SHA256.hexdigest(event.message.to_s)[0, 10],
+      "learning_strategy" => event.delivery_strategy,
+      "learning_coupon" => event.coupon&.discount_type == "free_shipping" ? "frete_gratis" : event.coupon&.discount_value&.to_i&.then { |value| "#{value}%" },
+      "learning_day" => sent_time.strftime("%A"),
+      "learning_weekday" => sent_time.wday,
+      "learning_hour" => sent_time.hour,
+      "learning_cart_type" => event.cart_total_cents.to_i >= SalesRecoveryIntelligence::HIGH_CART_CENTS ? "alto_valor" : "normal",
+      "learning_main_category" => event.metadata_json.to_h["top_category"],
+      "learning_score" => event.recovery_score,
+      "learning_classification" => event.metadata_json.to_h["recovery_classification"]
+    }.compact
   end
 
   def public_store_url
