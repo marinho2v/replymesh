@@ -152,7 +152,7 @@ class PerformanceMonitorService
     def instrument_external(kind, company_id: nil)
       started_at = monotonic_time
       result = yield
-      track_external(kind: kind, company_id: company_id, duration_ms: elapsed_ms(started_at), success: true)
+      track_external(kind: kind, company_id: company_id, duration_ms: elapsed_ms(started_at), success: external_success?(result))
       result
     rescue StandardError
       track_external(kind: kind, company_id: company_id, duration_ms: elapsed_ms(started_at), success: false)
@@ -167,6 +167,14 @@ class PerformanceMonitorService
       Rails.cache.write(key, events.last(limit), expires_in: CACHE_TTL)
     rescue StandardError => e
       Rails.logger.warn("[PerformanceMonitor] append failed key=#{key}: #{e.class}")
+    end
+
+    def external_success?(result)
+      return result.is_a?(Net::HTTPSuccess) if defined?(Net::HTTPResponse) && result.is_a?(Net::HTTPResponse)
+      return result[:success] != false if result.is_a?(Hash) && result.key?(:success)
+      return result["success"] != false if result.is_a?(Hash) && result.key?("success")
+
+      true
     end
 
     def read_events(key)
