@@ -128,6 +128,7 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request(`/master/dashboard${query ? `?${query}` : ""}`);
   },
+  getPerformance: () => request("/master/performance"),
   getFounderProgram: () => request("/master/founder_program"),
   updateFounderProgram: (founderProgram) => request("/master/founder_program", {
     method: "PATCH",

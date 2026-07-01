@@ -1,6 +1,7 @@
 export const NAV = [
   { type: "item", id: "dashboard", label: "Visão Geral", icon: "LayoutDashboard", path: "/dashboard" },
   { type: "section", label: "Master" },
+  { type: "item", id: "performance", label: "Performance", icon: "Activity", path: "/performance" },
   {
     type: "group",
     id: "empresas",
@@ -123,9 +124,10 @@ export const NAV = [
   },
 ];
 
-export const GROUP_IDS = ["empresas", "whatsapp", "assinaturas", "dominios", "financeiro", "usuarios", "tickets", "configuracoes"];
+export const GROUP_IDS = ["performance", "empresas", "whatsapp", "assinaturas", "dominios", "financeiro", "usuarios", "tickets", "configuracoes"];
 
 export function groupFromPath(pathname) {
+  if (pathname.startsWith("/performance")) return "performance";
   if (pathname.startsWith("/empresas")) return "empresas";
   if (pathname.startsWith("/whatsapp")) return "whatsapp";
   if (pathname.startsWith("/assinaturas")) return "assinaturas";

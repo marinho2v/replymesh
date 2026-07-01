@@ -134,7 +134,8 @@ class MasterDashboardService
   end
 
   def company_logo_url(company)
-    company.logo_url.presence || company.store_setting&.logo_url.presence
+    direct_logo = company.respond_to?(:logo_url) ? company.logo_url.presence : nil
+    direct_logo || company.store_setting&.logo_url.presence
   end
 
   def recent_activities

@@ -5,6 +5,7 @@ import { RequireAuth } from "../components/auth/RequireAuth.jsx";
 
 const Login = lazy(() => import("../pages/Login.jsx").then((module) => ({ default: module.Login })));
 const Dashboard = lazy(() => import("../pages/Dashboard.jsx").then((module) => ({ default: module.Dashboard })));
+const Performance = lazy(() => import("../pages/Performance.jsx").then((module) => ({ default: module.Performance })));
 const EmpresasList = lazy(() => import("../pages/empresas/EmpresasList.jsx").then((module) => ({ default: module.EmpresasList })));
 const NovaEmpresa = lazy(() => import("../pages/empresas/NovaEmpresa.jsx").then((module) => ({ default: module.NovaEmpresa })));
 const EmpresaDetalhe = lazy(() => import("../pages/empresas/EmpresaDetalhe.jsx").then((module) => ({ default: module.EmpresaDetalhe })));
@@ -68,6 +69,7 @@ export const routes = (onToast, authHandlers = {}) => [
   { path: "/status", element: page(<InstitutionalPage page="status" />) },
   { path: "/fale-conosco", element: page(<InstitutionalPage page="suporte" />) },
   { path: "/dashboard", element: protectedPage(<Dashboard />) },
+  { path: "/performance", element: protectedPage(<Performance onToast={onToast} />) },
   { path: "/empresas", element: protectedPage(<EmpresasList onToast={onToast} />) },
   { path: "/empresas/nova", element: protectedPage(<NovaEmpresa onToast={onToast} />) },
   { path: "/empresas/:id", element: protectedPage(<EmpresaDetalhe onToast={onToast} />) },
