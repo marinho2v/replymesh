@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Bot, Calendar, Filter, Lightbulb, RefreshCw, Search, Sparkles, TrendingUp } from 'lucide-react'
+import { AlertTriangle, Archive, Bot, Calendar, CheckCircle2, Filter, Lightbulb, RefreshCw, Search, Sparkles, ThumbsDown, ThumbsUp, TrendingUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Select } from '../../components/ui/Select'
-import { getSalesCoach, formatMoney } from '../../services/marketingWhatsapp'
+import { getSalesCoach, updateSalesCoachInsight, formatMoney } from '../../services/marketingWhatsapp'
 
 const priorityTone = {
   Critica: 'border-red-500/40 bg-red-500/10 text-red-200',
@@ -15,6 +15,7 @@ const priorityTone = {
 
 export default function SalesCoach() {
   const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState(null)
   const [payload, setPayload] = useState(null)
   const [filters, setFilters] = useState({ category: 'Todas', priority: 'Todas', search: '' })
 
@@ -32,8 +33,28 @@ export default function SalesCoach() {
 
   useEffect(() => { loadCoach() }, [])
 
+  const updateInsight = async (item, update, successMessage) => {
+    if (!item.id) {
+      toast.error('Insight ainda nao possui identificador para feedback.')
+      return
+    }
+
+    try {
+      setSavingId(`${item.id}-${Object.keys(update).join('-')}`)
+      await updateSalesCoachInsight(item.id, update)
+      toast.success(successMessage)
+      await loadCoach()
+    } catch (error) {
+      toast.error(error.message || 'Nao foi possivel salvar o feedback.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   const insights = payload?.insights || []
   const summary = payload?.summary || {}
+  const advisor = payload?.learning_advisor || {}
+  const history = payload?.history || {}
   const categories = ['Todas', ...(payload?.filters?.categories || [])]
   const priorities = ['Todas', ...(payload?.filters?.priorities || [])]
 
@@ -67,27 +88,66 @@ export default function SalesCoach() {
             <span className="rounded-2xl bg-primary-500 p-3 text-dark-950"><Bot size={24} /></span>
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-300">Coach ativo</p>
-              <h2 className="mt-1 text-2xl font-black text-white">{summary.biggest_opportunity || 'Aguardando dados da loja'}</h2>
+              <h2 className="mt-1 text-2xl font-black text-white">{advisor.top_opportunity || summary.biggest_opportunity || 'Aguardando dados da loja'}</h2>
               <p className="mt-2 max-w-3xl text-sm text-gray-300">
-                Ultima analise: {summary.last_analysis_at ? new Date(summary.last_analysis_at).toLocaleString('pt-BR') : 'ainda nao executada'}.
-                Nesta fase o coach apenas recomenda; nenhuma acao e disparada automaticamente.
+                {advisor.greeting || 'O coach esta analisando pedidos, recovery, produtos e oportunidades.'}
+                {' '}Nenhuma acao e disparada automaticamente.
               </p>
+              {advisor.next_best_action && (
+                <p className="mt-3 rounded-xl border border-primary-500/20 bg-dark-950/70 p-3 text-sm font-bold text-primary-200">
+                  Proxima melhor acao: {advisor.next_best_action}
+                </p>
+              )}
             </div>
           </div>
-          <div className="grid min-w-[280px] gap-2 rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
-            <span className="text-sm text-gray-400">Impacto estimado</span>
-            <strong className="text-2xl text-white">{summary.estimated_impact || formatMoney(0)}</strong>
-            <span className="text-xs text-gray-500">{summary.insights_count || 0} insight(s) encontrados</span>
+          <div className="grid min-w-[280px] gap-3 rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
+            <div>
+              <span className="text-sm text-gray-400">Coach Score</span>
+              <strong className="block text-3xl text-white">{summary.coach_score ?? advisor.coach_score ?? 0}/100</strong>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-dark-800">
+              <div className="h-full rounded-full bg-primary-400" style={{ width: `${Math.min(summary.coach_score ?? advisor.coach_score ?? 0, 100)}%` }} />
+            </div>
+            <span className="text-xs text-gray-500">{summary.learning_status || advisor.status || 'Coletando dados'}</span>
           </div>
         </CardContent>
       </Card>
 
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="text-lg font-black text-white">Coach Inteligente</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {(advisor.opportunities || []).slice(0, 4).map((item, index) => (
+                <div key={`${item}-${index}`} className="rounded-2xl border border-dark-700 bg-dark-950 p-3 text-sm text-gray-200">
+                  <span className="mr-2 text-primary-300">{index + 1}.</span>{item}
+                </div>
+              ))}
+              {!(advisor.opportunities || []).length && (
+                <div className="rounded-2xl border border-dark-700 bg-dark-950 p-3 text-sm text-gray-400">
+                  Ainda preciso de mais pedidos ou feedbacks para listar oportunidades.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-3 p-5">
+            <h3 className="text-lg font-black text-white">Historico de aprendizado</h3>
+            <LearningRow label="Aceitas" value={history.accepted || 0} />
+            <LearningRow label="Ignoradas" value={history.ignored || 0} />
+            <LearningRow label="Funcionaram" value={history.worked || 0} />
+            <LearningRow label="Impacto confirmado" value={formatMoney(history.feedback_impact_cents || 0)} />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Metric icon={Lightbulb} label="Insights" value={summary.insights_count || 0} />
         <Metric icon={AlertTriangle} label="Prioridade alta" value={summary.high_priority_count || 0} />
+        <Metric icon={CheckCircle2} label="Aceitas" value={history.accepted || 0} />
+        <Metric icon={ThumbsUp} label="Funcionaram" value={history.worked || 0} />
         <Metric icon={TrendingUp} label="Maior oportunidade" value={summary.biggest_opportunity || '-'} compact />
-        <Metric icon={AlertTriangle} label="Maior risco" value={summary.biggest_risk || '-'} compact />
-        <Metric icon={Calendar} label="Ultima analise" value={summary.last_analysis_at ? new Date(summary.last_analysis_at).toLocaleTimeString('pt-BR') : '-'} />
       </div>
 
       <Card>
@@ -122,7 +182,12 @@ export default function SalesCoach() {
           ) : (
             <div className="grid gap-3">
               {filteredInsights.map((item, index) => (
-                <InsightCard key={`${item.origin}-${item.title}-${index}`} item={item} />
+                <InsightCard
+                  key={`${item.origin}-${item.title}-${index}`}
+                  item={item}
+                  savingId={savingId}
+                  onUpdate={updateInsight}
+                />
               ))}
             </div>
           )}
@@ -136,8 +201,8 @@ export default function SalesCoach() {
             <div>
               <h3 className="text-lg font-black text-white">Aprendizado preparado</h3>
               <p className="mt-1 text-sm text-gray-400">
-                A estrutura ja esta pronta para futuramente registrar sugestoes aplicadas, ignoradas e impacto em vendas.
-                Nesta fase o painel apenas observa, analisa e recomenda.
+                O coach agora aprende com cada resposta sua: aceite, ignore, marque se funcionou e registre execucao manual.
+                Quanto mais feedback, melhor fica a recomendacao para esta empresa.
               </p>
             </div>
           </div>
@@ -161,7 +226,28 @@ const Metric = ({ icon: Icon, label, value, compact = false }) => (
   </Card>
 )
 
-const InsightCard = ({ item }) => (
+const LearningRow = ({ label, value }) => (
+  <div className="flex items-center justify-between rounded-xl border border-dark-700 bg-dark-950 px-3 py-2">
+    <span className="text-sm text-gray-400">{label}</span>
+    <strong className="text-sm text-white">{value}</strong>
+  </div>
+)
+
+const statusLabel = {
+  new: 'Novo',
+  viewed: 'Visualizado',
+  accepted: 'Aceito',
+  ignored: 'Ignorado',
+  archived: 'Arquivado',
+  manual_executed: 'Executado manual',
+}
+
+const feedbackLabel = {
+  worked: 'Funcionou',
+  not_worked: 'Nao funcionou',
+}
+
+const InsightCard = ({ item, onUpdate, savingId }) => (
   <article className="rounded-2xl border border-dark-700 bg-dark-950 p-4 transition hover:border-primary-500/40">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
@@ -171,6 +257,8 @@ const InsightCard = ({ item }) => (
           </span>
           <span className="rounded-full bg-dark-800 px-2.5 py-1 text-xs font-bold text-gray-300">{item.category}</span>
           <span className="rounded-full bg-dark-800 px-2.5 py-1 text-xs font-bold text-gray-400">{item.confidence}% confianca</span>
+          <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-200">{statusLabel[item.status] || item.status || 'Novo'}</span>
+          {item.feedback_result && <span className="rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-bold text-green-200">{feedbackLabel[item.feedback_result] || item.feedback_result}</span>}
         </div>
         <h2 className="mt-3 text-lg font-black text-white">{item.title}</h2>
         <p className="mt-1 text-sm leading-6 text-gray-400">{item.description}</p>
@@ -183,6 +271,29 @@ const InsightCard = ({ item }) => (
     <div className="mt-4 rounded-xl border border-primary-500/20 bg-primary-500/10 p-3">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-300">Sugestao</p>
       <p className="mt-1 text-sm text-gray-200">{item.suggested_action}</p>
+    </div>
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { status: 'viewed' }, 'Insight marcado como visualizado.')}>
+        <CheckCircle2 size={14} className="mr-1" /> Visualizei
+      </Button>
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { status: 'accepted' }, 'O coach aprendeu que voce aceitou essa sugestao.')}>
+        <ThumbsUp size={14} className="mr-1" /> Aceitei
+      </Button>
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { status: 'ignored' }, 'Sugestao ignorada registrada.')}>
+        <ThumbsDown size={14} className="mr-1" /> Ignorei
+      </Button>
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { result: 'worked' }, 'Resultado positivo registrado.')}>
+        <TrendingUp size={14} className="mr-1" /> Funcionou
+      </Button>
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { result: 'not_worked' }, 'Resultado negativo registrado.')}>
+        <AlertTriangle size={14} className="mr-1" /> Nao funcionou
+      </Button>
+      <Button size="sm" variant="secondary" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { status: 'manual_executed' }, 'Execucao manual registrada.')}>
+        <Sparkles size={14} className="mr-1" /> Executei manual
+      </Button>
+      <Button size="sm" variant="ghost" disabled={savingId?.startsWith(item.id)} onClick={() => onUpdate(item, { status: 'archived' }, 'Insight arquivado.')}>
+        <Archive size={14} className="mr-1" /> Arquivar
+      </Button>
     </div>
     <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
       <span>Origem: {item.origin}</span>

@@ -69,7 +69,7 @@ module Api
         end
 
         def sales_coach_summary
-          SalesCoachService.call(company: current_company)[:summary] || {}
+          SalesCoachLearningService.call(company: current_company)[:summary] || {}
         rescue StandardError => e
           Rails.logger.warn("[DashboardController] sales coach skipped company=#{current_company&.id}: #{e.class} #{e.message}")
           {}

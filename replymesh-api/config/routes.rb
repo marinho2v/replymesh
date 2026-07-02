@@ -297,6 +297,7 @@ Rails.application.routes.draw do
         post "sales_recovery/simulate", to: "marketing#simulate_sales_recovery"
         get  "recovery/insights", to: "marketing#recovery_insights"
         get  "sales_coach", to: "marketing#sales_coach"
+        patch "sales_coach/insights/:id", to: "marketing#update_sales_coach_insight"
 
         get  "android_app", to: "android_apps#show"
         post "android_app", to: "android_apps#create"

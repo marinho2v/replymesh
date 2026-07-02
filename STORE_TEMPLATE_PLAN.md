@@ -24,6 +24,17 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Phase 2.1 - AI Sales Coach com aprendizado
+
+Executado no `store-template`:
+
+- A tela `Marketing > AI Sales Coach` passou a consumir o payload enriquecido do backend.
+- Adicionado bloco "Coach Inteligente" com oportunidades, proxima melhor acao e Coach Score.
+- Adicionado historico de aprendizado com recomendacoes aceitas, ignoradas e marcadas como funcionaram.
+- Cada insight agora permite feedback manual do lojista: visualizado, aceitei, ignorei, funcionou, nao funcionou, executei manualmente e arquivar.
+- O frontend chama apenas `GET /api/v1/store/sales_coach` e `PATCH /api/v1/store/sales_coach/insights/:id`.
+- Nenhuma automacao e disparada pela tela; o coach apenas recomenda e aprende com o feedback.
+
 ## Fase 15.9.2 - Hamburgueria Premium React funcional
 
 Objetivo: converter o prototipo `hamburgueria V2` em template React/Vite real, sem alterar regras operacionais.

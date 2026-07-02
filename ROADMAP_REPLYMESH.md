@@ -19,6 +19,16 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-02 — Phase 2.1 Coach Inteligente Learning Advisor
+
+- Criado aprendizado persistente do AI Sales Coach por empresa, reaproveitando `SalesCoachService`, `SalesRecoveryLearningEngine`, `CompanyContextBuilder` e `ReplymeshCacheService`.
+- Insights agora possuem ID publico, status, feedback, motivo, origem, impacto estimado, confianca e historico de aprendizado.
+- Criado endpoint de feedback para marcar recomendacoes como visualizadas, aceitas, ignoradas, arquivadas, executadas manualmente, funcionou ou nao funcionou.
+- Adicionado `Coach Score` para medir maturidade do aprendizado por empresa.
+- Tela `Marketing > AI Sales Coach` recebeu area "Coach Inteligente", oportunidades priorizadas, historico de aprendizado e botoes de feedback.
+- O coach continua sem executar acoes automaticas; apenas observa, aprende e recomenda.
+- Proxima direcao: usar feedback acumulado para refinar sugestoes futuras, sem iniciar automacoes novas sem autorizacao.
+
 ### Atualizacao DEV em 2026-07-01 — Phase 2.0 AI Sales Coach Foundation
 
 - Criado `SalesCoachService` para gerar recomendacoes operacionais por empresa, usando `CompanyContextBuilder`, `SalesRecoveryLearningEngine` e `ReplymeshCacheService`.

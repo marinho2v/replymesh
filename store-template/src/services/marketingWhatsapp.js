@@ -63,6 +63,10 @@ export const getSalesCoach = () => request('/store/sales_coach', {
   headers: headers(),
 })
 
+export const updateSalesCoachInsight = (id, payload) => request(`/store/sales_coach/insights/${id}`, {
+  method: 'PATCH', body: payload, headers: headers(),
+}).then((response) => response.insight)
+
 export const formatMoney = (cents) => (Number(cents || 0) / 100).toLocaleString('pt-BR', {
   style: 'currency', currency: 'BRL',
 })

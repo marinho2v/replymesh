@@ -1,7 +1,7 @@
 class MarketingCampaign < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :promotions, :dashboard, :ai_context, :sales_coach
+  invalidates_replymesh_cache :promotions, :dashboard, :ai_context, :sales_coach, :sales_coach_learning
 
   STATUSES = %w[draft active paused completed cancelled].freeze
 

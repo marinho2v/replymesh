@@ -117,13 +117,28 @@ module Api
         end
 
         def sales_coach
-          render_ok(SalesCoachService.call(company: current_company))
+          render_ok(SalesCoachLearningService.call(company: current_company))
+        end
+
+        def update_sales_coach_insight
+          insight = SalesCoachLearningService.feedback(
+            company: current_company,
+            public_id: params[:id],
+            status: sales_coach_feedback_params[:status],
+            result: sales_coach_feedback_params[:result],
+            impact_cents: sales_coach_feedback_params[:impact_cents]
+          )
+          render_ok(insight: insight)
+        rescue ActiveRecord::RecordNotFound
+          render_error("Insight nao encontrado", status: :not_found)
+        rescue ArgumentError => e
+          render_error(e.message, status: :unprocessable_entity)
         end
 
         private
 
         def require_marketing_feature!
-          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery recovery_insights sales_coach]) ? "sales_recovery" : "marketing_whatsapp"
+          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery recovery_insights sales_coach update_sales_coach_insight]) ? "sales_recovery" : "marketing_whatsapp"
           require_feature!(feature)
         end
 
@@ -153,6 +168,10 @@ module Api
             metadata_json: {},
             allowed_weekdays: []
           )
+        end
+
+        def sales_coach_feedback_params
+          params.permit(:status, :result, :impact_cents)
         end
 
         def serialize_customer(customer)
