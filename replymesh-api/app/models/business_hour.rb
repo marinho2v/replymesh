@@ -1,7 +1,7 @@
 class BusinessHour < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :business_hours, :store, :ai_context
+  invalidates_replymesh_cache :business_hours, :store, :ai_context, :business_intelligence
   DAYS = (0..6).to_a.freeze  # 0=domingo, 6=sábado
 
   belongs_to :company

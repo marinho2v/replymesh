@@ -222,6 +222,7 @@ const Dashboard = () => {
           usedCoupons:        data.used_coupons || 0,
           trendData:          data.trend_data || [],
           salesCoach:         data.sales_coach || {},
+          businessIntelligence: data.business_intelligence || {},
         })
       } catch (error) {
         console.error('Erro ao buscar stats do dashboard:', error)

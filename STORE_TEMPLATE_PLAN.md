@@ -1542,3 +1542,8 @@ A pagina recebeu uma camada mais operacional para decisao e simulacao:
 
 O envio automatico segue protegido: apenas classificacoes `Alta` e `Muito Alta`
 podem sair automaticamente; scores menores ficam registrados para analise.
+# Business Intelligence da Loja
+
+O Store Template passa a exibir uma área de Inteligência do Negócio para administradores da loja. A tela consome apenas `/api/v1/store/business_intelligence` e apresenta score, saúde da operação, oportunidades, alertas, recomendações, produtos, categorias e análises de recovery, cupons, delivery, clientes e performance.
+
+O painel não executa ações automaticamente; ele apenas orienta o lojista.

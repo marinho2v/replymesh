@@ -1,7 +1,7 @@
 class Order < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :dashboard, :statistics, :sales_coach, :sales_coach_learning
+  invalidates_replymesh_cache :dashboard, :statistics, :sales_coach, :sales_coach_learning, :business_intelligence
 
   ORDER_TYPES       = %w[delivery pickup dine_in pos].freeze
   STATUSES          = %w[pending accepted preparing ready out_for_delivery completed cancelled].freeze

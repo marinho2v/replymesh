@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/currency'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import {
   ShoppingCart, DollarSign, Users, TrendingUp,
-  ShoppingBag, AlertTriangle, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles,
+  ShoppingBag, AlertTriangle, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles, BarChart3,
 } from 'lucide-react'
 
 // Sparkline SVG simples usando polilinha
@@ -145,7 +145,9 @@ const DashboardStats = ({ stats, loading }) => {
 
   const trendData = stats?.trendData || []
   const salesCoach = stats?.salesCoach || {}
+  const businessIntelligence = stats?.businessIntelligence || {}
   const hasSalesCoach = Object.keys(salesCoach).length > 0
+  const hasBusinessIntelligence = Object.keys(businessIntelligence).length > 0
 
   const statCards = [
     {
@@ -323,6 +325,42 @@ const DashboardStats = ({ stats, loading }) => {
                   className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-yellow-300"
                 >
                   Ver recomendações
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasBusinessIntelligence && (
+        <Card className="mb-4 border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-dark-900 to-dark-950 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
+                  <BarChart3 size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Business Intelligence</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    Score do negocio: {businessIntelligence.business_score ?? 0}/100
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    {businessIntelligence.headline || 'Analisando vendas, produtos, clientes e recovery para sugerir proximas acoes.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Saude da operacao</p>
+                  <p className="text-lg font-black text-white">{businessIntelligence.health_label || 'Aguardando dados'}</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/business-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver inteligencia
                 </Link>
               </div>
             </div>

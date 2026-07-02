@@ -142,6 +142,7 @@ Rails.application.routes.draw do
       # ─── Store (autenticado — painel/admin/cozinha/motoboy) ───────────────────
       namespace :store do
         get "dashboard",      to: "dashboard#show"
+        get "business_intelligence", to: "business_intelligence#show"
         get "reports",        to: "reports#show"
         get "features",       to: "features#show"
         get "kitchen/orders", to: "orders#kitchen"

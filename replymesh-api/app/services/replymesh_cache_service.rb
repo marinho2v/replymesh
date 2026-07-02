@@ -16,6 +16,7 @@ class ReplymeshCacheService
     dashboard: 30.seconds,
     sales_coach: 2.minutes,
     sales_coach_learning: 2.minutes,
+    business_intelligence: 60.seconds,
     statistics: 60.seconds,
     tables: 5.minutes,
     motoboys: 5.minutes,

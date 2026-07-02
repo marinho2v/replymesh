@@ -1,7 +1,7 @@
 class ProductOptionGroup < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :menu, :products, :featured_products, :ai_context
+  invalidates_replymesh_cache :menu, :products, :featured_products, :ai_context, :business_intelligence
 
   TYPES = %w[single multiple].freeze
 

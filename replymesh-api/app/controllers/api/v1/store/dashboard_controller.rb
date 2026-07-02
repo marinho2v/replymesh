@@ -64,7 +64,8 @@ module Api
             recurring_customers:  recurring,
             used_coupons:         used_coupons,
             trend_data:           trend_data,
-            sales_coach:          sales_coach_summary
+            sales_coach:          sales_coach_summary,
+            business_intelligence: business_intelligence_summary
           }
         end
 
@@ -72,6 +73,13 @@ module Api
           SalesCoachLearningService.call(company: current_company)[:summary] || {}
         rescue StandardError => e
           Rails.logger.warn("[DashboardController] sales coach skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def business_intelligence_summary
+          BusinessIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] business intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
           {}
         end
 

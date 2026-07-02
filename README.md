@@ -1256,3 +1256,8 @@ Principais pontos:
 Relatorio:
 
 - `REPLYMESH_DEV_RECOVERY_LEARNING_PHASE18.md`
+# Replymesh — Business Intelligence
+
+Phase 2.2 adiciona a base do Business Intelligence da loja.
+
+O módulo observa pedidos, produtos, categorias, recovery, cupons, delivery, clientes e performance para gerar score, alertas, oportunidades e recomendações. Ele é somente leitura: não cria pedidos, não envia mensagens, não cria cupons e não altera dados operacionais.

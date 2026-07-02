@@ -1,7 +1,7 @@
 class StoreAiSetting < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :settings, :ai_context, :dashboard, :sales_coach, :sales_coach_learning
+  invalidates_replymesh_cache :settings, :ai_context, :dashboard, :sales_coach, :sales_coach_learning, :business_intelligence
 
   PROVIDERS = %w[anthropic groq openai disabled].freeze
   MODES = %w[answers sales_assistant auto_seller].freeze

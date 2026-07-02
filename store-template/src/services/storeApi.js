@@ -131,6 +131,12 @@ export const getDashboardStats = (options = {}) => (
   })
 )
 
+export const getBusinessIntelligence = (options = {}) => (
+  request('/store/business_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
 export const railsGetFeatureAccess = (options = {}) => (
   request('/store/features', {
     headers: withCompanyHeader(options.companyId || currentCompanyId()),

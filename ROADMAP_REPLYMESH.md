@@ -2453,3 +2453,10 @@ Fora do escopo:
 - [x] Fase 1.8 adicionou card `Recovery Insights` na tela de Automacao Inteligente.
 - [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
 - [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.
+# Phase 2.2 — Business Intelligence Engine Foundation
+
+- Criado `BusinessIntelligenceService` reaproveitando Company Context, Recovery Learning e Sales Coach Learning.
+- Criado endpoint `GET /api/v1/store/business_intelligence`.
+- Criada tela da loja `Admin > Business Intelligence`.
+- Criado card de Business Intelligence no Dashboard da loja.
+- Cache dedicado `business_intelligence` com invalidação automática nos principais eventos operacionais.

@@ -1,7 +1,7 @@
 class SalesRecoverySetting < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :settings, :promotions, :ai_context, :dashboard, :sales_coach, :sales_coach_learning
+  invalidates_replymesh_cache :settings, :promotions, :ai_context, :dashboard, :sales_coach, :sales_coach_learning, :business_intelligence
 
   DELAY_OPTIONS = [30, 60, 120, 240, 720, 1440].freeze
   DAILY_LIMIT_OPTIONS = [10, 20, 30, 50, 100].freeze
