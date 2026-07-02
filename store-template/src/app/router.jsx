@@ -54,6 +54,7 @@ const WhatsappTemplates = lazy(() => import('../pages/admin/WhatsappTemplates'))
 const WhatsappLogs = lazy(() => import('../pages/admin/WhatsappLogs'))
 const MarketingWhatsapp = lazy(() => import('../pages/admin/MarketingWhatsapp'))
 const SalesRecovery = lazy(() => import('../pages/admin/SalesRecovery'))
+const SalesCoach = lazy(() => import('../pages/admin/SalesCoach'))
 // AiAssistant removido da loja (Fase 15.12) — config apenas no master
 const Motoboys = lazy(() => import('../pages/admin/Motoboys'))
 const Inventory = lazy(() => import('../pages/admin/Inventory'))
@@ -235,6 +236,7 @@ const adminChildren = [
   { path: 'whatsapp-templates', element: protectedPage(WhatsappTemplates, ['admin']) },
   { path: 'marketing-whatsapp', element: protectedPage(MarketingWhatsapp, ['admin']) },
   { path: 'sales-recovery', element: protectedPage(SalesRecovery, ['admin']) },
+  { path: 'sales-coach', element: protectedPage(SalesCoach, ['admin']) },
   { path: 'ai', element: protectedPage(StoreAiSettings, ['admin']) },
   { path: 'ai/logs', element: protectedPage(StoreAiLogs, ['admin']) },
   { path: 'inteligencia-artificial', element: protectedPage(StoreAiSettings, ['admin']) },

@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '../ui/Card'
 import { formatCurrency } from '../../utils/currency'
+import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import {
   ShoppingCart, DollarSign, Users, TrendingUp,
-  ShoppingBag, AlertTriangle, PackageX, RefreshCw, Ticket, ChevronRight,
+  ShoppingBag, AlertTriangle, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles,
 } from 'lucide-react'
 
 // Sparkline SVG simples usando polilinha
@@ -124,6 +126,7 @@ const DonutChart = ({ statusCounts = {} }) => {
 
 const DashboardStats = ({ stats, loading }) => {
   const [openSummary, setOpenSummary] = useState(null)
+  const basePath = useCompanyBasePath()
 
   if (loading) {
     return (
@@ -141,6 +144,8 @@ const DashboardStats = ({ stats, loading }) => {
   }
 
   const trendData = stats?.trendData || []
+  const salesCoach = stats?.salesCoach || {}
+  const hasSalesCoach = Object.keys(salesCoach).length > 0
 
   const statCards = [
     {
@@ -287,6 +292,43 @@ const DashboardStats = ({ stats, loading }) => {
           )
         })}
       </div>
+
+      {hasSalesCoach && (
+        <Card className="mb-4 border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-dark-900 to-dark-950 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400 text-black">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">AI Sales Coach</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {salesCoach.insights_count || 0} recomendações para sua operação
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Maior oportunidade: <span className="text-gray-200">{salesCoach.biggest_opportunity || 'Aguardando dados'}</span>.
+                    {' '}Maior risco: <span className="text-gray-200">{salesCoach.biggest_risk || 'Nenhum risco crítico detectado'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Impacto estimado</p>
+                  <p className="text-lg font-black text-white">{salesCoach.estimated_impact || 'R$ 0,00'}</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/sales-coach`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-yellow-300"
+                >
+                  Ver recomendações
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status dos Pedidos + Resumo Geral */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-8">

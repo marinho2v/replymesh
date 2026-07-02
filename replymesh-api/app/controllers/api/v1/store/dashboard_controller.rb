@@ -63,8 +63,16 @@ module Api
             out_of_stock_items:   out_of_stock,
             recurring_customers:  recurring,
             used_coupons:         used_coupons,
-            trend_data:           trend_data
+            trend_data:           trend_data,
+            sales_coach:          sales_coach_summary
           }
+        end
+
+        def sales_coach_summary
+          SalesCoachService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] sales coach skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
         end
 
         def build_trend_data(local_today, zone)

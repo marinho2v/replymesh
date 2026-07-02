@@ -59,6 +59,10 @@ export const getRecoveryInsights = () => request('/store/recovery/insights', {
   headers: headers(),
 }).then((payload) => payload.insights || {})
 
+export const getSalesCoach = () => request('/store/sales_coach', {
+  headers: headers(),
+})
+
 export const formatMoney = (cents) => (Number(cents || 0) / 100).toLocaleString('pt-BR', {
   style: 'currency', currency: 'BRL',
 })

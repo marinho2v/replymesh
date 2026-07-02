@@ -127,6 +127,7 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/whatsapp-templates', label: 'Templates WhatsApp' },
       { path: '/admin/marketing-whatsapp', label: 'Marketing WhatsApp' },
       { path: '/admin/sales-recovery', label: 'Automacao Inteligente' },
+      { path: '/admin/sales-coach', label: 'AI Sales Coach' },
       { path: '/admin/users', label: 'Usuários' },
     ],
     attendant: [

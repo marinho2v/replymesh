@@ -1,4 +1,8 @@
 class SalesRecoveryEvent < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :dashboard, :sales_coach
+
   STATUSES = %w[queued sent failed recovered ignored skipped].freeze
 
   belongs_to :company

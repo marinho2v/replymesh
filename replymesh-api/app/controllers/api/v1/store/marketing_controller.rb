@@ -116,10 +116,14 @@ module Api
           render_ok(insights: recovery_learning_insights)
         end
 
+        def sales_coach
+          render_ok(SalesCoachService.call(company: current_company))
+        end
+
         private
 
         def require_marketing_feature!
-          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery recovery_insights]) ? "sales_recovery" : "marketing_whatsapp"
+          feature = action_name.to_s.start_with?("sales_recovery") || action_name == "recovery_customers" || action_name.in?(%w[run_sales_recovery simulate_sales_recovery recovery_insights sales_coach]) ? "sales_recovery" : "marketing_whatsapp"
           require_feature!(feature)
         end
 

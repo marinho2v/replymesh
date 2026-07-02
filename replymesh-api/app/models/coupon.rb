@@ -2,7 +2,7 @@ class Coupon < ApplicationRecord
   include CloudStorageBacked
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :promotions, :store, :ai_context, :dashboard
+  invalidates_replymesh_cache :promotions, :store, :ai_context, :dashboard, :sales_coach
 
   DISCOUNT_TYPES = %w[percentage fixed free_shipping free_item].freeze
 

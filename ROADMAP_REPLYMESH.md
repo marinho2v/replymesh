@@ -19,6 +19,15 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-01 — Phase 2.0 AI Sales Coach Foundation
+
+- Criado `SalesCoachService` para gerar recomendacoes operacionais por empresa, usando `CompanyContextBuilder`, `SalesRecoveryLearningEngine` e `ReplymeshCacheService`.
+- Adicionado endpoint `GET /api/v1/store/sales_coach` no modulo Marketing, protegido pelo recurso `sales_recovery`.
+- Dashboard da loja recebeu resumo do AI Sales Coach com maior oportunidade, maior risco, impacto estimado e acesso a tela dedicada.
+- Criada tela `Marketing > AI Sales Coach` com insights, filtros por categoria/prioridade, busca, impacto, confianca, origem e sugestao.
+- Nesta fase o coach apenas observa, analisa e recomenda; nenhuma acao e executada automaticamente.
+- Proxima direcao: Phase 2.1 deve registrar feedback das sugestoes aplicadas/ignoradas e medir impacto real.
+
 ### Atualizacao DEV em 2026-07-01 — Phase 1.9 Company Context Engine
 
 - Criado `CompanyContextBuilder` como fonte unica de contexto de empresa para modulos de IA.
