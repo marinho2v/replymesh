@@ -56,8 +56,9 @@ class BusinessIntelligenceService
     context = CompanyContextBuilder.build(company)
     coach = safe_hash { SalesCoachLearningService.call(company: company, now: now) }
     recovery_learning = safe_hash { SalesRecoveryLearningEngine.new(company: company, now: now).insights }
-    data = operational_data(context, coach, recovery_learning)
-    insights = build_insights(data, context, coach, recovery_learning)
+    brain = safe_hash { ReplymeshBrainService.call(company: company, now: now) }
+    data = operational_data(context, coach, recovery_learning, brain)
+    insights = build_insights(data, context, coach, recovery_learning, brain)
     score = business_score(data, insights)
     health = health_for(score)
 
@@ -79,6 +80,7 @@ class BusinessIntelligenceService
       coupon_analysis: coupon_analysis(data, recovery_learning),
       delivery_analysis: delivery_analysis(context),
       customer_analysis: customer_analysis(data),
+      replymesh_brain: brain_summary(brain),
       performance_analysis: performance_analysis,
       generated_at: now.iso8601,
       source: "business_intelligence_service"
@@ -88,7 +90,7 @@ class BusinessIntelligenceService
     fallback_payload(e)
   end
 
-  def operational_data(context, coach, recovery_learning)
+  def operational_data(context, coach, recovery_learning, brain)
     current_orders = orders_in(current_range)
     previous_orders = orders_in(previous_range)
     valid_current = current_orders.where.not(status: "cancelled")
@@ -110,6 +112,7 @@ class BusinessIntelligenceService
       context: context,
       coach: coach,
       recovery_learning: recovery_learning,
+      replymesh_brain: brain,
       revenue_current: revenue_current,
       revenue_previous: revenue_previous,
       revenue_change_percent: percentage_change(revenue_current, revenue_previous),
@@ -138,7 +141,7 @@ class BusinessIntelligenceService
     }
   end
 
-  def build_insights(data, context, coach, recovery_learning)
+  def build_insights(data, context, coach, recovery_learning, brain)
     rows = []
     rows << revenue_insight(data)
     rows << ticket_insight(data)
@@ -152,6 +155,7 @@ class BusinessIntelligenceService
     rows << best_time_insight(data)
     rows << customer_insight(data)
     rows << coach_insight(coach)
+    rows << brain_insight(brain)
 
     rows.compact
         .sort_by { |item| [-priority_weight(item[:priority_key]), -item[:confidence].to_i, item[:title].to_s] }
@@ -369,12 +373,29 @@ class BusinessIntelligenceService
       type: :recommendation,
       category: :marketing,
       priority: :medium,
-      title: "Coach encontrou #{count} recomendacao(oes)",
-      explanation: "O AI Sales Coach ja analisou oportunidades especificas da loja.",
-      action: summary[:biggest_opportunity].presence || "Abrir o AI Sales Coach e revisar as principais acoes sugeridas.",
+      title: "Consultor encontrou #{count} recomendacao(oes)",
+      explanation: "O consultor de vendas ja analisou oportunidades especificas da loja.",
+      action: summary[:biggest_opportunity].presence || "Abrir o consultor de vendas e revisar as principais acoes sugeridas.",
       impact_cents: summary[:estimated_impact_cents].to_i,
       confidence: 75,
       origin: "sales_coach_learning"
+    )
+  end
+
+  def brain_insight(brain)
+    top = Array(brain[:top_strategies] || brain["top_strategies"]).first || {}
+    return unless top && top[:sample_size].to_i.positive?
+
+    insight(
+      type: :recommendation,
+      category: :marketing,
+      priority: :medium,
+      title: "Cerebro Replymesh identificou um padrao",
+      explanation: "#{top[:dimension_value]} converteu #{(top[:conversion_rate].to_f * 100).round(1)}% nas recuperacoes analisadas.",
+      action: "Usar esse padrao como referencia nas proximas campanhas, sem aplicar automaticamente.",
+      impact_cents: top[:estimated_value_cents].to_i,
+      confidence: confidence_from_volume(top[:sample_size]),
+      origin: "replymesh_brain"
     )
   end
 
@@ -485,6 +506,20 @@ class BusinessIntelligenceService
     {
       new_customers: data[:new_customers],
       recurring_customers: data[:recurring_customers]
+    }
+  end
+
+  def brain_summary(brain)
+    top = Array(brain[:top_strategies] || brain["top_strategies"]).first || {}
+
+    {
+      status: Array(brain[:knowledge] || brain["knowledge"]).any? ? "ativo" : "coletando_dados",
+      scope: brain[:scope] || brain["scope"],
+      melhor_padrao: top[:dimension_value] || top["dimension_value"] || "Aguardando dados",
+      dimensao: top[:dimension] || top["dimension"],
+      conversao: top.present? ? "#{((top[:conversion_rate] || top["conversion_rate"]).to_f * 100).round(1)}%" : "0.0%",
+      amostras: (top[:sample_size] || top["sample_size"]).to_i,
+      generated_at: brain[:generated_at] || brain["generated_at"]
     }
   end
 

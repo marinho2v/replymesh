@@ -53,8 +53,9 @@ class SalesCoachService
   def build_payload
     context = CompanyContextBuilder.build(company)
     learning = SalesRecoveryLearningEngine.new(company: company, now: now).insights
-    data = operational_data(context, learning)
-    insights = build_insights(data, context, learning)
+    brain = safe_hash { ReplymeshBrainService.call(company: company, now: now) }
+    data = operational_data(context, learning, brain)
+    insights = build_insights(data, context, learning, brain)
 
     {
       generated_at: now.iso8601,
@@ -65,12 +66,12 @@ class SalesCoachService
         priorities: PRIORITIES.values
       },
       history: [],
-      learning_foundation: learning_foundation(learning),
+      learning_foundation: learning_foundation(learning, brain),
       source: "sales_coach_service"
     }
   end
 
-  def operational_data(context, learning)
+  def operational_data(context, learning, brain)
     current_orders = orders_in(current_range)
     previous_orders = orders_in(previous_range)
     current_completed = current_orders.where(status: "completed")
@@ -102,11 +103,12 @@ class SalesCoachService
       hour_rows: hour_rows(current_orders),
       weekday_rows: weekday_rows(current_orders),
       low_stock: Array(context[:stock_alerts]),
-      learning: learning
+      learning: learning,
+      replymesh_brain: brain
     }
   end
 
-  def build_insights(data, context, learning)
+  def build_insights(data, context, learning, brain)
     insights = []
     insights << revenue_insight(data)
     insights << ticket_insight(data)
@@ -119,6 +121,7 @@ class SalesCoachService
     insights << best_hour_insight(data)
     insights << coupon_learning_insight(learning)
     insights << ai_learning_insight(learning)
+    insights << brain_learning_insight(brain)
     insights << customer_insight(data)
     insights << stock_insight(data)
 
@@ -327,6 +330,22 @@ class SalesCoachService
     )
   end
 
+  def brain_learning_insight(brain)
+    top = Array(brain[:top_strategies] || brain["top_strategies"]).first || {}
+    return unless top && top[:sample_size].to_i.positive?
+
+    insight(
+      title: "Padrao anonimo da plataforma identificado",
+      description: "#{top[:dimension_value]} teve #{(top[:conversion_rate].to_f * 100).round(1)}% de conversao nas recuperacoes analisadas.",
+      category: :marketing,
+      priority: :medium,
+      impact: top[:estimated_value_cents].to_i,
+      confidence: confidence_from_volume(top[:sample_size]),
+      origin: "replymesh_brain",
+      action: "Usar esse aprendizado como referencia antes de criar novas campanhas."
+    )
+  end
+
   def customer_insight(data)
     return if data[:new_customers].zero?
 
@@ -392,12 +411,28 @@ class SalesCoachService
     }
   end
 
-  def learning_foundation(learning)
+  def learning_foundation(learning, brain = {})
+    top = Array(brain[:top_strategies] || brain["top_strategies"]).first || {}
+
     {
       feedback_ready: true,
       future_fields: %w[suggestion_applied suggestion_ignored sales_after_suggestion revenue_after_suggestion],
-      current_learning: learning
+      current_learning: learning,
+      replymesh_brain: {
+        status: Array(brain[:knowledge] || brain["knowledge"]).any? ? "ativo" : "coletando_dados",
+        melhor_padrao: top[:dimension_value] || top["dimension_value"] || "Aguardando dados",
+        conversao: top.present? ? "#{((top[:conversion_rate] || top["conversion_rate"]).to_f * 100).round(1)}%" : "0.0%",
+        amostras: (top[:sample_size] || top["sample_size"]).to_i
+      }
     }
+  end
+
+  def safe_hash
+    result = yield
+    result.respond_to?(:deep_symbolize_keys) ? result.deep_symbolize_keys : result.to_h.deep_symbolize_keys
+  rescue StandardError => e
+    Rails.logger.warn("[SalesCoachService] optional source skipped: #{e.class} #{e.message}")
+    {}
   end
 
   def current_range

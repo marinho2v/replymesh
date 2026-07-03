@@ -19,6 +19,16 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-03 — Phase 2.3 Cerebro Replymesh
+
+- Criado `ReplymeshBrainService` para consolidar aprendizado estatistico anonimo de Recovery em escopo global e por empresa.
+- Criada tabela `replymesh_brain_knowledge` para armazenar apenas metricas agregadas: beneficio, horario, dia, segmento e categoria.
+- `BusinessIntelligenceService` e `SalesCoachService` passam a consumir o Cerebro como fonte complementar de recomendacoes, sem executar acoes automaticas.
+- Cache `replymesh_brain` com TTL de 5 minutos foi integrado ao `ReplymeshCacheService`.
+- Invalidacao do cache conectada a pedidos, produtos, categorias, cupons, configuracoes e eventos de Recovery.
+- Telas de inteligencia foram normalizadas para parecerem parte do sistema: Consultor de Vendas, Analise do Negocio e cards padrao.
+- Nenhum dado pessoal, telefone, mensagem, prompt, Pix, cartao, token ou API key e armazenado pelo Cerebro.
+
 ### Atualizacao DEV em 2026-07-02 — Phase 2.1 Coach Inteligente Learning Advisor
 
 - Criado aprendizado persistente do AI Sales Coach por empresa, reaproveitando `SalesCoachService`, `SalesRecoveryLearningEngine`, `CompanyContextBuilder` e `ReplymeshCacheService`.

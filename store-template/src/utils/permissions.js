@@ -129,7 +129,7 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/whatsapp-templates', label: 'Templates WhatsApp' },
       { path: '/admin/marketing-whatsapp', label: 'Marketing WhatsApp' },
       { path: '/admin/sales-recovery', label: 'Automacao Inteligente' },
-      { path: '/admin/sales-coach', label: 'AI Sales Coach' },
+      { path: '/admin/sales-coach', label: 'Consultor de Vendas' },
       { path: '/admin/business-intelligence', label: 'Inteligencia do Negocio' },
       { path: '/admin/users', label: 'Usuários' },
     ],

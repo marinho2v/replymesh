@@ -142,7 +142,7 @@ export default function BusinessIntelligence() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-300">Analise da operacao</p>
-          <h1 className="mt-2 text-3xl font-black text-white">Inteligencia do Negocio</h1>
+          <h1 className="mt-2 text-3xl font-black text-white">Analise do Negocio</h1>
           <p className="text-gray-400">A Replymesh analisa vendas, produtos, clientes, recovery e performance para sugerir proximas acoes.</p>
         </div>
         <Button variant="secondary" onClick={load} disabled={loading}>
@@ -151,12 +151,12 @@ export default function BusinessIntelligence() {
         </Button>
       </div>
 
-      <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/15 via-dark-900 to-dark-950">
+      <Card>
         <CardContent className="grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex items-start gap-4">
             <span className="rounded-2xl bg-blue-500 p-3 text-white"><BarChart3 size={24} /></span>
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-200">Business Intelligence ativo</p>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-200">Analise ativa</p>
               <h2 className="mt-1 text-2xl font-black text-white">{summary.headline || health.label || 'Coletando dados da loja'}</h2>
               <p className="mt-2 max-w-3xl text-sm text-gray-300">
                 Esta tela apenas observa e recomenda. Nenhuma mensagem, pedido, cupom ou campanha e executada automaticamente.
@@ -221,6 +221,7 @@ export default function BusinessIntelligence() {
         <Analysis title="Clientes" data={payload?.customer_analysis} />
         <Analysis title="Entrega" data={payload?.delivery_analysis} />
         <Analysis title="Performance" data={payload?.performance_analysis} />
+        <Analysis title="Cerebro Replymesh" data={payload?.replymesh_brain} />
         <Section title="Todos os insights">
           <InsightList items={combinedInsights.slice(0, 8)} />
         </Section>

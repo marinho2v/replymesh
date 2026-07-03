@@ -4,6 +4,8 @@ Plataforma SaaS multi-tenant para lanchonetes, restaurantes, hamburguerias, pizz
 
 ## Status
 
+- Fase 2.3 Cerebro Replymesh: `ReplymeshBrainService` consolida estatisticas anonimas globais e por empresa para reutilizar aprendizado em Recovery, Consultor de Vendas e Analise do Negocio, usando PostgreSQL e cache `replymesh_brain`, sem armazenar dados pessoais ou mensagens.
+- Fase 2.2 Business Intelligence: `BusinessIntelligenceService` transforma dados operacionais da loja em leitura comercial, riscos, oportunidades e indicadores executivos.
 - Fase 2.1 Coach Inteligente: `SalesCoachLearningService` adiciona aprendizado por empresa ao AI Sales Coach, com persistencia de insights, status, feedback do lojista, historico, Coach Score e area visual de recomendacoes inteligentes. O coach continua apenas recomendando; nenhuma acao e executada automaticamente.
 - Fase 2.0 AI Sales Coach Foundation: `SalesCoachService` analisa pedidos, faturamento, ticket medio, produtos, categorias, Recovery, cupons, clientes, horarios, estoque e aprendizado existente para gerar recomendacoes ao dono da loja. O coach apenas observa e sugere acoes; nao executa automacoes.
 - Fase 1.9 AI Foundation: `CompanyContextBuilder` centraliza contexto de empresa para IA vendedora e Recovery Engine, com cache de 5 minutos, invalidacao por alteracoes da loja e metricas no Performance Monitor.

@@ -296,7 +296,7 @@ const DashboardStats = ({ stats, loading }) => {
       </div>
 
       {hasSalesCoach && (
-        <Card className="mb-4 border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-dark-900 to-dark-950 sm:mb-8">
+        <Card className="mb-4 sm:mb-8">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3">
@@ -304,7 +304,7 @@ const DashboardStats = ({ stats, loading }) => {
                   <Sparkles size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">AI Sales Coach</p>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">Consultor de Vendas</p>
                   <h3 className="mt-1 text-xl font-black text-white">
                     {salesCoach.insights_count || 0} recomendações para sua operação
                   </h3>
@@ -333,7 +333,7 @@ const DashboardStats = ({ stats, loading }) => {
       )}
 
       {hasBusinessIntelligence && (
-        <Card className="mb-4 border-blue-500/30 bg-gradient-to-br from-blue-500/10 via-dark-900 to-dark-950 sm:mb-8">
+        <Card className="mb-4 sm:mb-8">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3">
@@ -341,7 +341,7 @@ const DashboardStats = ({ stats, loading }) => {
                   <BarChart3 size={22} />
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Business Intelligence</p>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Analise do Negocio</p>
                   <h3 className="mt-1 text-xl font-black text-white">
                     Score do negocio: {businessIntelligence.business_score ?? 0}/100
                   </h3>
@@ -360,7 +360,7 @@ const DashboardStats = ({ stats, loading }) => {
                   to={`${basePath}/admin/business-intelligence`}
                   className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
                 >
-                  Ver inteligencia
+                  Ver analise
                 </Link>
               </div>
             </div>

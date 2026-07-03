@@ -226,7 +226,7 @@ export const AdminLayout = () => {
         { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'], feature: 'whatsapp_templates' },
         { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Automacao Inteligente', roles: ['admin'], feature: 'sales_recovery' },
-        { path: '/admin/sales-coach', icon: Sparkles, label: 'AI Sales Coach', roles: ['admin'], feature: 'sales_recovery' },
+        { path: '/admin/sales-coach', icon: Sparkles, label: 'Consultor de Vendas', roles: ['admin'], feature: 'sales_recovery' },
         { path: '/admin/business-intelligence', icon: BarChart3, label: 'Inteligencia do Negocio', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },

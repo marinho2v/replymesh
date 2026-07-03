@@ -25,7 +25,7 @@ export default function SalesCoach() {
       const data = await getSalesCoach()
       setPayload(data)
     } catch (error) {
-      toast.error(error.message || 'Nao foi possivel carregar o AI Sales Coach.')
+      toast.error(error.message || 'Nao foi possivel carregar o consultor de vendas.')
     } finally {
       setLoading(false)
     }
@@ -73,8 +73,8 @@ export default function SalesCoach() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-400">Marketing inteligente</p>
-          <h1 className="mt-2 text-3xl font-black text-white">AI Sales Coach</h1>
-          <p className="text-gray-400">A IA observa sua operacao, encontra oportunidades e recomenda proximas acoes sem executar nada sozinha.</p>
+          <h1 className="mt-2 text-3xl font-black text-white">Consultor de Vendas</h1>
+          <p className="text-gray-400">A Replymesh observa sua operacao, encontra oportunidades e recomenda proximas acoes sem executar nada sozinha.</p>
         </div>
         <Button variant="secondary" onClick={loadCoach} disabled={loading}>
           <RefreshCw size={16} className="mr-2" />
@@ -82,15 +82,15 @@ export default function SalesCoach() {
         </Button>
       </div>
 
-      <Card className="border-primary-500/30 bg-gradient-to-br from-primary-500/15 via-dark-900 to-dark-950">
+      <Card>
         <CardContent className="grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex items-start gap-4">
             <span className="rounded-2xl bg-primary-500 p-3 text-dark-950"><Bot size={24} /></span>
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-300">Coach ativo</p>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-300">Analise ativa</p>
               <h2 className="mt-1 text-2xl font-black text-white">{advisor.top_opportunity || summary.biggest_opportunity || 'Aguardando dados da loja'}</h2>
               <p className="mt-2 max-w-3xl text-sm text-gray-300">
-                {advisor.greeting || 'O coach esta analisando pedidos, recovery, produtos e oportunidades.'}
+                {advisor.greeting || 'A Replymesh esta analisando pedidos, recovery, produtos e oportunidades.'}
                 {' '}Nenhuma acao e disparada automaticamente.
               </p>
               {advisor.next_best_action && (
@@ -102,7 +102,7 @@ export default function SalesCoach() {
           </div>
           <div className="grid min-w-[280px] gap-3 rounded-2xl border border-dark-700 bg-dark-950/70 p-4">
             <div>
-              <span className="text-sm text-gray-400">Coach Score</span>
+              <span className="text-sm text-gray-400">Score de venda</span>
               <strong className="block text-3xl text-white">{summary.coach_score ?? advisor.coach_score ?? 0}/100</strong>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-dark-800">
@@ -116,7 +116,7 @@ export default function SalesCoach() {
       <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-black text-white">Coach Inteligente</h3>
+            <h3 className="text-lg font-black text-white">Recomendacoes principais</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {(advisor.opportunities || []).slice(0, 4).map((item, index) => (
                 <div key={`${item}-${index}`} className="rounded-2xl border border-dark-700 bg-dark-950 p-3 text-sm text-gray-200">
@@ -201,7 +201,7 @@ export default function SalesCoach() {
             <div>
               <h3 className="text-lg font-black text-white">Aprendizado preparado</h3>
               <p className="mt-1 text-sm text-gray-400">
-                O coach agora aprende com cada resposta sua: aceite, ignore, marque se funcionou e registre execucao manual.
+                O sistema aprende com cada resposta sua: aceite, ignore, marque se funcionou e registre execucao manual.
                 Quanto mais feedback, melhor fica a recomendacao para esta empresa.
               </p>
             </div>

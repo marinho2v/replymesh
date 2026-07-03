@@ -24,6 +24,16 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Phase 2.3 - Cerebro Replymesh e padronizacao visual
+
+Executado no `store-template`:
+
+- Menu e permissoes passaram a exibir `Consultor de Vendas` no lugar de nomes tecnicos de IA.
+- Tela do Consultor de Vendas foi simplificada para seguir os mesmos cards e espacos do dashboard.
+- Tela de Analise do Negocio recebeu bloco resumido do Cerebro Replymesh.
+- Dashboard da loja passou a apresentar o consultor e a analise como recursos nativos do sistema, sem visual de landing page ou modulo separado.
+- Nenhuma automacao nova foi criada; as telas apenas observam, analisam e recomendam.
+
 ## Phase 2.1 - AI Sales Coach com aprendizado
 
 Executado no `store-template`:
