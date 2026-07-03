@@ -18,6 +18,7 @@ class ReplymeshCacheService
     sales_coach_learning: 2.minutes,
     business_intelligence: 60.seconds,
     replymesh_brain: 5.minutes,
+    replymesh_strategy: 5.minutes,
     statistics: 60.seconds,
     tables: 5.minutes,
     motoboys: 5.minutes,

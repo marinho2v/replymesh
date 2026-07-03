@@ -6,7 +6,7 @@ class SalesCoachInsight < ApplicationRecord
   STATUSES = %w[new viewed accepted ignored archived manual_executed].freeze
   FEEDBACK_RESULTS = %w[worked not_worked].freeze
 
-  invalidates_replymesh_cache :dashboard, :sales_coach, :sales_coach_learning, :business_intelligence
+  invalidates_replymesh_cache :dashboard, :sales_coach, :sales_coach_learning, :business_intelligence, :replymesh_strategy
 
   belongs_to :company
 

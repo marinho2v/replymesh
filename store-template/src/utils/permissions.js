@@ -81,6 +81,7 @@ export const canAccessRoute = (userRole, route) => {
     '/admin/sales-recovery': ['admin'],
     '/admin/sales-coach': ['admin'],
     '/admin/business-intelligence': ['admin'],
+    '/admin/strategy': ['admin'],
     '/admin/motoboys': ['admin', 'attendant'],
     '/admin/users': ['admin'],
     '/kitchen': ['kitchen'],
@@ -131,6 +132,7 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/sales-recovery', label: 'Automacao Inteligente' },
       { path: '/admin/sales-coach', label: 'Consultor de Vendas' },
       { path: '/admin/business-intelligence', label: 'Inteligencia do Negocio' },
+      { path: '/admin/strategy', label: 'Estrategia' },
       { path: '/admin/users', label: 'Usuários' },
     ],
     attendant: [

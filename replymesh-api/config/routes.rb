@@ -143,6 +143,7 @@ Rails.application.routes.draw do
       namespace :store do
         get "dashboard",      to: "dashboard#show"
         get "business_intelligence", to: "business_intelligence#show"
+        get "strategy", to: "strategy#show"
         get "reports",        to: "reports#show"
         get "features",       to: "features#show"
         get "kitchen/orders", to: "orders#kitchen"

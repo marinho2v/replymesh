@@ -1,7 +1,7 @@
 class InventoryItem < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :products, :dashboard, :ai_context, :business_intelligence
+  invalidates_replymesh_cache :products, :dashboard, :ai_context, :business_intelligence, :replymesh_strategy
 
   UNITS = %w[un kg g l ml cx pct].freeze
 

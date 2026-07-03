@@ -35,6 +35,7 @@ import {
   MonitorPlay,
   BookOpen,
   ExternalLink,
+  Target,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { signOut } from '../../services/auth'
@@ -228,6 +229,7 @@ export const AdminLayout = () => {
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Automacao Inteligente', roles: ['admin'], feature: 'sales_recovery' },
         { path: '/admin/sales-coach', icon: Sparkles, label: 'Consultor de Vendas', roles: ['admin'], feature: 'sales_recovery' },
         { path: '/admin/business-intelligence', icon: BarChart3, label: 'Inteligencia do Negocio', roles: ['admin'], feature: 'dashboard' },
+        { path: '/admin/strategy', icon: Target, label: 'Estrategia', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
       ],

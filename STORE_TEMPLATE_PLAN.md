@@ -1557,3 +1557,18 @@ podem sair automaticamente; scores menores ficam registrados para analise.
 O Store Template passa a exibir uma área de Inteligência do Negócio para administradores da loja. A tela consome apenas `/api/v1/store/business_intelligence` e apresenta score, saúde da operação, oportunidades, alertas, recomendações, produtos, categorias e análises de recovery, cupons, delivery, clientes e performance.
 
 O painel não executa ações automaticamente; ele apenas orienta o lojista.
+## DEV - Estrategia da Loja / Phase 2.4
+
+O Store Template passa a exibir uma tela de estrategia operacional em
+`Admin > Estrategia`, consumindo apenas `/api/v1/store/strategy`.
+
+A tela mostra:
+
+- resumo executivo;
+- maior prioridade, maior oportunidade e maior risco;
+- indicadores 0-100;
+- prioridades consolidadas sem repeticao entre modulos;
+- recomendacoes, mudancas recentes, historico e fontes.
+
+A experiencia segue o mesmo design system do painel e nao dispara nenhuma acao
+automatica.

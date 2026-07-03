@@ -2470,3 +2470,11 @@ Fora do escopo:
 - Criada tela da loja `Admin > Business Intelligence`.
 - Criado card de Business Intelligence no Dashboard da loja.
 - Cache dedicado `business_intelligence` com invalidação automática nos principais eventos operacionais.
+# Phase 2.4 — Inteligencia Estrategica da Replymesh
+
+- Criado `ReplymeshStrategyService` para consolidar Consultor, Business Intelligence, Recovery e Cerebro Replymesh.
+- Criado endpoint `GET /api/v1/store/strategy`.
+- Criado card `Estrategia da Loja` no Dashboard.
+- Criada tela `Admin > Estrategia` com resumo executivo, prioridades, indicadores, historico e fontes.
+- Criado cache dedicado `replymesh_strategy`, invalidado por eventos operacionais relevantes.
+- A camada apenas organiza prioridades e nao executa acoes automaticamente.

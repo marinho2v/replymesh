@@ -1263,3 +1263,19 @@ Relatorio:
 Phase 2.2 adiciona a base do Business Intelligence da loja.
 
 O módulo observa pedidos, produtos, categorias, recovery, cupons, delivery, clientes e performance para gerar score, alertas, oportunidades e recomendações. Ele é somente leitura: não cria pedidos, não envia mensagens, não cria cupons e não altera dados operacionais.
+## Replymesh Strategy — Phase 2.4
+
+A Phase 2.4 adiciona a camada `ReplymeshStrategyService`, que consolida
+Consultor de Vendas, Analise do Negocio, Recovery Intelligence e Cerebro
+Replymesh em prioridades simples para o dono da loja.
+
+Principais pontos:
+
+- endpoint `GET /api/v1/store/strategy`;
+- card compacto `Estrategia da Loja` no dashboard da loja;
+- tela `Admin > Estrategia`;
+- indicadores internos `Strategic Score`, `Operational Health`,
+  `Sales Opportunity` e `Risk Level`;
+- agrupamento de recomendacoes semelhantes para evitar repeticao;
+- cache `replymesh_strategy` com TTL de 5 minutos;
+- nenhuma acao automatica, envio, cupom ou alteracao operacional.
