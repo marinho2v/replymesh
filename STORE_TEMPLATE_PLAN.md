@@ -24,6 +24,17 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Phase 2.6 - Product Intelligence
+
+Executado no `store-template`:
+
+- Criada tela `Marketing > Inteligencia de Produtos`.
+- A tela consome `GET /api/v1/store/product_intelligence`.
+- Exibe produto campeao, produto em crescimento, produto esquecido, produto com maior potencial, score, tendencia, melhor horario, melhor dia e produtos vendidos juntos.
+- Dashboard recebeu card compacto `Produtos Inteligentes`.
+- Menu e permissoes foram atualizados sem criar automacoes, alterar precos, modificar pedidos ou criar campanhas.
+- A tela usa o mesmo padrao visual do dashboard, sem visual futurista ou modulo separado de IA.
+
 ## Phase 2.5 - Customer Intelligence
 
 Executado no `store-template`:

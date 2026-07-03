@@ -2,7 +2,7 @@ class StoreSetting < ApplicationRecord
   include CloudStorageBacked
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :store, :settings, :business_hours, :delivery, :ai_context, :business_intelligence, :replymesh_strategy
+  invalidates_replymesh_cache :store, :settings, :business_hours, :delivery, :ai_context, :business_intelligence, :product_intelligence, :replymesh_strategy
 
   STATUSES = %w[open closed paused].freeze
   WHATSAPP_MODES = %w[automatic manual disabled].freeze

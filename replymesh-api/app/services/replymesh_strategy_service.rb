@@ -90,6 +90,7 @@ class ReplymeshStrategyService
       sales_coach: safe_hash { SalesCoachService.call(company: company, now: now) },
       business_intelligence: safe_hash { BusinessIntelligenceService.call(company: company, now: now) },
       customer_intelligence: safe_hash { CustomerIntelligenceService.call(company: company, now: now) },
+      product_intelligence: safe_hash { ProductIntelligenceService.call(company: company, now: now) },
       recovery_intelligence: safe_hash { SalesRecoveryLearningEngine.new(company: company, now: now).insights },
       replymesh_brain: safe_hash { ReplymeshBrainService.call(company: company, now: now) }
     }
@@ -100,6 +101,7 @@ class ReplymeshStrategyService
     raw.concat(normalize_sales_coach(sources[:sales_coach]))
     raw.concat(normalize_business_intelligence(sources[:business_intelligence]))
     raw.concat(normalize_customer_intelligence(sources[:customer_intelligence]))
+    raw.concat(normalize_product_intelligence(sources[:product_intelligence]))
     raw.concat(normalize_recovery(sources[:recovery_intelligence]))
     raw.concat(normalize_brain(sources[:replymesh_brain]))
 
@@ -204,6 +206,55 @@ class ReplymeshStrategyService
         confidence: 72,
         origin: "Inteligencia de Clientes",
         reason: "vip"
+      )
+    end
+
+    items
+  end
+
+  def normalize_product_intelligence(payload)
+    summary = payload[:summary] || {}
+    items = []
+
+    if summary[:forgotten_product].present?
+      items << recommendation_from(
+        title: "Produto esquecido precisa de revisao",
+        description: "#{summary[:forgotten_product]} esta ativo, mas teve baixo movimento no periodo.",
+        action: "Revisar foto, descricao, preco, destaque ou retirar do cardapio se nao fizer sentido.",
+        priority: "Media",
+        category: "Produtos",
+        impact_cents: 0,
+        confidence: 70,
+        origin: "Inteligencia de Produtos",
+        reason: "forgotten_product"
+      )
+    end
+
+    if summary[:growing_product].present?
+      items << recommendation_from(
+        title: "Produto em crescimento pode receber destaque",
+        description: "#{summary[:growing_product]} esta crescendo e pode puxar mais vendas.",
+        action: "Testar destaque no cardapio, banner ou sugestao no atendimento.",
+        priority: "Media",
+        category: "Produtos",
+        impact_cents: 0,
+        confidence: 74,
+        origin: "Inteligencia de Produtos",
+        reason: "growing_product"
+      )
+    end
+
+    if summary.dig(:best_bundle, :label).present?
+      items << recommendation_from(
+        title: "Produtos vendidos juntos sugerem combo",
+        description: "#{summary[:best_bundle][:label]} aparecem juntos em #{summary[:best_bundle][:orders]} pedido(s).",
+        action: "Avaliar um combo ou sugestao de venda casada com esses itens.",
+        priority: "Baixa",
+        category: "Marketing",
+        impact_cents: summary[:best_bundle][:revenue_cents],
+        confidence: summary[:best_bundle][:percent].to_i.clamp(35, 90),
+        origin: "Inteligencia de Produtos",
+        reason: "sold_together"
       )
     end
 
@@ -368,6 +419,10 @@ class ReplymeshStrategyService
       customer_intelligence: {
         available: sources[:customer_intelligence].present?,
         insights: Array(sources.dig(:customer_intelligence, :insights)).size
+      },
+      product_intelligence: {
+        available: sources[:product_intelligence].present?,
+        insights: Array(sources.dig(:product_intelligence, :insights)).size
       },
       replymesh_brain: {
         available: sources[:replymesh_brain].present?,

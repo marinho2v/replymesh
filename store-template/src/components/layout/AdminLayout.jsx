@@ -230,6 +230,7 @@ export const AdminLayout = () => {
         { path: '/admin/sales-coach', icon: Sparkles, label: 'Consultor de Vendas', roles: ['admin'], feature: 'sales_recovery' },
         { path: '/admin/business-intelligence', icon: BarChart3, label: 'Inteligencia do Negocio', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/customer-intelligence', icon: Users, label: 'Inteligencia de Clientes', roles: ['admin'], feature: 'customers' },
+        { path: '/admin/product-intelligence', icon: Package, label: 'Inteligencia de Produtos', roles: ['admin'], feature: 'products' },
         { path: '/admin/strategy', icon: Target, label: 'Estrategia', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
         { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },

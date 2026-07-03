@@ -19,6 +19,16 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-03 — Phase 2.6 Product Intelligence
+
+- Criado `ProductIntelligenceService` para analisar produtos, categorias, adicionais, combos, pedidos, horarios, dias e produtos vendidos juntos.
+- Criado endpoint `GET /api/v1/store/product_intelligence`, protegido pelo recurso de produtos.
+- Dashboard da loja recebeu card compacto `Produtos Inteligentes`, com produto campeao, em crescimento, esquecido, maior potencial e score medio.
+- Criada tela `Marketing > Inteligencia de Produtos` para resumo, score, classificacao, tendencia, potencial, melhor horario/dia, produtos esquecidos e combinacoes de venda.
+- Cache `product_intelligence` com TTL de 5 minutos foi integrado e invalidado por pedidos, produtos, categorias, cupons, estoque, adicionais, configuracoes e Recovery.
+- A camada de Estrategia passou a consumir Product Intelligence como fonte complementar, sem executar acoes automaticas.
+- Nenhum telefone, mensagem, Pix, cartao, token, prompt ou dado pessoal e exposto pelo modulo.
+
 ### Atualizacao DEV em 2026-07-03 — Phase 2.5 Customer Intelligence
 
 - Criado `CustomerIntelligenceService` para transformar clientes em perfis comerciais: Novo, Ativo, Recorrente, VIP, Em risco, Inativo e Perdido.
