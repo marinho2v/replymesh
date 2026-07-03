@@ -1282,3 +1282,21 @@ Principais pontos:
 - agrupamento de recomendacoes semelhantes para evitar repeticao;
 - cache `replymesh_strategy` com TTL de 5 minutos;
 - nenhuma acao automatica, envio, cupom ou alteracao operacional.
+
+## Replymesh Marketing Intelligence — Phase 2.7
+
+A Phase 2.7 adiciona o `MarketingIntelligenceService`, uma camada somente
+leitura que reutiliza Cérebro ReplyMesh, Estratégia, Consultor de Vendas,
+Análise do Negócio, Inteligência de Clientes, Inteligência de Produtos e
+Recovery Learning para recomendar oportunidades comerciais.
+
+Principais pontos:
+
+- endpoint `GET /api/v1/store/marketing_intelligence`;
+- card compacto `Marketing Inteligente` no dashboard da loja;
+- tela `Admin > Inteligência de Marketing` dentro do grupo Cérebro da ReplyMesh;
+- cache `marketing_intelligence` com TTL de 5 minutos;
+- recomendações de melhor campanha, produto, categoria, horário, dia, público
+  prioritário, potencial e confiança;
+- nenhuma campanha, cupom, WhatsApp ou alteração operacional é executada
+  automaticamente.

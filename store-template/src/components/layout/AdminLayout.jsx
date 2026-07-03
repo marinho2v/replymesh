@@ -235,6 +235,7 @@ export const AdminLayout = () => {
         { path: '/admin/business-intelligence', icon: BarChart3, label: 'Analise do Negocio', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/customer-intelligence', icon: Users, label: 'Inteligencia de Clientes', roles: ['admin'], feature: 'customers' },
         { path: '/admin/product-intelligence', icon: Package, label: 'Inteligencia de Produtos', roles: ['admin'], feature: 'products' },
+        { path: '/admin/marketing-intelligence', icon: Megaphone, label: 'Inteligencia de Marketing', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
       ],
     },

@@ -145,6 +145,7 @@ Rails.application.routes.draw do
         get "business_intelligence", to: "business_intelligence#show"
         get "customer_intelligence", to: "customer_intelligence#show"
         get "product_intelligence", to: "product_intelligence#show"
+        get "marketing_intelligence", to: "marketing_intelligence#show"
         get "strategy", to: "strategy#show"
         get "reports",        to: "reports#show"
         get "features",       to: "features#show"

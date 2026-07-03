@@ -19,6 +19,7 @@ class ReplymeshCacheService
     business_intelligence: 60.seconds,
     customer_intelligence: 5.minutes,
     product_intelligence: 5.minutes,
+    marketing_intelligence: 5.minutes,
     replymesh_brain: 5.minutes,
     replymesh_strategy: 5.minutes,
     statistics: 60.seconds,

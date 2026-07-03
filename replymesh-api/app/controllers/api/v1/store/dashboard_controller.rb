@@ -68,6 +68,7 @@ module Api
             business_intelligence: business_intelligence_summary,
             customer_intelligence: customer_intelligence_summary,
             product_intelligence:  product_intelligence_summary,
+            marketing_intelligence: marketing_intelligence_summary,
             strategy:             strategy_summary
           }
         end
@@ -97,6 +98,13 @@ module Api
           ProductIntelligenceService.call(company: current_company)[:summary] || {}
         rescue StandardError => e
           Rails.logger.warn("[DashboardController] product intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def marketing_intelligence_summary
+          MarketingIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] marketing intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
           {}
         end
 

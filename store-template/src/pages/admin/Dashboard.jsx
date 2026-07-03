@@ -225,6 +225,7 @@ const Dashboard = () => {
           businessIntelligence: data.business_intelligence || {},
           customerIntelligence: data.customer_intelligence || {},
           productIntelligence: data.product_intelligence || {},
+          marketingIntelligence: data.marketing_intelligence || {},
           strategy:           data.strategy || {},
         })
       } catch (error) {

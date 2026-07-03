@@ -1,7 +1,7 @@
 class Customer < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :dashboard, :statistics, :sales_coach, :sales_coach_learning, :business_intelligence, :customer_intelligence, :replymesh_brain, :replymesh_strategy
+  invalidates_replymesh_cache :dashboard, :statistics, :sales_coach, :sales_coach_learning, :business_intelligence, :customer_intelligence, :marketing_intelligence, :replymesh_brain, :replymesh_strategy
 
   belongs_to :company
   has_many   :customer_addresses, dependent: :destroy

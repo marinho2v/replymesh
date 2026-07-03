@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/currency'
 import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import {
   ShoppingCart, DollarSign, Users, TrendingUp,
-  ShoppingBag, AlertTriangle, Package, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles, BarChart3, Target,
+  ShoppingBag, AlertTriangle, Package, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles, BarChart3, Target, Megaphone,
 } from 'lucide-react'
 
 // Sparkline SVG simples usando polilinha
@@ -148,11 +148,13 @@ const DashboardStats = ({ stats, loading }) => {
   const businessIntelligence = stats?.businessIntelligence || {}
   const customerIntelligence = stats?.customerIntelligence || {}
   const productIntelligence = stats?.productIntelligence || {}
+  const marketingIntelligence = stats?.marketingIntelligence || {}
   const strategy = stats?.strategy || {}
   const hasSalesCoach = Object.keys(salesCoach).length > 0
   const hasBusinessIntelligence = Object.keys(businessIntelligence).length > 0
   const hasCustomerIntelligence = Object.keys(customerIntelligence).length > 0
   const hasProductIntelligence = Object.keys(productIntelligence).length > 0
+  const hasMarketingIntelligence = Object.keys(marketingIntelligence).length > 0
   const hasStrategy = Object.keys(strategy).length > 0
 
   const statCards = [
@@ -443,6 +445,44 @@ const DashboardStats = ({ stats, loading }) => {
                   className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
                 >
                   Ver produtos
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasMarketingIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+                  <Megaphone size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Marketing Inteligente</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {marketingIntelligence.recommended_campaign || marketingIntelligence.best_campaign || 'Aguardando campanha ideal'}
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Produto: <span className="text-gray-200">{marketingIntelligence.product_to_promote || 'Aguardando dados'}</span>.
+                    {' '}Horario: <span className="text-gray-200">{marketingIntelligence.best_time || 'Aguardando dados'}</span>.
+                    {' '}Potencial: <span className="text-gray-200">{marketingIntelligence.conversion_potential || 'Baixo'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Marketing Score</p>
+                  <p className="text-lg font-black text-white">{marketingIntelligence.marketing_score ?? 0}/100</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/marketing-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver marketing
                 </Link>
               </div>
             </div>

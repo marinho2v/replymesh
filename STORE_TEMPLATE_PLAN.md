@@ -1605,3 +1605,20 @@ A tela mostra:
 
 A experiencia segue o mesmo design system do painel e nao dispara nenhuma acao
 automatica.
+
+## DEV - Inteligencia de Marketing / Phase 2.7
+
+O Store Template passa a exibir `Admin > Inteligencia de Marketing`, consumindo
+apenas `/api/v1/store/marketing_intelligence`.
+
+A tela mostra:
+
+- resumo executivo;
+- melhor campanha, melhor produto, melhor horario e melhor dia;
+- recomendacoes priorizadas;
+- tipos de campanha sugeridos;
+- produtos, categorias e clientes prioritarios;
+- calendario comercial e insights rapidos.
+
+A experiencia segue o mesmo Design System do painel, fica dentro do grupo
+`Cerebro da ReplyMesh` e nao dispara campanhas automaticamente.

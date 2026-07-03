@@ -149,6 +149,12 @@ export const getProductIntelligence = (options = {}) => (
   })
 )
 
+export const getMarketingIntelligence = (options = {}) => (
+  request('/store/marketing_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
 export const getStoreStrategy = (options = {}) => (
   request('/store/strategy', {
     headers: withCompanyHeader(options.companyId || currentCompanyId()),

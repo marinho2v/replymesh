@@ -2506,3 +2506,12 @@ Fora do escopo:
 - Criada tela `Admin > Estrategia` com resumo executivo, prioridades, indicadores, historico e fontes.
 - Criado cache dedicado `replymesh_strategy`, invalidado por eventos operacionais relevantes.
 - A camada apenas organiza prioridades e nao executa acoes automaticamente.
+
+# Phase 2.7 — Marketing Intelligence
+
+- Criado `MarketingIntelligenceService` para transformar as inteligencias existentes em recomendacoes comerciais.
+- Criado endpoint `GET /api/v1/store/marketing_intelligence`.
+- Criado card `Marketing Inteligente` no Dashboard da loja.
+- Criada tela `Admin > Inteligencia de Marketing`, dentro do grupo `Cerebro da ReplyMesh`.
+- Criado cache dedicado `marketing_intelligence`, invalidado por eventos operacionais relevantes.
+- A camada apenas recomenda campanhas, horarios, produtos, categorias e publicos; nao envia WhatsApp, nao cria cupons e nao altera dados.
