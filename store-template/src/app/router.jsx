@@ -56,6 +56,7 @@ const MarketingWhatsapp = lazy(() => import('../pages/admin/MarketingWhatsapp'))
 const SalesRecovery = lazy(() => import('../pages/admin/SalesRecovery'))
 const SalesCoach = lazy(() => import('../pages/admin/SalesCoach'))
 const BusinessIntelligence = lazy(() => import('../pages/admin/BusinessIntelligence'))
+const CustomerIntelligence = lazy(() => import('../pages/admin/CustomerIntelligence'))
 const Strategy = lazy(() => import('../pages/admin/Strategy'))
 // AiAssistant removido da loja (Fase 15.12) — config apenas no master
 const Motoboys = lazy(() => import('../pages/admin/Motoboys'))
@@ -240,6 +241,7 @@ const adminChildren = [
   { path: 'sales-recovery', element: protectedPage(SalesRecovery, ['admin']) },
   { path: 'sales-coach', element: protectedPage(SalesCoach, ['admin']) },
   { path: 'business-intelligence', element: protectedPage(BusinessIntelligence, ['admin']) },
+  { path: 'customer-intelligence', element: protectedPage(CustomerIntelligence, ['admin']) },
   { path: 'strategy', element: protectedPage(Strategy, ['admin']) },
   { path: 'ai', element: protectedPage(StoreAiSettings, ['admin']) },
   { path: 'ai/logs', element: protectedPage(StoreAiLogs, ['admin']) },

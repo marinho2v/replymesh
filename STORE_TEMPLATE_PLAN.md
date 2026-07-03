@@ -24,6 +24,17 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Phase 2.5 - Customer Intelligence
+
+Executado no `store-template`:
+
+- Criada tela `Marketing > Inteligencia de Clientes`.
+- A tela consome `GET /api/v1/store/customer_intelligence`.
+- Exibe resumo, perfis, score, risco, potencial, produtos favoritos, categorias favoritas e insights.
+- Dashboard recebeu card compacto `Clientes Inteligentes`.
+- Menu e permissoes foram atualizados sem criar automacoes, campanhas ou disparos de WhatsApp.
+- A tela usa o mesmo padrao visual do dashboard, sem visual futurista ou modulo separado de IA.
+
 ## Phase 2.3 - Cerebro Replymesh e padronizacao visual
 
 Executado no `store-template`:

@@ -89,6 +89,7 @@ class ReplymeshStrategyService
     {
       sales_coach: safe_hash { SalesCoachService.call(company: company, now: now) },
       business_intelligence: safe_hash { BusinessIntelligenceService.call(company: company, now: now) },
+      customer_intelligence: safe_hash { CustomerIntelligenceService.call(company: company, now: now) },
       recovery_intelligence: safe_hash { SalesRecoveryLearningEngine.new(company: company, now: now).insights },
       replymesh_brain: safe_hash { ReplymeshBrainService.call(company: company, now: now) }
     }
@@ -98,6 +99,7 @@ class ReplymeshStrategyService
     raw = []
     raw.concat(normalize_sales_coach(sources[:sales_coach]))
     raw.concat(normalize_business_intelligence(sources[:business_intelligence]))
+    raw.concat(normalize_customer_intelligence(sources[:customer_intelligence]))
     raw.concat(normalize_recovery(sources[:recovery_intelligence]))
     raw.concat(normalize_brain(sources[:replymesh_brain]))
 
@@ -167,6 +169,41 @@ class ReplymeshStrategyService
         confidence: confidence_from_rate(best_strategy[:conversion_rate]),
         origin: "Recovery Intelligence",
         reason: "learning"
+      )
+    end
+
+    items
+  end
+
+  def normalize_customer_intelligence(payload)
+    summary = payload[:summary] || {}
+    items = []
+
+    if summary[:at_risk_customers].to_i.positive?
+      items << recommendation_from(
+        title: "Clientes em risco precisam de atencao",
+        description: "#{summary[:at_risk_customers]} cliente(s) possuem risco medio ou alto de abandono.",
+        action: "Acompanhar a lista de Inteligencia de Clientes antes de criar novas campanhas.",
+        priority: summary[:at_risk_customers].to_i >= 5 ? "Alta" : "Media",
+        category: "Clientes",
+        impact_cents: 0,
+        confidence: summary[:average_customer_score].to_i.clamp(35, 85),
+        origin: "Inteligencia de Clientes",
+        reason: "risk"
+      )
+    end
+
+    if summary[:vip_customers].to_i.positive?
+      items << recommendation_from(
+        title: "Clientes VIP podem gerar mais recorrencia",
+        description: "#{summary[:vip_customers]} cliente(s) VIP foram identificados na base.",
+        action: "Priorizar a experiencia desses clientes e evitar excesso de desconto.",
+        priority: "Media",
+        category: "Clientes",
+        impact_cents: 0,
+        confidence: 72,
+        origin: "Inteligencia de Clientes",
+        reason: "vip"
       )
     end
 
@@ -327,6 +364,10 @@ class ReplymeshStrategyService
       recovery_intelligence: {
         available: sources[:recovery_intelligence].present?,
         insights: Array(sources.dig(:recovery_intelligence, :insights)).size
+      },
+      customer_intelligence: {
+        available: sources[:customer_intelligence].present?,
+        insights: Array(sources.dig(:customer_intelligence, :insights)).size
       },
       replymesh_brain: {
         available: sources[:replymesh_brain].present?,

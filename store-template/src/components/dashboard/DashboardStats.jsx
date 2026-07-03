@@ -146,9 +146,11 @@ const DashboardStats = ({ stats, loading }) => {
   const trendData = stats?.trendData || []
   const salesCoach = stats?.salesCoach || {}
   const businessIntelligence = stats?.businessIntelligence || {}
+  const customerIntelligence = stats?.customerIntelligence || {}
   const strategy = stats?.strategy || {}
   const hasSalesCoach = Object.keys(salesCoach).length > 0
   const hasBusinessIntelligence = Object.keys(businessIntelligence).length > 0
+  const hasCustomerIntelligence = Object.keys(customerIntelligence).length > 0
   const hasStrategy = Object.keys(strategy).length > 0
 
   const statCards = [
@@ -363,6 +365,44 @@ const DashboardStats = ({ stats, loading }) => {
                   className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
                 >
                   Ver analise
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasCustomerIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+                  <Users size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Clientes Inteligentes</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {customerIntelligence.vip_customers || 0} VIP • {customerIntelligence.at_risk_customers || 0} em risco
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Recorrentes: <span className="text-gray-200">{customerIntelligence.recurring_customers || 0}</span>.
+                    {' '}Novos: <span className="text-gray-200">{customerIntelligence.new_customers || 0}</span>.
+                    {' '}Oportunidade: <span className="text-gray-200">{customerIntelligence.biggest_opportunity || 'Aguardando dados'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Score medio</p>
+                  <p className="text-lg font-black text-white">{customerIntelligence.average_customer_score ?? 0}/100</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/customer-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver clientes
                 </Link>
               </div>
             </div>

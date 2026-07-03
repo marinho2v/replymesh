@@ -1,4 +1,8 @@
 class OrderItem < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :dashboard, :statistics, :sales_coach, :sales_coach_learning, :business_intelligence, :customer_intelligence, :replymesh_brain, :replymesh_strategy
+
   STATUSES = %w[active sent_to_kitchen preparing ready delivered cancelled].freeze
 
   belongs_to :company

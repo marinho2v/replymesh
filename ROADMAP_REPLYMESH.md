@@ -19,6 +19,16 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-03 — Phase 2.5 Customer Intelligence
+
+- Criado `CustomerIntelligenceService` para transformar clientes em perfis comerciais: Novo, Ativo, Recorrente, VIP, Em risco, Inativo e Perdido.
+- Criado endpoint `GET /api/v1/store/customer_intelligence`, protegido pelo recurso de clientes.
+- Dashboard da loja recebeu card compacto `Clientes Inteligentes`, com VIPs, clientes em risco, recorrentes, novos, score medio e maior oportunidade.
+- Criada tela `Marketing > Inteligencia de Clientes` para resumo, perfis, score, risco, potencial, produtos favoritos, categorias favoritas e insights.
+- Cache `customer_intelligence` com TTL de 5 minutos foi integrado e invalidado por pedidos, clientes, produtos, categorias, cupons e Recovery.
+- A camada de Estrategia passou a consumir Customer Intelligence como fonte complementar, sem executar nenhuma acao automatica.
+- Nenhum telefone, mensagem, Pix, cartao, token, prompt ou dado sensivel e exposto pelo modulo.
+
 ### Atualizacao DEV em 2026-07-03 — Phase 2.3 Cerebro Replymesh
 
 - Criado `ReplymeshBrainService` para consolidar aprendizado estatistico anonimo de Recovery em escopo global e por empresa.

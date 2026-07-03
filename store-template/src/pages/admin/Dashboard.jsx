@@ -223,6 +223,7 @@ const Dashboard = () => {
           trendData:          data.trend_data || [],
           salesCoach:         data.sales_coach || {},
           businessIntelligence: data.business_intelligence || {},
+          customerIntelligence: data.customer_intelligence || {},
           strategy:           data.strategy || {},
         })
       } catch (error) {

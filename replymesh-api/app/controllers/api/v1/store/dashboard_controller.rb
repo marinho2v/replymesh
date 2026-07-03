@@ -66,6 +66,7 @@ module Api
             trend_data:           trend_data,
             sales_coach:          sales_coach_summary,
             business_intelligence: business_intelligence_summary,
+            customer_intelligence: customer_intelligence_summary,
             strategy:             strategy_summary
           }
         end
@@ -81,6 +82,13 @@ module Api
           BusinessIntelligenceService.call(company: current_company)[:summary] || {}
         rescue StandardError => e
           Rails.logger.warn("[DashboardController] business intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def customer_intelligence_summary
+          CustomerIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] customer intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
           {}
         end
 
