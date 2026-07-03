@@ -24,7 +24,6 @@ import {
   Bike,
   Wallet,
   Armchair,
-  Trophy,
   Smartphone,
   Bell,
   Calendar,
@@ -33,7 +32,6 @@ import {
   RefreshCw,
   Lock,
   MonitorPlay,
-  BookOpen,
   ExternalLink,
   Target,
 } from 'lucide-react'
@@ -171,15 +169,15 @@ export const AdminLayout = () => {
 
   const menuSections = [
     {
-      title: null,
+      title: 'Dashboard',
       items: [
-        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'cashier'], feature: 'pos_counter' },
         { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'cashier'], feature: 'dashboard' },
       ],
     },
     {
       title: 'Operacao',
       items: [
+        { path: '/admin/pos', icon: MonitorPlay, label: 'PDV / Balcao', roles: ['admin', 'cashier'], feature: 'pos_counter' },
         { path: '/admin/orders', icon: ShoppingBag, label: 'Pedidos', roles: ['admin', 'attendant', 'cashier'], feature: 'orders' },
         { path: '/admin/tables', icon: Armchair, label: 'Mesas', roles: ['admin', 'attendant', 'waiter', 'cashier'], feature: 'tables' },
       ],
@@ -199,11 +197,10 @@ export const AdminLayout = () => {
       ],
     },
     {
-      title: 'Clientes & Promocoes',
+      title: 'Clientes',
       items: [
         { path: '/admin/customers', icon: Users, label: 'Clientes', roles: ['admin', 'attendant'], feature: 'customers' },
         { path: '/admin/coupons', icon: Ticket, label: 'Cupons', roles: ['admin'], feature: 'coupons' },
-        { path: '/admin/wheel', icon: Trophy, label: 'Roleta', roles: ['admin'], feature: 'roulette' },
       ],
     },
     {
@@ -227,13 +224,18 @@ export const AdminLayout = () => {
         { path: '/admin/whatsapp/templates', icon: MessageSquare, label: 'Templates WhatsApp', roles: ['admin'], feature: 'whatsapp_templates' },
         { path: '/admin/marketing-whatsapp', icon: Megaphone, label: 'Marketing WhatsApp', roles: ['admin'], feature: 'marketing_whatsapp' },
         { path: '/admin/sales-recovery', icon: RefreshCw, label: 'Automacao Inteligente', roles: ['admin'], feature: 'sales_recovery' },
+        { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
+      ],
+    },
+    {
+      title: 'Cerebro da ReplyMesh',
+      items: [
+        { path: '/admin/strategy', icon: Target, label: 'Visao Estrategica', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/sales-coach', icon: Sparkles, label: 'Consultor de Vendas', roles: ['admin'], feature: 'sales_recovery' },
-        { path: '/admin/business-intelligence', icon: BarChart3, label: 'Inteligencia do Negocio', roles: ['admin'], feature: 'dashboard' },
+        { path: '/admin/business-intelligence', icon: BarChart3, label: 'Analise do Negocio', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/customer-intelligence', icon: Users, label: 'Inteligencia de Clientes', roles: ['admin'], feature: 'customers' },
         { path: '/admin/product-intelligence', icon: Package, label: 'Inteligencia de Produtos', roles: ['admin'], feature: 'products' },
-        { path: '/admin/strategy', icon: Target, label: 'Estrategia', roles: ['admin'], feature: 'dashboard' },
         { path: '/admin/ai', icon: Sparkles, label: 'Inteligencia Artificial', roles: ['admin'], feature: 'store_ai' },
-        { path: '/admin/app-banners', icon: Smartphone, label: 'Aplicativo Android', roles: ['admin'], feature: 'motoboy_app' },
       ],
     },
     {
@@ -244,9 +246,8 @@ export const AdminLayout = () => {
       ],
     },
     {
-      title: null,
+      title: 'Ajuda',
       items: [
-        { path: '/admin/help',    icon: BookOpen,  label: 'Ajuda',         roles: ['admin', 'cashier', 'attendant'] },
         { path: '/admin/support', icon: LifeBuoy,  label: 'Suporte',       roles: ['admin'], highlight: true },
         { path: '/admin/updates', icon: Sparkles,  label: 'Atualizações',  roles: ['admin'] },
       ],

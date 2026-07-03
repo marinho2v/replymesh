@@ -19,6 +19,14 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-03 — Reorganizacao do Menu Admin
+
+- Menu lateral da loja reorganizado sem alterar rotas, APIs, permissoes, banco ou regras de negocio.
+- Criado grupo visual `Cerebro da ReplyMesh` para concentrar Visao Estrategica, Consultor de Vendas, Analise do Negocio, Inteligencia de Clientes, Inteligencia de Produtos e Inteligencia Artificial.
+- Grupo `Comunicacao` ficou dedicado a WhatsApp, Templates WhatsApp, Marketing WhatsApp, Automacao Inteligente e Aplicativo Android.
+- Areas operacionais foram separadas em Dashboard, Operacao, Cardapio, Entrega, Clientes, Estoque, Financeiro, Administracao e Ajuda.
+- A arquitetura visual ficou preparada para futuras inteligencias de Marketing, Delivery, Comercial, Financeira e Operacional sem criar telas novas agora.
+
 ### Atualizacao DEV em 2026-07-03 — Phase 2.6 Product Intelligence
 
 - Criado `ProductIntelligenceService` para analisar produtos, categorias, adicionais, combos, pedidos, horarios, dias e produtos vendidos juntos.

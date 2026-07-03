@@ -135,8 +135,8 @@ export const getAccessibleRoutes = (userRole) => {
       { path: '/admin/marketing-whatsapp', label: 'Marketing WhatsApp' },
       { path: '/admin/sales-recovery', label: 'Automacao Inteligente' },
       { path: '/admin/sales-coach', label: 'Consultor de Vendas' },
-      { path: '/admin/business-intelligence', label: 'Inteligencia do Negocio' },
-      { path: '/admin/strategy', label: 'Estrategia' },
+      { path: '/admin/business-intelligence', label: 'Analise do Negocio' },
+      { path: '/admin/strategy', label: 'Visao Estrategica' },
       { path: '/admin/users', label: 'Usuários' },
     ],
     attendant: [

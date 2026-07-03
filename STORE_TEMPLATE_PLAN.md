@@ -24,6 +24,17 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Reorganizacao do Menu Admin - Cerebro da ReplyMesh
+
+Executado no `store-template`:
+
+- Menu lateral reorganizado apenas visualmente, sem alterar rotas, URLs, permissoes, componentes internos ou APIs.
+- `Dashboard` ficou isolado como grupo proprio.
+- `Operacao`, `Cardapio`, `Entrega`, `Clientes`, `Estoque`, `Financeiro`, `Comunicacao`, `Administracao` e `Ajuda` foram separados por responsabilidade.
+- `Comunicacao` permanece responsavel por canais e automacoes com clientes.
+- Novo grupo visual `Cerebro da ReplyMesh` concentra todas as inteligencias atuais: Visao Estrategica, Consultor de Vendas, Analise do Negocio, Inteligencia de Clientes, Inteligencia de Produtos e Inteligencia Artificial.
+- A estrutura ficou preparada para receber futuras inteligencias sem poluir o menu operacional.
+
 ## Phase 2.6 - Product Intelligence
 
 Executado no `store-template`:
