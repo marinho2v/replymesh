@@ -142,6 +142,11 @@ Rails.application.routes.draw do
       # ─── Store (autenticado — painel/admin/cozinha/motoboy) ───────────────────
       namespace :store do
         get "dashboard",      to: "dashboard#show"
+        get "business_intelligence", to: "business_intelligence#show"
+        get "customer_intelligence", to: "customer_intelligence#show"
+        get "product_intelligence", to: "product_intelligence#show"
+        get "marketing_intelligence", to: "marketing_intelligence#show"
+        get "strategy", to: "strategy#show"
         get "reports",        to: "reports#show"
         get "features",       to: "features#show"
         get "kitchen/orders", to: "orders#kitchen"
@@ -290,6 +295,14 @@ Rails.application.routes.draw do
         post "marketing/send_individual", to: "marketing#send_individual"
         post "marketing/campaigns/:id/send", to: "marketing#send_campaign"
         get  "sales_recovery/customers", to: "marketing#recovery_customers"
+        get  "sales_recovery", to: "marketing#sales_recovery"
+        get  "sales_recovery/settings", to: "marketing#sales_recovery_settings"
+        patch "sales_recovery/settings", to: "marketing#update_sales_recovery_settings"
+        post "sales_recovery/run", to: "marketing#run_sales_recovery"
+        post "sales_recovery/simulate", to: "marketing#simulate_sales_recovery"
+        get  "recovery/insights", to: "marketing#recovery_insights"
+        get  "sales_coach", to: "marketing#sales_coach"
+        patch "sales_coach/insights/:id", to: "marketing#update_sales_coach_insight"
 
         get  "android_app", to: "android_apps#show"
         post "android_app", to: "android_apps#create"

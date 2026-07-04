@@ -235,20 +235,23 @@ class PerformanceMonitorService
       grouped = events.select { |event| event[:company_id].present? }.group_by { |event| event[:company_id] }
       return nil if grouped.blank?
 
+      names = company_name_map(grouped.keys)
       company_id, company_events = grouped.max_by do |_id, items|
         items.sum { |event| event[:duration_ms].to_f + event[:sql_ms].to_f + (event[:payload_bytes].to_i / 1024.0) }
       end
-      { company_id: company_id, requests: company_events.size, average_ms: average(company_events, :duration_ms) }
+      { company_id: company_id, company_name: names[company_id.to_i], requests: company_events.size, average_ms: average(company_events, :duration_ms) }
     end
 
     def company_load_ranking(requests, cache_events, external_events)
       ids = (requests.map { |event| event[:company_id] } + cache_events.map { |event| event[:company_id] } + external_events.map { |event| event[:company_id] }).compact.uniq
+      names = company_name_map(ids)
       ids.map do |company_id|
         company_requests = requests.select { |event| event[:company_id] == company_id }
         company_cache = cache_events.select { |event| event[:company_id] == company_id }
         company_external = external_events.select { |event| event[:company_id] == company_id }
         {
           company_id: company_id,
+          company_name: names[company_id.to_i],
           requests: company_requests.size,
           ai_calls: company_external.count { |event| event[:kind] == "ai" },
           average_ms: average(company_requests, :duration_ms),
@@ -281,8 +284,9 @@ class PerformanceMonitorService
     end
 
     def top_slow_queries(events)
+      names = company_name_map(events.map { |event| event[:company_id] })
       top_by(events, :duration_ms, limit: 20).map do |event|
-        event.slice(:endpoint, :company_id, :duration_ms, :rows, :sql, :at)
+        event.slice(:endpoint, :company_id, :duration_ms, :rows, :sql, :at).merge(company_name: names[event[:company_id].to_i])
       end
     end
 
@@ -304,6 +308,15 @@ class PerformanceMonitorService
       company_id.presence&.to_i
     rescue StandardError
       nil
+    end
+
+    def company_name_map(ids)
+      normalized_ids = Array(ids).compact.map { |id| id.to_i }.select(&:positive?).uniq
+      return {} if normalized_ids.blank?
+
+      Company.where(id: normalized_ids).pluck(:id, :name).to_h
+    rescue StandardError
+      {}
     end
 
     def summarize_sql(sql)

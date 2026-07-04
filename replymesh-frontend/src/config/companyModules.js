@@ -23,7 +23,7 @@ export const COMPANY_MODULES = [
   { key: "roulette", label: "Roleta premiada", group: "Marketing", description: "Roleta de prêmios e fidelização.", essential: false, dependencies: ["orders", "coupons"] },
   { key: "banners", label: "Banners", group: "Marketing", description: "Banners promocionais.", essential: false, dependencies: ["products"] },
   { key: "whatsapp_marketing", label: "Marketing via WhatsApp", group: "Marketing", description: "Campanhas via WhatsApp.", essential: false, dependencies: ["whatsapp_manual"] },
-  { key: "abandoned_cart", label: "Recuperador de vendas", group: "Marketing", description: "Recuperação de clientes e vendas.", essential: false, dependencies: ["orders", "whatsapp_manual"] },
+  { key: "abandoned_cart", label: "Automação Inteligente", group: "Marketing", description: "Recuperação automática de carrinhos e clientes.", essential: false, dependencies: ["orders", "whatsapp_manual"] },
   { key: "mercado_pago", label: "Mercado Pago", group: "Pagamentos", description: "Integração com Mercado Pago.", essential: false, dependencies: ["orders", "checkout"] },
   { key: "pix", label: "PIX", group: "Pagamentos", description: "Pagamento PIX no checkout.", essential: false, dependencies: ["orders", "checkout"] },
   { key: "store_ai", label: "Inteligência Artificial", group: "Inteligência", description: "Atendimento inteligente da loja.", essential: false, dependencies: ["orders", "products", "categories"] },

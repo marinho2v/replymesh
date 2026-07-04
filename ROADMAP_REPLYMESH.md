@@ -19,6 +19,72 @@
 
 ## Status Atual
 
+### Atualizacao DEV em 2026-07-03 — Reorganizacao do Menu Admin
+
+- Menu lateral da loja reorganizado sem alterar rotas, APIs, permissoes, banco ou regras de negocio.
+- Criado grupo visual `Cerebro da ReplyMesh` para concentrar Visao Estrategica, Consultor de Vendas, Analise do Negocio, Inteligencia de Clientes, Inteligencia de Produtos e Inteligencia Artificial.
+- Grupo `Comunicacao` ficou dedicado a WhatsApp, Templates WhatsApp, Marketing WhatsApp, Automacao Inteligente e Aplicativo Android.
+- Areas operacionais foram separadas em Dashboard, Operacao, Cardapio, Entrega, Clientes, Estoque, Financeiro, Administracao e Ajuda.
+- A arquitetura visual ficou preparada para futuras inteligencias de Marketing, Delivery, Comercial, Financeira e Operacional sem criar telas novas agora.
+
+### Atualizacao DEV em 2026-07-03 — Phase 2.6 Product Intelligence
+
+- Criado `ProductIntelligenceService` para analisar produtos, categorias, adicionais, combos, pedidos, horarios, dias e produtos vendidos juntos.
+- Criado endpoint `GET /api/v1/store/product_intelligence`, protegido pelo recurso de produtos.
+- Dashboard da loja recebeu card compacto `Produtos Inteligentes`, com produto campeao, em crescimento, esquecido, maior potencial e score medio.
+- Criada tela `Marketing > Inteligencia de Produtos` para resumo, score, classificacao, tendencia, potencial, melhor horario/dia, produtos esquecidos e combinacoes de venda.
+- Cache `product_intelligence` com TTL de 5 minutos foi integrado e invalidado por pedidos, produtos, categorias, cupons, estoque, adicionais, configuracoes e Recovery.
+- A camada de Estrategia passou a consumir Product Intelligence como fonte complementar, sem executar acoes automaticas.
+- Nenhum telefone, mensagem, Pix, cartao, token, prompt ou dado pessoal e exposto pelo modulo.
+
+### Atualizacao DEV em 2026-07-03 — Phase 2.5 Customer Intelligence
+
+- Criado `CustomerIntelligenceService` para transformar clientes em perfis comerciais: Novo, Ativo, Recorrente, VIP, Em risco, Inativo e Perdido.
+- Criado endpoint `GET /api/v1/store/customer_intelligence`, protegido pelo recurso de clientes.
+- Dashboard da loja recebeu card compacto `Clientes Inteligentes`, com VIPs, clientes em risco, recorrentes, novos, score medio e maior oportunidade.
+- Criada tela `Marketing > Inteligencia de Clientes` para resumo, perfis, score, risco, potencial, produtos favoritos, categorias favoritas e insights.
+- Cache `customer_intelligence` com TTL de 5 minutos foi integrado e invalidado por pedidos, clientes, produtos, categorias, cupons e Recovery.
+- A camada de Estrategia passou a consumir Customer Intelligence como fonte complementar, sem executar nenhuma acao automatica.
+- Nenhum telefone, mensagem, Pix, cartao, token, prompt ou dado sensivel e exposto pelo modulo.
+
+### Atualizacao DEV em 2026-07-03 — Phase 2.3 Cerebro Replymesh
+
+- Criado `ReplymeshBrainService` para consolidar aprendizado estatistico anonimo de Recovery em escopo global e por empresa.
+- Criada tabela `replymesh_brain_knowledge` para armazenar apenas metricas agregadas: beneficio, horario, dia, segmento e categoria.
+- `BusinessIntelligenceService` e `SalesCoachService` passam a consumir o Cerebro como fonte complementar de recomendacoes, sem executar acoes automaticas.
+- Cache `replymesh_brain` com TTL de 5 minutos foi integrado ao `ReplymeshCacheService`.
+- Invalidacao do cache conectada a pedidos, produtos, categorias, cupons, configuracoes e eventos de Recovery.
+- Telas de inteligencia foram normalizadas para parecerem parte do sistema: Consultor de Vendas, Analise do Negocio e cards padrao.
+- Nenhum dado pessoal, telefone, mensagem, prompt, Pix, cartao, token ou API key e armazenado pelo Cerebro.
+
+### Atualizacao DEV em 2026-07-02 — Phase 2.1 Coach Inteligente Learning Advisor
+
+- Criado aprendizado persistente do AI Sales Coach por empresa, reaproveitando `SalesCoachService`, `SalesRecoveryLearningEngine`, `CompanyContextBuilder` e `ReplymeshCacheService`.
+- Insights agora possuem ID publico, status, feedback, motivo, origem, impacto estimado, confianca e historico de aprendizado.
+- Criado endpoint de feedback para marcar recomendacoes como visualizadas, aceitas, ignoradas, arquivadas, executadas manualmente, funcionou ou nao funcionou.
+- Adicionado `Coach Score` para medir maturidade do aprendizado por empresa.
+- Tela `Marketing > AI Sales Coach` recebeu area "Coach Inteligente", oportunidades priorizadas, historico de aprendizado e botoes de feedback.
+- O coach continua sem executar acoes automaticas; apenas observa, aprende e recomenda.
+- Proxima direcao: usar feedback acumulado para refinar sugestoes futuras, sem iniciar automacoes novas sem autorizacao.
+
+### Atualizacao DEV em 2026-07-01 — Phase 2.0 AI Sales Coach Foundation
+
+- Criado `SalesCoachService` para gerar recomendacoes operacionais por empresa, usando `CompanyContextBuilder`, `SalesRecoveryLearningEngine` e `ReplymeshCacheService`.
+- Adicionado endpoint `GET /api/v1/store/sales_coach` no modulo Marketing, protegido pelo recurso `sales_recovery`.
+- Dashboard da loja recebeu resumo do AI Sales Coach com maior oportunidade, maior risco, impacto estimado e acesso a tela dedicada.
+- Criada tela `Marketing > AI Sales Coach` com insights, filtros por categoria/prioridade, busca, impacto, confianca, origem e sugestao.
+- Nesta fase o coach apenas observa, analisa e recomenda; nenhuma acao e executada automaticamente.
+- Proxima direcao: Phase 2.1 deve registrar feedback das sugestoes aplicadas/ignoradas e medir impacto real.
+
+### Atualizacao DEV em 2026-07-01 — Phase 1.9 Company Context Engine
+
+- Criado `CompanyContextBuilder` como fonte unica de contexto de empresa para modulos de IA.
+- IA vendedora e Sales Recovery passaram a consumir o mesmo contexto central sem mudar comportamento visivel.
+- Contexto inclui loja, horarios, pagamentos, entrega, categorias, produtos, destaques, cupons, campanhas, estoque e estatisticas de recuperacao.
+- Cache de 5 minutos via `ReplymeshCacheService`, com invalidacao em produtos, categorias, configuracoes, cupons, banners, campanhas, estoque, IA e Recovery.
+- Metricas de montagem do contexto alimentam o Performance Monitor como `company_context_builder`.
+- Proxima direcao: Delivery AI, Customer Intelligence, Sales AI Coach e Analytics Inteligente devem consumir este contexto central.
+
 **Fase atual:** FASE 15.11.3 - Auditoria Final do Mercado Pago + Jobs Pendentes - **CONCLUIDA EM 2026-06-06**  
 **Última atualização:** 2026-06-06  
 **Próxima tarefa recomendada:** FASE 16 - VPS E PRODUCAO, somente com confirmacao explicita. Nao iniciar deploy, banco de producao, Evolution real, webhook real, pagamento online, Flutter, IA ou marketing em massa sem confirmacao.
@@ -2395,3 +2461,57 @@ Fora do escopo:
 - [ ] DNS wildcard `*.replymesh.cloud` fica para VPS.
 - [ ] Traefik/Nginx e SSL real ficam para VPS.
 - [ ] Fase 16 nao iniciada.
+
+# DEV - Automacao Inteligente de Vendas / Recovery Engine AI Fase 1
+
+- [x] Auditoria do recuperador manual, Evolution, cupons, IA da loja, carrinhos e multiempresa.
+- [x] Recuperador manual preservado na nova pagina de Automacao Inteligente.
+- [x] Configuracao por empresa criada para ativar/pausar a automacao.
+- [x] Motor `SalesRecoveryEngine` criado para localizar carrinhos abandonados da IA.
+- [x] Limites diarios, janela de horario, dias permitidos e limite por cliente aplicados.
+- [x] Cupons unicos `VOLTA-XXXXX` criados automaticamente quando habilitado.
+- [x] Mensagens com IA usam provider global da loja quando configurado.
+- [x] Fallback sem IA usa templates variados e nao envia em massa.
+- [x] Envio reaproveita Evolution via `MarketingMessageService`.
+- [x] Logs e metricas por empresa criados.
+- [x] UI da loja criada em Marketing > Automacao Inteligente.
+- [x] Fase 1.6 adicionou Customer Value Score por cliente.
+- [x] Fase 1.6 adicionou Recovery Score inteligente por carrinho.
+- [x] Fase 1.6 adicionou decisao automatica de beneficio: sem desconto, cupom ou frete gratis.
+- [x] Fase 1.6 adicionou reputacao anti-spam e pausa automatica de clientes que ignoram recuperacoes.
+- [x] Fase 1.6 adicionou ranking `Quase comprando`, insights automaticos e metricas de conversao.
+- [x] Fase 1.7 adicionou Recovery Score V2 com pesos configuraveis.
+- [x] Fase 1.7 adicionou classificacao automatica e bloqueio de envio para score abaixo de Alta.
+- [x] Fase 1.7 adicionou motivos do score, fila priorizada e simulador sem envio.
+- [x] Fase 1.7 adicionou metricas de elegibilidade, bloqueio, potencial recuperavel, motivo, categoria e horario.
+- [x] Fase 1.8 adicionou Recovery Learning Engine estatistico por empresa.
+- [x] Fase 1.8 registra enviado, ignorado, respondido sem compra e convertido.
+- [x] Fase 1.8 detecta pedido recuperado com cupom e sem cupom.
+- [x] Fase 1.8 criou `GET /api/v1/store/recovery/insights`.
+- [x] Fase 1.8 adicionou card `Recovery Insights` na tela de Automacao Inteligente.
+- [ ] Fase 2: campanhas inteligentes, recomendacoes avancadas, playbooks e orquestracao de jornadas.
+- [ ] Scheduler permanente em VPS deve ser avaliado somente em etapa de infraestrutura.
+# Phase 2.2 — Business Intelligence Engine Foundation
+
+- Criado `BusinessIntelligenceService` reaproveitando Company Context, Recovery Learning e Sales Coach Learning.
+- Criado endpoint `GET /api/v1/store/business_intelligence`.
+- Criada tela da loja `Admin > Business Intelligence`.
+- Criado card de Business Intelligence no Dashboard da loja.
+- Cache dedicado `business_intelligence` com invalidação automática nos principais eventos operacionais.
+# Phase 2.4 — Inteligencia Estrategica da Replymesh
+
+- Criado `ReplymeshStrategyService` para consolidar Consultor, Business Intelligence, Recovery e Cerebro Replymesh.
+- Criado endpoint `GET /api/v1/store/strategy`.
+- Criado card `Estrategia da Loja` no Dashboard.
+- Criada tela `Admin > Estrategia` com resumo executivo, prioridades, indicadores, historico e fontes.
+- Criado cache dedicado `replymesh_strategy`, invalidado por eventos operacionais relevantes.
+- A camada apenas organiza prioridades e nao executa acoes automaticamente.
+
+# Phase 2.7 — Marketing Intelligence
+
+- Criado `MarketingIntelligenceService` para transformar as inteligencias existentes em recomendacoes comerciais.
+- Criado endpoint `GET /api/v1/store/marketing_intelligence`.
+- Criado card `Marketing Inteligente` no Dashboard da loja.
+- Criada tela `Admin > Inteligencia de Marketing`, dentro do grupo `Cerebro da ReplyMesh`.
+- Criado cache dedicado `marketing_intelligence`, invalidado por eventos operacionais relevantes.
+- A camada apenas recomenda campanhas, horarios, produtos, categorias e publicos; nao envia WhatsApp, nao cria cupons e nao altera dados.

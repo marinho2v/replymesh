@@ -12,7 +12,8 @@ export const REPLYMESH_API_URL = (
 ).replace(/\/$/, '')
 
 export const COMPANY_SLUG = resolveDefaultCompanySlug(
-  import.meta.env.VITE_COMPANY_SLUG || null
+  import.meta.env.VITE_COMPANY_SLUG ||
+    (import.meta.env.DEV ? localStorage.getItem('replymesh_store_company_slug') || 'qa-pizza' : null)
 )
 
 const buildUrl = (path, params = {}) => {

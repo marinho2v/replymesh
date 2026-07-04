@@ -221,6 +221,12 @@ const Dashboard = () => {
           recurringCustomers: data.recurring_customers || 0,
           usedCoupons:        data.used_coupons || 0,
           trendData:          data.trend_data || [],
+          salesCoach:         data.sales_coach || {},
+          businessIntelligence: data.business_intelligence || {},
+          customerIntelligence: data.customer_intelligence || {},
+          productIntelligence: data.product_intelligence || {},
+          marketingIntelligence: data.marketing_intelligence || {},
+          strategy:           data.strategy || {},
         })
       } catch (error) {
         console.error('Erro ao buscar stats do dashboard:', error)

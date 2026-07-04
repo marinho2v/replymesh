@@ -1,4 +1,8 @@
 class InventoryItem < ApplicationRecord
+  include ReplymeshCacheInvalidation
+
+  invalidates_replymesh_cache :products, :dashboard, :ai_context, :business_intelligence, :product_intelligence, :marketing_intelligence, :replymesh_strategy
+
   UNITS = %w[un kg g l ml cx pct].freeze
 
   belongs_to :company

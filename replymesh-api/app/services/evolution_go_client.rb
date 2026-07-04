@@ -181,10 +181,22 @@ class EvolutionGoClient
 
   def perform_request(uri, req)
     PerformanceMonitorService.instrument_external("evolution") do
-      Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", read_timeout: 20, open_timeout: 8) do |http|
+      Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", read_timeout: read_timeout, open_timeout: open_timeout) do |http|
         http.request(req)
       end
     end
+  end
+
+  def read_timeout
+    ENV.fetch("EVOLUTION_GO_READ_TIMEOUT", "8").to_i.clamp(3, 30)
+  rescue StandardError
+    8
+  end
+
+  def open_timeout
+    ENV.fetch("EVOLUTION_GO_OPEN_TIMEOUT", "3").to_i.clamp(1, 15)
+  rescue StandardError
+    3
   end
 
   def parse_json(body)

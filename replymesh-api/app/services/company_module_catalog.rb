@@ -27,7 +27,7 @@ class CompanyModuleCatalog
     ["roulette", "Roleta Premiada", "marketing", "Roleta de premios e fidelizacao.", %w[roulette], false, %w[orders coupons]],
     ["banners", "Banners", "marketing", "Banners promocionais.", %w[banners], false, %w[products]],
     ["whatsapp_marketing", "Marketing via WhatsApp", "marketing", "Campanhas via WhatsApp.", %w[marketing_whatsapp], false, %w[whatsapp_manual]],
-    ["abandoned_cart", "Recuperador de Vendas", "marketing", "Recuperacao de clientes e vendas.", %w[sales_recovery], false, %w[orders whatsapp_manual]],
+    ["abandoned_cart", "Automacao Inteligente", "marketing", "Recuperacao automatica de carrinhos e clientes.", %w[sales_recovery], false, %w[orders whatsapp_manual]],
     ["mercado_pago", "Mercado Pago", "pagamentos", "Integracao com Mercado Pago.", %w[mercado_pago], false, %w[orders checkout]],
     ["pix", "PIX", "pagamentos", "Pagamento PIX no checkout.", %w[pix], false, %w[orders checkout]],
     ["store_ai", "Inteligencia Artificial", "inteligencia", "Atendimento inteligente da loja.", %w[store_ai], false, %w[orders products categories]],

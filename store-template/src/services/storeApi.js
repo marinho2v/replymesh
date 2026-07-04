@@ -131,6 +131,36 @@ export const getDashboardStats = (options = {}) => (
   })
 )
 
+export const getBusinessIntelligence = (options = {}) => (
+  request('/store/business_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
+export const getCustomerIntelligence = (options = {}) => (
+  request('/store/customer_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
+export const getProductIntelligence = (options = {}) => (
+  request('/store/product_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
+export const getMarketingIntelligence = (options = {}) => (
+  request('/store/marketing_intelligence', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
+export const getStoreStrategy = (options = {}) => (
+  request('/store/strategy', {
+    headers: withCompanyHeader(options.companyId || currentCompanyId()),
+  })
+)
+
 export const railsGetFeatureAccess = (options = {}) => (
   request('/store/features', {
     headers: withCompanyHeader(options.companyId || currentCompanyId()),

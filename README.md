@@ -4,6 +4,14 @@ Plataforma SaaS multi-tenant para lanchonetes, restaurantes, hamburguerias, pizz
 
 ## Status
 
+- Reorganizacao do menu admin: a navegacao da loja foi separada em Dashboard, Operacao, Cardapio, Entrega, Clientes, Estoque, Financeiro, Comunicacao, Cerebro da ReplyMesh, Administracao e Ajuda. As telas de inteligencia agora ficam concentradas no grupo `Cerebro da ReplyMesh`, sem alterar rotas, APIs ou permissoes.
+- Fase 2.6 Product Intelligence: `ProductIntelligenceService` transforma pedidos e cardapio em inteligencia de produtos, calculando score, classificacao, tendencia, potencial, horarios, dias e combinacoes vendidas juntas, com cache `product_intelligence` e sem alterar precos, pedidos ou promocoes.
+- Fase 2.5 Customer Intelligence: `CustomerIntelligenceService` classifica clientes por perfil, score, risco, oportunidade, produtos favoritos e insights comerciais, usando apenas metricas da loja, cache `customer_intelligence` e sem enviar mensagens ou executar campanhas.
+- Fase 2.3 Cerebro Replymesh: `ReplymeshBrainService` consolida estatisticas anonimas globais e por empresa para reutilizar aprendizado em Recovery, Consultor de Vendas e Analise do Negocio, usando PostgreSQL e cache `replymesh_brain`, sem armazenar dados pessoais ou mensagens.
+- Fase 2.2 Business Intelligence: `BusinessIntelligenceService` transforma dados operacionais da loja em leitura comercial, riscos, oportunidades e indicadores executivos.
+- Fase 2.1 Coach Inteligente: `SalesCoachLearningService` adiciona aprendizado por empresa ao AI Sales Coach, com persistencia de insights, status, feedback do lojista, historico, Coach Score e area visual de recomendacoes inteligentes. O coach continua apenas recomendando; nenhuma acao e executada automaticamente.
+- Fase 2.0 AI Sales Coach Foundation: `SalesCoachService` analisa pedidos, faturamento, ticket medio, produtos, categorias, Recovery, cupons, clientes, horarios, estoque e aprendizado existente para gerar recomendacoes ao dono da loja. O coach apenas observa e sugere acoes; nao executa automacoes.
+- Fase 1.9 AI Foundation: `CompanyContextBuilder` centraliza contexto de empresa para IA vendedora e Recovery Engine, com cache de 5 minutos, invalidacao por alteracoes da loja e metricas no Performance Monitor.
 - Fase 1: Backend Rails API concluido.
 - Fase 2: Frontend React/Vite convertido a partir do prototipo aprovado.
 - Fase 3: Modulo Empresas / Onboarding conectado ao backend Rails API.
@@ -1166,3 +1174,129 @@ SSL e roteamento real ficam para a Fase 16/VPS.
 Auditoria completa:
 
 - `REPLYMESH_PHASE_15_23_DOMAINS_DEPLOY_READINESS.md`
+
+## Fase DEV - Automacao Inteligente de Vendas
+
+O antigo Recuperador de Vendas manual foi preservado e a tela da loja passou a
+ter a base da Automacao Inteligente para recuperacao segura de carrinhos:
+
+- configuracao por empresa, com janela de envio, dias permitidos e limite diario;
+- deteccao de carrinhos da IA com produtos e sem finalizacao;
+- fila gradual via ActiveJob padrao do Rails, sem Redis ou Sidekiq;
+- cupons unicos por cliente/carrinho, com validade configuravel;
+- mensagens por IA quando o provider da loja estiver configurado, com fallback
+  para templates humanos variados;
+- envio reaproveitando o `MarketingMessageService` e Evolution existentes;
+- logs por empresa com status, cupom, mensagem, erro e conversao;
+- dashboard da pagina com valor recuperado, mensagens, taxa e produtos.
+
+Relatorio:
+
+- `REPLYMESH_DEV_AUTOMATION_ENGINE_PHASE1_REPORT.md`
+
+## Fase DEV - Recovery Intelligence 1.6
+
+O Sales Recovery evoluiu para um motor de decisao comercial, mantendo Rails,
+ActiveJob, PostgreSQL, Evolution, IA existente e `Rails.cache`, sem nova
+infraestrutura.
+
+Principais pontos:
+
+- Customer Value Score por cliente, com segmento `novo`, `ativo`, `recorrente`
+  ou `VIP`;
+- Recovery Score do carrinho considerando valor, itens, abandono, horario,
+  perfil do cliente e reputacao recente;
+- decisao automatica de beneficio: lembrar sem desconto, cupom percentual ou
+  frete gratis;
+- reputacao anti-spam por cliente para pausar recuperacao quando houver muitas
+  mensagens ignoradas;
+- metricas e ranking `Quase comprando` na tela da loja;
+- insights automaticos de conversao por beneficio, IA/template, horario e dia;
+- logs enriquecidos sem adicionar telefone, tokens, Pix, cartao, prompts ou
+  respostas de IA aos novos campos.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_INTELLIGENCE_PHASE_1_6_REPORT.md`
+
+## Fase DEV - Recovery Intelligence 1.7
+
+A fase 1.7 tornou o Recovery mais seletivo e explicavel, sem criar novo fluxo e
+sem alterar Evolution, IA de atendimento, VPS ou producao.
+
+Principais pontos:
+
+- Recovery Score V2 com pesos configuraveis via JSON de configuracao;
+- classificacao automatica `Muito Alta`, `Alta`, `Media`, `Baixa` e
+  `Muito Baixa`;
+- somente scores `Alta` e `Muito Alta` podem gerar envio automatico;
+- motivos do score salvos no log para o lojista entender a decisao;
+- fila priorizada por score, valor, tempo parado e cliente recorrente;
+- simulador de Recovery sem envio real;
+- novos indicadores: carrinhos elegiveis, bloqueados, potencial recuperavel,
+  motivo, categoria e horario de abandono.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_PHASE_1_7_REPORT.md`
+
+## Fase DEV - Recovery Learning Engine 1.8
+
+A fase 1.8 adicionou aprendizado estatistico ao Recovery, usando somente
+PostgreSQL, ActiveRecord e `Rails.cache`.
+
+Principais pontos:
+
+- registro automatico de recovery enviado, ignorado, respondido sem compra e
+  convertido;
+- deteccao de pedido recuperado com cupom e sem cupom;
+- calculo de tempo ate responder e tempo ate comprar;
+- comparacao de estrategias por template, IA, cupom, frete gratis, horario,
+  dia e categoria;
+- endpoint `GET /api/v1/store/recovery/insights`;
+- card `Recovery Insights` na tela `Marketing > Automacao Inteligente`;
+- sem armazenar mensagens completas, prompts, tokens, Pix, cartao ou
+  credenciais.
+
+Relatorio:
+
+- `REPLYMESH_DEV_RECOVERY_LEARNING_PHASE18.md`
+# Replymesh — Business Intelligence
+
+Phase 2.2 adiciona a base do Business Intelligence da loja.
+
+O módulo observa pedidos, produtos, categorias, recovery, cupons, delivery, clientes e performance para gerar score, alertas, oportunidades e recomendações. Ele é somente leitura: não cria pedidos, não envia mensagens, não cria cupons e não altera dados operacionais.
+## Replymesh Strategy — Phase 2.4
+
+A Phase 2.4 adiciona a camada `ReplymeshStrategyService`, que consolida
+Consultor de Vendas, Analise do Negocio, Recovery Intelligence e Cerebro
+Replymesh em prioridades simples para o dono da loja.
+
+Principais pontos:
+
+- endpoint `GET /api/v1/store/strategy`;
+- card compacto `Estrategia da Loja` no dashboard da loja;
+- tela `Admin > Estrategia`;
+- indicadores internos `Strategic Score`, `Operational Health`,
+  `Sales Opportunity` e `Risk Level`;
+- agrupamento de recomendacoes semelhantes para evitar repeticao;
+- cache `replymesh_strategy` com TTL de 5 minutos;
+- nenhuma acao automatica, envio, cupom ou alteracao operacional.
+
+## Replymesh Marketing Intelligence — Phase 2.7
+
+A Phase 2.7 adiciona o `MarketingIntelligenceService`, uma camada somente
+leitura que reutiliza Cérebro ReplyMesh, Estratégia, Consultor de Vendas,
+Análise do Negócio, Inteligência de Clientes, Inteligência de Produtos e
+Recovery Learning para recomendar oportunidades comerciais.
+
+Principais pontos:
+
+- endpoint `GET /api/v1/store/marketing_intelligence`;
+- card compacto `Marketing Inteligente` no dashboard da loja;
+- tela `Admin > Inteligência de Marketing` dentro do grupo Cérebro da ReplyMesh;
+- cache `marketing_intelligence` com TTL de 5 minutos;
+- recomendações de melhor campanha, produto, categoria, horário, dia, público
+  prioritário, potencial e confiança;
+- nenhuma campanha, cupom, WhatsApp ou alteração operacional é executada
+  automaticamente.

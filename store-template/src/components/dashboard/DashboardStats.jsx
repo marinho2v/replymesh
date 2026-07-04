@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '../ui/Card'
 import { formatCurrency } from '../../utils/currency'
+import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import {
   ShoppingCart, DollarSign, Users, TrendingUp,
-  ShoppingBag, AlertTriangle, PackageX, RefreshCw, Ticket, ChevronRight,
+  ShoppingBag, AlertTriangle, Package, PackageX, RefreshCw, Ticket, ChevronRight, Sparkles, BarChart3, Target, Megaphone,
 } from 'lucide-react'
 
 // Sparkline SVG simples usando polilinha
@@ -124,6 +126,7 @@ const DonutChart = ({ statusCounts = {} }) => {
 
 const DashboardStats = ({ stats, loading }) => {
   const [openSummary, setOpenSummary] = useState(null)
+  const basePath = useCompanyBasePath()
 
   if (loading) {
     return (
@@ -141,6 +144,18 @@ const DashboardStats = ({ stats, loading }) => {
   }
 
   const trendData = stats?.trendData || []
+  const salesCoach = stats?.salesCoach || {}
+  const businessIntelligence = stats?.businessIntelligence || {}
+  const customerIntelligence = stats?.customerIntelligence || {}
+  const productIntelligence = stats?.productIntelligence || {}
+  const marketingIntelligence = stats?.marketingIntelligence || {}
+  const strategy = stats?.strategy || {}
+  const hasSalesCoach = Object.keys(salesCoach).length > 0
+  const hasBusinessIntelligence = Object.keys(businessIntelligence).length > 0
+  const hasCustomerIntelligence = Object.keys(customerIntelligence).length > 0
+  const hasProductIntelligence = Object.keys(productIntelligence).length > 0
+  const hasMarketingIntelligence = Object.keys(marketingIntelligence).length > 0
+  const hasStrategy = Object.keys(strategy).length > 0
 
   const statCards = [
     {
@@ -287,6 +302,230 @@ const DashboardStats = ({ stats, loading }) => {
           )
         })}
       </div>
+
+      {hasSalesCoach && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400 text-black">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-300">Consultor de Vendas</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {salesCoach.insights_count || 0} recomendações para sua operação
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Maior oportunidade: <span className="text-gray-200">{salesCoach.biggest_opportunity || 'Aguardando dados'}</span>.
+                    {' '}Maior risco: <span className="text-gray-200">{salesCoach.biggest_risk || 'Nenhum risco crítico detectado'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Impacto estimado</p>
+                  <p className="text-lg font-black text-white">{salesCoach.estimated_impact || 'R$ 0,00'}</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/sales-coach`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-yellow-300"
+                >
+                  Ver recomendações
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasBusinessIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white">
+                  <BarChart3 size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Analise do Negocio</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    Score do negocio: {businessIntelligence.business_score ?? 0}/100
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    {businessIntelligence.headline || 'Analisando vendas, produtos, clientes e recovery para sugerir proximas acoes.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Saude da operacao</p>
+                  <p className="text-lg font-black text-white">{businessIntelligence.health_label || 'Aguardando dados'}</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/business-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver analise
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasCustomerIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+                  <Users size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Clientes Inteligentes</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {customerIntelligence.vip_customers || 0} VIP • {customerIntelligence.at_risk_customers || 0} em risco
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Recorrentes: <span className="text-gray-200">{customerIntelligence.recurring_customers || 0}</span>.
+                    {' '}Novos: <span className="text-gray-200">{customerIntelligence.new_customers || 0}</span>.
+                    {' '}Oportunidade: <span className="text-gray-200">{customerIntelligence.biggest_opportunity || 'Aguardando dados'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Score medio</p>
+                  <p className="text-lg font-black text-white">{customerIntelligence.average_customer_score ?? 0}/100</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/customer-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver clientes
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasProductIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+                  <Package size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Produtos Inteligentes</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {productIntelligence.champion_product || 'Aguardando produto campeao'}
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Crescendo: <span className="text-gray-200">{productIntelligence.growing_product || 'Aguardando dados'}</span>.
+                    {' '}Esquecido: <span className="text-gray-200">{productIntelligence.forgotten_product || 'Nenhum detectado'}</span>.
+                    {' '}Potencial: <span className="text-gray-200">{productIntelligence.highest_potential_product || 'Aguardando dados'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Score medio</p>
+                  <p className="text-lg font-black text-white">{productIntelligence.average_product_score ?? 0}/100</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/product-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver produtos
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasMarketingIntelligence && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+                  <Megaphone size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Marketing Inteligente</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {marketingIntelligence.recommended_campaign || marketingIntelligence.best_campaign || 'Aguardando campanha ideal'}
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Produto: <span className="text-gray-200">{marketingIntelligence.product_to_promote || 'Aguardando dados'}</span>.
+                    {' '}Horario: <span className="text-gray-200">{marketingIntelligence.best_time || 'Aguardando dados'}</span>.
+                    {' '}Potencial: <span className="text-gray-200">{marketingIntelligence.conversion_potential || 'Baixo'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Marketing Score</p>
+                  <p className="text-lg font-black text-white">{marketingIntelligence.marketing_score ?? 0}/100</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/marketing-intelligence`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-blue-300"
+                >
+                  Ver marketing
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasStrategy && (
+        <Card className="mb-4 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-dark-800 text-green-300">
+                  <Target size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-green-300">Estrategia da Loja</p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    {strategy.biggest_priority || 'Aguardando prioridade principal'}
+                  </h3>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                    Oportunidade: <span className="text-gray-200">{strategy.biggest_opportunity || 'Aguardando dados'}</span>.
+                    {' '}Risco: <span className="text-gray-200">{strategy.biggest_risk || 'Nenhum risco critico detectado'}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
+                <div className="rounded-xl border border-dark-700 bg-dark-950/70 px-4 py-3">
+                  <p className="text-xs text-gray-500">Confianca da analise</p>
+                  <p className="text-lg font-black text-white">{strategy.confidence ?? 0}%</p>
+                </div>
+                <Link
+                  to={`${basePath}/admin/strategy`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-green-300"
+                >
+                  Ver estrategia
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status dos Pedidos + Resumo Geral */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-8">

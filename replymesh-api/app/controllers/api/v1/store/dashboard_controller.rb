@@ -63,8 +63,56 @@ module Api
             out_of_stock_items:   out_of_stock,
             recurring_customers:  recurring,
             used_coupons:         used_coupons,
-            trend_data:           trend_data
+            trend_data:           trend_data,
+            sales_coach:          sales_coach_summary,
+            business_intelligence: business_intelligence_summary,
+            customer_intelligence: customer_intelligence_summary,
+            product_intelligence:  product_intelligence_summary,
+            marketing_intelligence: marketing_intelligence_summary,
+            strategy:             strategy_summary
           }
+        end
+
+        def sales_coach_summary
+          SalesCoachLearningService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] sales coach skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def business_intelligence_summary
+          BusinessIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] business intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def customer_intelligence_summary
+          CustomerIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] customer intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def product_intelligence_summary
+          ProductIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] product intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def marketing_intelligence_summary
+          MarketingIntelligenceService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] marketing intelligence skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
+        end
+
+        def strategy_summary
+          ReplymeshStrategyService.call(company: current_company)[:summary] || {}
+        rescue StandardError => e
+          Rails.logger.warn("[DashboardController] strategy skipped company=#{current_company&.id}: #{e.class} #{e.message}")
+          {}
         end
 
         def build_trend_data(local_today, zone)

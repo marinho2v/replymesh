@@ -24,6 +24,60 @@ W:\sas replymesh\store-template
   - `src/hooks/usePublicStoreInfo.js`
 - Supabase Auth continua preservado, com fallback local Rails para desenvolvimento da migracao.
 
+## Reorganizacao do Menu Admin - Cerebro da ReplyMesh
+
+Executado no `store-template`:
+
+- Menu lateral reorganizado apenas visualmente, sem alterar rotas, URLs, permissoes, componentes internos ou APIs.
+- `Dashboard` ficou isolado como grupo proprio.
+- `Operacao`, `Cardapio`, `Entrega`, `Clientes`, `Estoque`, `Financeiro`, `Comunicacao`, `Administracao` e `Ajuda` foram separados por responsabilidade.
+- `Comunicacao` permanece responsavel por canais e automacoes com clientes.
+- Novo grupo visual `Cerebro da ReplyMesh` concentra todas as inteligencias atuais: Visao Estrategica, Consultor de Vendas, Analise do Negocio, Inteligencia de Clientes, Inteligencia de Produtos e Inteligencia Artificial.
+- A estrutura ficou preparada para receber futuras inteligencias sem poluir o menu operacional.
+
+## Phase 2.6 - Product Intelligence
+
+Executado no `store-template`:
+
+- Criada tela `Marketing > Inteligencia de Produtos`.
+- A tela consome `GET /api/v1/store/product_intelligence`.
+- Exibe produto campeao, produto em crescimento, produto esquecido, produto com maior potencial, score, tendencia, melhor horario, melhor dia e produtos vendidos juntos.
+- Dashboard recebeu card compacto `Produtos Inteligentes`.
+- Menu e permissoes foram atualizados sem criar automacoes, alterar precos, modificar pedidos ou criar campanhas.
+- A tela usa o mesmo padrao visual do dashboard, sem visual futurista ou modulo separado de IA.
+
+## Phase 2.5 - Customer Intelligence
+
+Executado no `store-template`:
+
+- Criada tela `Marketing > Inteligencia de Clientes`.
+- A tela consome `GET /api/v1/store/customer_intelligence`.
+- Exibe resumo, perfis, score, risco, potencial, produtos favoritos, categorias favoritas e insights.
+- Dashboard recebeu card compacto `Clientes Inteligentes`.
+- Menu e permissoes foram atualizados sem criar automacoes, campanhas ou disparos de WhatsApp.
+- A tela usa o mesmo padrao visual do dashboard, sem visual futurista ou modulo separado de IA.
+
+## Phase 2.3 - Cerebro Replymesh e padronizacao visual
+
+Executado no `store-template`:
+
+- Menu e permissoes passaram a exibir `Consultor de Vendas` no lugar de nomes tecnicos de IA.
+- Tela do Consultor de Vendas foi simplificada para seguir os mesmos cards e espacos do dashboard.
+- Tela de Analise do Negocio recebeu bloco resumido do Cerebro Replymesh.
+- Dashboard da loja passou a apresentar o consultor e a analise como recursos nativos do sistema, sem visual de landing page ou modulo separado.
+- Nenhuma automacao nova foi criada; as telas apenas observam, analisam e recomendam.
+
+## Phase 2.1 - AI Sales Coach com aprendizado
+
+Executado no `store-template`:
+
+- A tela `Marketing > AI Sales Coach` passou a consumir o payload enriquecido do backend.
+- Adicionado bloco "Coach Inteligente" com oportunidades, proxima melhor acao e Coach Score.
+- Adicionado historico de aprendizado com recomendacoes aceitas, ignoradas e marcadas como funcionaram.
+- Cada insight agora permite feedback manual do lojista: visualizado, aceitei, ignorei, funcionou, nao funcionou, executei manualmente e arquivar.
+- O frontend chama apenas `GET /api/v1/store/sales_coach` e `PATCH /api/v1/store/sales_coach/insights/:id`.
+- Nenhuma automacao e disparada pela tela; o coach apenas recomenda e aprende com o feedback.
+
 ## Fase 15.9.2 - Hamburgueria Premium React funcional
 
 Objetivo: converter o prototipo `hamburgueria V2` em template React/Vite real, sem alterar regras operacionais.
@@ -1501,3 +1555,70 @@ slug do hostname e chama a API Rails filtrando pela empresa correta.
 
 Dominios proprios ficam preparados no banco, mas verificacao DNS/SSL e ativacao
 real permanecem para a Fase 16.
+
+## DEV - Automacao Inteligente / Recovery Intelligence 1.6
+
+A pagina `Marketing > Automacao Inteligente` agora exibe o Recovery como produto
+comercial para lojistas:
+
+- indicadores de valor recuperado, valor perdido, clientes recuperados e
+  clientes pausados;
+- Customer Value medio e Recovery Score medio;
+- ranking `Quase comprando`, ordenado por score;
+- insights automaticos sobre cupom, frete gratis, IA/template, horario e dia;
+- logs com perfil do cliente, chance de recuperacao e decisao comercial;
+- conversao por beneficio, por tipo de mensagem e por dia da semana.
+
+A tela continua consumindo as APIs existentes do store-template, sem nova
+infraestrutura e sem quebrar compatibilidade.
+
+## DEV - Automacao Inteligente / Recovery Intelligence 1.7
+
+A pagina recebeu uma camada mais operacional para decisao e simulacao:
+
+- cards de carrinhos elegiveis, carrinhos bloqueados e potencial recuperavel;
+- top motivo de abandono, top categoria abandonada e horario de maior abandono;
+- botao `Simular Recovery`, que mostra score, cupom sugerido, mensagem sugerida
+  e decisao sem enviar WhatsApp;
+- logs com classificacao do score e motivos resumidos;
+- ranking `Quase comprando` exibindo classificacao junto do score.
+
+O envio automatico segue protegido: apenas classificacoes `Alta` e `Muito Alta`
+podem sair automaticamente; scores menores ficam registrados para analise.
+# Business Intelligence da Loja
+
+O Store Template passa a exibir uma área de Inteligência do Negócio para administradores da loja. A tela consome apenas `/api/v1/store/business_intelligence` e apresenta score, saúde da operação, oportunidades, alertas, recomendações, produtos, categorias e análises de recovery, cupons, delivery, clientes e performance.
+
+O painel não executa ações automaticamente; ele apenas orienta o lojista.
+## DEV - Estrategia da Loja / Phase 2.4
+
+O Store Template passa a exibir uma tela de estrategia operacional em
+`Admin > Estrategia`, consumindo apenas `/api/v1/store/strategy`.
+
+A tela mostra:
+
+- resumo executivo;
+- maior prioridade, maior oportunidade e maior risco;
+- indicadores 0-100;
+- prioridades consolidadas sem repeticao entre modulos;
+- recomendacoes, mudancas recentes, historico e fontes.
+
+A experiencia segue o mesmo design system do painel e nao dispara nenhuma acao
+automatica.
+
+## DEV - Inteligencia de Marketing / Phase 2.7
+
+O Store Template passa a exibir `Admin > Inteligencia de Marketing`, consumindo
+apenas `/api/v1/store/marketing_intelligence`.
+
+A tela mostra:
+
+- resumo executivo;
+- melhor campanha, melhor produto, melhor horario e melhor dia;
+- recomendacoes priorizadas;
+- tipos de campanha sugeridos;
+- produtos, categorias e clientes prioritarios;
+- calendario comercial e insights rapidos.
+
+A experiencia segue o mesmo Design System do painel, fica dentro do grupo
+`Cerebro da ReplyMesh` e nao dispara campanhas automaticamente.

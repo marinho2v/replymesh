@@ -97,6 +97,7 @@
       phone: @phone,
       settings: @settings,
       global: @global,
+      company_context: company_context,
       simulate: @simulate
     ).to_h
 
@@ -112,8 +113,8 @@
 
   def system_prompt(chunks)
     <<~PROMPT
-      Voce e #{@settings.assistant_name}, atendente virtual da loja #{@company.name}.
-      Tom: #{@settings.tone}.
+      Voce e #{company_context[:agent_name].presence || @settings.assistant_name}, atendente virtual da loja #{company_context[:store_name].presence || @company.name}.
+      Tom: #{company_context[:tone].presence || @settings.tone}.
       Responda em portugues do Brasil, de forma curta, natural e util.
       Use somente os fatos dos chunks fornecidos. Nunca invente produto, preco, horario, pedido ou promocao.
       Nunca misture dados de outras lojas. Nao revele IDs internos.
@@ -260,7 +261,7 @@
   end
 
   def greeting_answer
-    store_name = @company.store_setting&.company_name.presence || @company.name
+    store_name = company_context[:store_name].presence || @company.store_setting&.company_name.presence || @company.name
     greeting = case current_store_time.hour
                when 5...12 then "Bom dia"
                when 12...18 then "Boa tarde"
@@ -320,7 +321,7 @@
   end
 
   def menu_url
-    "https://#{@company.slug}.replymesh.cloud/menu"
+    "https://#{@company.primary_domain.presence || @company.subdomain.presence || "#{@company.slug}.replymesh.cloud"}/menu"
   end
 
   def matching_delivery_zone(zones)
@@ -336,7 +337,11 @@
   end
 
   def store_timezone
-    @company.respond_to?(:timezone) && @company.timezone.present? ? @company.timezone : "America/Sao_Paulo"
+    company_context[:timezone].presence || (@company.respond_to?(:timezone) && @company.timezone.present? ? @company.timezone : "America/Sao_Paulo")
+  end
+
+  def company_context
+    @company_context ||= CompanyContextBuilder.build(@company)
   end
 
   def question_about_today?

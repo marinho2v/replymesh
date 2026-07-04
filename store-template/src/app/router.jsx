@@ -54,6 +54,12 @@ const WhatsappTemplates = lazy(() => import('../pages/admin/WhatsappTemplates'))
 const WhatsappLogs = lazy(() => import('../pages/admin/WhatsappLogs'))
 const MarketingWhatsapp = lazy(() => import('../pages/admin/MarketingWhatsapp'))
 const SalesRecovery = lazy(() => import('../pages/admin/SalesRecovery'))
+const SalesCoach = lazy(() => import('../pages/admin/SalesCoach'))
+const BusinessIntelligence = lazy(() => import('../pages/admin/BusinessIntelligence'))
+const CustomerIntelligence = lazy(() => import('../pages/admin/CustomerIntelligence'))
+const ProductIntelligence = lazy(() => import('../pages/admin/ProductIntelligence'))
+const MarketingIntelligence = lazy(() => import('../pages/admin/MarketingIntelligence'))
+const Strategy = lazy(() => import('../pages/admin/Strategy'))
 // AiAssistant removido da loja (Fase 15.12) — config apenas no master
 const Motoboys = lazy(() => import('../pages/admin/Motoboys'))
 const Inventory = lazy(() => import('../pages/admin/Inventory'))
@@ -235,6 +241,12 @@ const adminChildren = [
   { path: 'whatsapp-templates', element: protectedPage(WhatsappTemplates, ['admin']) },
   { path: 'marketing-whatsapp', element: protectedPage(MarketingWhatsapp, ['admin']) },
   { path: 'sales-recovery', element: protectedPage(SalesRecovery, ['admin']) },
+  { path: 'sales-coach', element: protectedPage(SalesCoach, ['admin']) },
+  { path: 'business-intelligence', element: protectedPage(BusinessIntelligence, ['admin']) },
+  { path: 'customer-intelligence', element: protectedPage(CustomerIntelligence, ['admin']) },
+  { path: 'product-intelligence', element: protectedPage(ProductIntelligence, ['admin']) },
+  { path: 'marketing-intelligence', element: protectedPage(MarketingIntelligence, ['admin']) },
+  { path: 'strategy', element: protectedPage(Strategy, ['admin']) },
   { path: 'ai', element: protectedPage(StoreAiSettings, ['admin']) },
   { path: 'ai/logs', element: protectedPage(StoreAiLogs, ['admin']) },
   { path: 'inteligencia-artificial', element: protectedPage(StoreAiSettings, ['admin']) },

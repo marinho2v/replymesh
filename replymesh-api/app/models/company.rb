@@ -1,7 +1,7 @@
 class Company < ApplicationRecord
   include ReplymeshCacheInvalidation
 
-  invalidates_replymesh_cache :store, :settings, :menu, :dashboard, :ai_context
+  invalidates_replymesh_cache :store, :settings, :menu, :dashboard, :ai_context, :business_intelligence, :marketing_intelligence, :replymesh_strategy
 
   has_many :master_impersonation_sessions, dependent: :destroy
   has_many :master_audit_logs, dependent: :nullify
@@ -53,6 +53,9 @@ class Company < ApplicationRecord
   has_many :app_banners,               dependent: :destroy
   has_many :marketing_campaigns,       dependent: :destroy
   has_many :marketing_message_logs,    dependent: :destroy
+  has_one  :sales_recovery_setting,     dependent: :destroy
+  has_many :sales_recovery_events,      dependent: :destroy
+  has_many :sales_coach_insights,       dependent: :destroy
   has_one  :android_app_request,        dependent: :destroy
   has_many :whatsapp_message_logs,     dependent: :destroy
   has_many :support_tickets,           dependent: :destroy
