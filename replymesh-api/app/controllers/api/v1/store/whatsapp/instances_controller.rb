@@ -35,7 +35,6 @@ module Api
           def status
             response = client.status(@instance.instance_uuid.presence || @instance.instance_name)
             apply_remote_status!(@instance, response)
-            ensure_evolution_webhooks!(@instance, remote: response)
             render_ok(instance: @instance.reload.safe_json)
           rescue EvolutionGoClient::Error => e
             if recoverable_evolution_instance_error?(e)
@@ -47,7 +46,12 @@ module Api
               )
             end
 
-            render_error(e.message, status: :bad_gateway)
+            mark_instance_sync_error!(@instance, e)
+            render_ok(
+              instance: @instance.reload.safe_json,
+              recoverable: false,
+              message: "Nao foi possivel consultar a Evolution agora. Tente atualizar novamente em alguns instantes."
+            )
           end
 
           def qrcode
@@ -55,8 +59,8 @@ module Api
               return render_error("Instancia nao possui token local para QR Code", status: :unprocessable_entity)
             end
 
-            ensure_evolution_webhooks!(@instance)
             response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+            ensure_evolution_webhooks!(@instance)
             @instance.update!(
               qr_code: response.dig(:qrcode, :value),
               status: response[:status].presence || "connecting"
@@ -70,8 +74,8 @@ module Api
           rescue EvolutionGoClient::Error => e
             if recoverable_evolution_instance_error?(e)
               remote = recreate_remote_instance!(@instance, reason: "remote_missing_on_qrcode")
-              ensure_evolution_webhooks!(@instance, remote: remote)
               response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+              ensure_evolution_webhooks!(@instance, remote: remote)
               @instance.update!(
                 qr_code: response.dig(:qrcode, :value),
                 status: response[:status].presence || "connecting"
@@ -85,7 +89,13 @@ module Api
               )
             end
 
-            render_error(e.message, status: :bad_gateway)
+            mark_instance_sync_error!(@instance, e)
+            render_ok(
+              instance: @instance.reload.safe_json.slice(:id, :instance_name, :status, :remote_status),
+              qrcode: nil,
+              remote_error: true,
+              message: "A Evolution demorou ou recusou a geracao do QR Code. Tente novamente em alguns instantes."
+            )
           end
 
           private
@@ -226,6 +236,23 @@ module Api
               last_disconnected_at: Time.current,
               last_remote_sync_at: Time.current
             )
+          end
+
+          def mark_instance_sync_error!(instance, error)
+            instance.update!(
+              status: "disconnected",
+              remote_status: "remote_error",
+              remote_data: scrub_secret({
+                error: error.message,
+                status: error.status,
+                recovered: false
+              }),
+              qr_code: nil,
+              last_disconnected_at: Time.current,
+              last_remote_sync_at: Time.current
+            )
+          rescue StandardError => e
+            Rails.logger.warn("WhatsApp instance sync error update failed: #{e.class}")
           end
 
           def log_recovery!(instance, reason:, remote:)

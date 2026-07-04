@@ -342,7 +342,7 @@ export function Performance() {
               <tbody>
                 {topLoad.length ? topLoad.map((company, index) => (
                   <tr key={company.company_id || `company-load-${index}`}>
-                    <td className="mono">#{company.company_id || "-"}</td>
+                    <td>{company.company_name || (company.company_id ? `#${company.company_id}` : "-")}</td>
                     <td>{count(company.requests)}</td>
                     <td>{ms(company.average_ms)}</td>
                     <td>{count(company.query_count)}</td>
@@ -399,7 +399,7 @@ export function Performance() {
                   <tr key={`${query.at}-${index}`}>
                     <td>{ms(query.duration_ms)}</td>
                     <td className="mono">{text(query.endpoint)}</td>
-                    <td className="mono">{query.company_id ? `#${query.company_id}` : "-"}</td>
+                    <td>{query.company_name || (query.company_id ? `#${query.company_id}` : "-")}</td>
                     <td className="mono perf-sql">{text(query.sql)}</td>
                     <td>{query.at ? dtf.format(new Date(query.at)) : EMPTY}</td>
                   </tr>
