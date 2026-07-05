@@ -416,8 +416,11 @@ export const railsEnsureWhatsappInstance = () =>
   request('/store/whatsapp/instances/ensure', { method: 'POST', headers: h() })
     .then(r => r.instance)
 
-export const railsGetWhatsappInstanceStatus = (id) =>
-  request(`/store/whatsapp/instances/${id}/status`, { headers: h() })
+export const railsGetWhatsappInstanceStatus = (id, options = {}) =>
+  request(`/store/whatsapp/instances/${id}/status`, {
+    headers: h(),
+    params: options.force ? { force: '1' } : undefined,
+  })
     .then(r => r.instance)
 
 export const railsGetWhatsappQrCode = (id) =>

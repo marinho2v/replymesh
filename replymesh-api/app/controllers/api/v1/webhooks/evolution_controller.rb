@@ -154,7 +154,7 @@ module Api
           if human_request?(parsed.text)
             answer = "Certo, vou deixar um atendente continuar por aqui."
             pause_conversation!(instance, parsed.phone, "customer_requested_human")
-            send_result = EvolutionGoClient.new.send_text(
+            send_result = EvolutionGoClient.new(company: instance.company).send_text(
               instance.instance_token,
               phone: parsed.phone,
               message: answer
@@ -185,7 +185,7 @@ module Api
           end
 
           begin
-            send_result = EvolutionGoClient.new.send_text(
+            send_result = EvolutionGoClient.new(company: instance.company).send_text(
               instance.instance_token,
               phone: parsed.phone,
               message: answer

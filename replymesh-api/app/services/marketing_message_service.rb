@@ -12,7 +12,7 @@ class MarketingMessageService
       customer: customer, marketing_campaign: campaign, phone: normalized_phone,
       message: message.to_s.strip, status: "pending", provider: "evolution"
     )
-    result = EvolutionGoClient.new.send_text(instance.instance_token, phone: normalized_phone, message: message.to_s.strip)
+    result = EvolutionGoClient.new(company: company).send_text(instance.instance_token, phone: normalized_phone, message: message.to_s.strip)
     log.update!(status: "sent", sent_at: Time.current, metadata: { message_id: result[:message_id], mode: result[:mode] })
     log
   rescue StandardError => e

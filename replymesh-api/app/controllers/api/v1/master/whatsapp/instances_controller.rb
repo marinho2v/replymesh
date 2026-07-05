@@ -87,7 +87,7 @@ module Api
           end
 
           def status
-            response = client.status(@instance.instance_uuid.presence || @instance.instance_name)
+            response = client.status(@instance.instance_uuid.presence || @instance.instance_name, force: force_refresh?)
             apply_status!(@instance, response)
             client.ensure_webhooks(@instance, remote: response)
             log!(@instance, "info", "Status da instancia consultado", response)
@@ -108,7 +108,7 @@ module Api
             end
 
             client.ensure_webhooks(@instance)
-            response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+            response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name, force: true)
             @instance.update!(qr_code: response.dig(:qrcode, :value), status: response[:status].presence || "connecting")
             log!(@instance, "info", "QR Code solicitado para instancia teste", response.except(:qrcode))
 
@@ -179,7 +179,12 @@ module Api
           end
 
           def client
-            @client ||= EvolutionGoClient.new
+            company = defined?(@instance) && @instance ? @instance.company : nil
+            @client ||= EvolutionGoClient.new(company: company)
+          end
+
+          def force_refresh?
+            ActiveModel::Type::Boolean.new.cast(params[:force])
           end
 
           def create_or_sync_test_instance!

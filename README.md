@@ -4,6 +4,7 @@ Plataforma SaaS multi-tenant para lanchonetes, restaurantes, hamburguerias, pizz
 
 ## Status
 
+- Fase 2.8 Evolution Performance: chamadas ReplyMesh -> Evolution foram centralizadas com cache de 30s, retry/backoff, timeouts menores, metricas por empresa e refresh assincromo de status. O polling da tela WhatsApp deixou de consultar a Evolution diretamente e chamadas reais ficam reservadas para acoes explicitas como atualizar status, reconectar/gerar QR e envio de mensagens.
 - Reorganizacao do menu admin: a navegacao da loja foi separada em Dashboard, Operacao, Cardapio, Entrega, Clientes, Estoque, Financeiro, Comunicacao, Cerebro da ReplyMesh, Administracao e Ajuda. As telas de inteligencia agora ficam concentradas no grupo `Cerebro da ReplyMesh`, sem alterar rotas, APIs ou permissoes.
 - Fase 2.6 Product Intelligence: `ProductIntelligenceService` transforma pedidos e cardapio em inteligencia de produtos, calculando score, classificacao, tendencia, potencial, horarios, dias e combinacoes vendidas juntas, com cache `product_intelligence` e sem alterar precos, pedidos ou promocoes.
 - Fase 2.5 Customer Intelligence: `CustomerIntelligenceService` classifica clientes por perfil, score, risco, oportunidade, produtos favoritos e insights comerciais, usando apenas metricas da loja, cache `customer_intelligence` e sem enviar mensagens ou executar campanhas.

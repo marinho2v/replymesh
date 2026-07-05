@@ -258,7 +258,7 @@ class CompanyOnboardingService
   def create_whatsapp_instance!
     instance_name = safe_instance_name(@company.slug)
     token = SecureRandom.hex(32)
-    client = EvolutionGoClient.new
+    client = EvolutionGoClient.new(company: @company)
     response = client.create_instance(instance_name, token: token)
 
     instance = WhatsappInstance.create!(

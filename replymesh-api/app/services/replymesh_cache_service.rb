@@ -22,6 +22,7 @@ class ReplymeshCacheService
     marketing_intelligence: 5.minutes,
     replymesh_brain: 5.minutes,
     replymesh_strategy: 5.minutes,
+    evolution: 30.seconds,
     statistics: 60.seconds,
     tables: 5.minutes,
     motoboys: 5.minutes,

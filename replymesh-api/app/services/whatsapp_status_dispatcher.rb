@@ -35,7 +35,7 @@ class WhatsappStatusDispatcher
     return log_skip("pedido sem telefone de destino", template_key, template: template, instance: instance) if phone.blank?
 
     message = WhatsappMessageRenderer.render(template: template.message, order: @order)
-    response = EvolutionGoClient.new.send_text(instance.instance_token, phone: phone, message: message)
+    response = EvolutionGoClient.new(company: @order.company).send_text(instance.instance_token, phone: phone, message: message)
     log = WhatsappLog.create!(
       company_id: @order.company_id,
       whatsapp_instance: instance,
