@@ -2515,3 +2515,10 @@ Fora do escopo:
 - Criada tela `Admin > Inteligencia de Marketing`, dentro do grupo `Cerebro da ReplyMesh`.
 - Criado cache dedicado `marketing_intelligence`, invalidado por eventos operacionais relevantes.
 - A camada apenas recomenda campanhas, horarios, produtos, categorias e publicos; nao envia WhatsApp, nao cria cupons e nao altera dados.
+# Atualizacao DEV - Phase 2.8 Evolution Performance
+
+- Cliente Evolution centralizado com cache de 30 segundos para status, QR Code e listagem.
+- Polling automatico da tela WhatsApp convertido para leitura local + refresh assincromo por ActiveJob.
+- Refresh manual e QR Code continuam executando chamada real sob demanda.
+- Timeouts, retry curto com backoff e metricas por empresa adicionados ao fluxo Evolution.
+- Producao/VPS/main nao fazem parte desta fase; aplicar somente depois de validacao e fluxo dev -> main -> VPS.

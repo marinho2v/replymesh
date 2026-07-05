@@ -1622,3 +1622,9 @@ A tela mostra:
 
 A experiencia segue o mesmo Design System do painel, fica dentro do grupo
 `Cerebro da ReplyMesh` e nao dispara campanhas automaticamente.
+# Atualizacao DEV - WhatsApp/Evolution Performance
+
+- A tela `Admin > WhatsApp` passou a usar polling mais leve: 30s visivel e 120s quando a aba esta oculta.
+- O polling automatico recebe o estado local/cacheado e agenda refresh assincromo no backend quando necessario.
+- O botao `Atualizar status` usa refresh forcado.
+- O botao `Reconectar / gerar QR` continua fazendo chamada real para a Evolution por ser uma acao explicita do lojista.

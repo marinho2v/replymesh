@@ -4,6 +4,10 @@ require "securerandom"
 require "uri"
 
 class EvolutionGoClient
+  CACHE_GROUP = :evolution
+  CACHE_TTL = 30.seconds
+  DEFAULT_RETRIES = 2
+
   class Error < StandardError
     attr_reader :status, :payload
 
@@ -14,10 +18,11 @@ class EvolutionGoClient
     end
   end
 
-  def initialize(base_url: ENV["EVOLUTION_GO_BASE_URL"], api_key: ENV["EVOLUTION_GO_API_KEY"], mock_mode: ENV.fetch("EVOLUTION_GO_MOCK_MODE", "true"))
+  def initialize(base_url: ENV["EVOLUTION_GO_BASE_URL"], api_key: ENV["EVOLUTION_GO_API_KEY"], mock_mode: ENV.fetch("EVOLUTION_GO_MOCK_MODE", "true"), company: nil)
     @base_url = base_url.to_s.delete_suffix("/")
     @api_key = api_key.to_s
     @mock_mode = ActiveModel::Type::Boolean.new.cast(mock_mode)
+    @company = company
   end
 
   def test_connection
@@ -31,7 +36,9 @@ class EvolutionGoClient
   def list_instances
     return [mock_response("mock-instance", "connected")] if mock?
 
-    normalize_instances(global_request(:get, "/instance/all"))
+    cache_fetch(endpoint: "list_instances") do
+      normalize_instances(global_request(:get, "/instance/all"))
+    end
   end
 
   def create_instance(name, token: SecureRandom.hex(32))
@@ -41,29 +48,35 @@ class EvolutionGoClient
       name: name,
       token: token
     }
-    normalize_instance(global_request(:post, "/instance/create", payload), fallback_name: name, fallback_status: "created")
+    response = normalize_instance(global_request(:post, "/instance/create", payload), fallback_name: name, fallback_status: "created")
+    invalidate_instance_cache(name)
+    response
   end
 
-  def get_qr_code(token, instance_name:)
+  def get_qr_code(token, instance_name:, force: false)
     return mock_qr_code(instance_name) if mock?
 
-    response = instance_request(:get, "/instance/qr", token: token)
-    qrcode = normalize_qr_code(response)
+    cache_fetch(endpoint: "qrcode", extra: instance_name, force: force) do
+      response = instance_request(:get, "/instance/qr", token: token)
+      qrcode = normalize_qr_code(response)
 
-    {
-      success: true,
-      instance_name: instance_name,
-      qrcode: qrcode,
-      pairing_code: response["pairingCode"] || response["pairing_code"],
-      status: response["status"],
-      mode: "real"
-    }
+      {
+        success: true,
+        instance_name: instance_name,
+        qrcode: qrcode,
+        pairing_code: response["pairingCode"] || response["pairing_code"],
+        status: response["status"],
+        mode: "real"
+      }
+    end
   end
 
-  def status(uuid_or_name)
+  def status(uuid_or_name, force: false)
     return mock_response(uuid_or_name, "connected") if mock?
 
-    normalize_instance(global_request(:get, "/instance/info/#{escape(uuid_or_name)}"))
+    cache_fetch(endpoint: "status", extra: uuid_or_name, force: force) do
+      normalize_instance(global_request(:get, "/instance/info/#{escape(uuid_or_name)}"))
+    end
   end
   alias get_status status
 
@@ -78,6 +91,7 @@ class EvolutionGoClient
       natsEnable: ""
     }
     instance_request(:post, "/instance/connect", token: token, body: payload)
+    invalidate_token_cache(token)
     { success: true, mode: "real" }
   end
 
@@ -135,7 +149,7 @@ class EvolutionGoClient
 
   private
 
-  attr_reader :base_url, :api_key, :mock_mode, :last_auth_header_label
+  attr_reader :base_url, :api_key, :mock_mode, :last_auth_header_label, :company
 
   def mock?
     mock_mode || base_url.blank? || api_key.blank?
@@ -159,7 +173,7 @@ class EvolutionGoClient
     }.fetch(method)
 
     req = build_request(klass, uri, token, body)
-    response = perform_request(uri, req)
+    response = perform_request_with_retries(uri, req)
     @last_auth_header_label = "apikey"
 
     payload = parse_json(response.body)
@@ -180,23 +194,71 @@ class EvolutionGoClient
   end
 
   def perform_request(uri, req)
-    PerformanceMonitorService.instrument_external("evolution") do
+    PerformanceMonitorService.instrument_external("evolution", company_id: company_id_for_monitoring) do
       Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https", read_timeout: read_timeout, open_timeout: open_timeout) do |http|
+        http.keep_alive_timeout = keep_alive_timeout if http.respond_to?(:keep_alive_timeout=)
         http.request(req)
       end
     end
   end
 
-  def read_timeout
-    ENV.fetch("EVOLUTION_GO_READ_TIMEOUT", "8").to_i.clamp(3, 30)
+  def perform_request_with_retries(uri, req)
+    attempts = retry_attempts
+    current_attempt = 0
+
+    loop do
+      current_attempt += 1
+
+      begin
+        response = perform_request(uri, req)
+      rescue Net::OpenTimeout, Net::ReadTimeout, EOFError, Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+        raise e if current_attempt > attempts
+
+        sleep(backoff_seconds(current_attempt))
+        next
+      end
+
+      return response unless retryable_response?(response) && current_attempt <= attempts
+
+      sleep(backoff_seconds(current_attempt))
+    end
+  end
+
+  def retryable_response?(response)
+    response.code.to_i >= 500
   rescue StandardError
-    8
+    false
+  end
+
+  def retry_attempts
+    ENV.fetch("EVOLUTION_GO_RETRY_ATTEMPTS", DEFAULT_RETRIES.to_s).to_i.clamp(0, 4)
+  rescue StandardError
+    DEFAULT_RETRIES
+  end
+
+  def backoff_seconds(attempt)
+    base = ENV.fetch("EVOLUTION_GO_RETRY_BACKOFF_MS", "250").to_i.clamp(50, 2_000) / 1000.0
+    base * (2**(attempt - 1))
+  rescue StandardError
+    0.25
+  end
+
+  def read_timeout
+    ENV.fetch("EVOLUTION_GO_READ_TIMEOUT", "5").to_i.clamp(2, 20)
+  rescue StandardError
+    5
   end
 
   def open_timeout
-    ENV.fetch("EVOLUTION_GO_OPEN_TIMEOUT", "3").to_i.clamp(1, 15)
+    ENV.fetch("EVOLUTION_GO_OPEN_TIMEOUT", "2").to_i.clamp(1, 10)
   rescue StandardError
-    3
+    2
+  end
+
+  def keep_alive_timeout
+    ENV.fetch("EVOLUTION_GO_KEEP_ALIVE_TIMEOUT", "30").to_i.clamp(5, 120)
+  rescue StandardError
+    30
   end
 
   def parse_json(body)
@@ -300,6 +362,43 @@ class EvolutionGoClient
 
   def escape(value)
     URI.encode_www_form_component(value.to_s)
+  end
+
+  def cache_fetch(endpoint:, extra: nil, force: false)
+    return yield unless defined?(ReplymeshCacheService) && defined?(Rails.cache)
+
+    key = ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: endpoint, extra: extra)
+    Rails.cache.delete(key) if force
+    ReplymeshCacheService.fetch(company: cache_company, group: CACHE_GROUP, endpoint: endpoint, extra: extra, expires_in: CACHE_TTL) do
+      yield
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[EvolutionGoClient] cache bypass endpoint=#{endpoint}: #{e.class}")
+    yield
+  end
+
+  def invalidate_instance_cache(instance_name)
+    return unless defined?(ReplymeshCacheService) && defined?(Rails.cache)
+
+    Rails.cache.delete(ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: "list_instances"))
+    Rails.cache.delete(ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: "status", extra: instance_name))
+    Rails.cache.delete(ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: "qrcode", extra: instance_name))
+  rescue StandardError => e
+    Rails.logger.warn("[EvolutionGoClient] cache invalidate failed instance=#{instance_name}: #{e.class}")
+  end
+
+  def invalidate_token_cache(_token)
+    Rails.cache.delete(ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: "list_instances")) if defined?(ReplymeshCacheService) && defined?(Rails.cache)
+  rescue StandardError
+    nil
+  end
+
+  def cache_company
+    company || "global"
+  end
+
+  def company_id_for_monitoring
+    company.respond_to?(:id) ? company.id : company
   end
 
 end

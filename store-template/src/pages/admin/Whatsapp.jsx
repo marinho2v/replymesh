@@ -13,8 +13,8 @@ import { useCompanyBasePath } from '../../contexts/CompanySlugContext'
 import { toast } from 'sonner'
 import { scheduleAdaptivePoll } from '../../utils/adaptivePolling'
 
-const STATUS_POLL_INTERVAL = 15000
-const HIDDEN_STATUS_POLL_INTERVAL = 60000
+const STATUS_POLL_INTERVAL = 30000
+const HIDDEN_STATUS_POLL_INTERVAL = 120000
 
 const statusLabel = {
   connected: 'Conectado',
@@ -58,7 +58,7 @@ const Whatsapp = () => {
     }
   }
 
-  // Atualiza status silenciosamente a cada 15s (sem resetar toda a tela)
+  // Atualiza status silenciosamente via cache/job para nao sobrecarregar a Evolution.
   const pollStatus = async () => {
     if (!instance || whatsappMode === 'manual') return
     try {
@@ -90,7 +90,7 @@ const Whatsapp = () => {
     if (!instance) return
 
     try {
-      const updated = await railsGetWhatsappInstanceStatus(instance.id)
+      const updated = await railsGetWhatsappInstanceStatus(instance.id, { force: true })
       setInstances(updated ? [updated] : [])
       if (updated?.status === 'connected') setQrCode(null)
       toast.success('Status atualizado')

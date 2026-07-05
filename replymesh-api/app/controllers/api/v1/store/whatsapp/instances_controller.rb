@@ -33,9 +33,14 @@ module Api
           end
 
           def status
-            response = client.status(@instance.instance_uuid.presence || @instance.instance_name)
-            apply_remote_status!(@instance, response)
-            render_ok(instance: @instance.reload.safe_json)
+            if force_refresh?
+              response = client.status(@instance.instance_uuid.presence || @instance.instance_name, force: true)
+              apply_remote_status!(@instance, response)
+              return render_ok(instance: @instance.reload.safe_json, refreshed: true)
+            end
+
+            enqueue_status_refresh_if_needed(@instance)
+            render_ok(instance: @instance.reload.safe_json, async_refresh: true)
           rescue EvolutionGoClient::Error => e
             if recoverable_evolution_instance_error?(e)
               mark_instance_remote_missing!(@instance, e)
@@ -59,7 +64,7 @@ module Api
               return render_error("Instancia nao possui token local para QR Code", status: :unprocessable_entity)
             end
 
-            response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+            response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name, force: true)
             ensure_evolution_webhooks!(@instance)
             @instance.update!(
               qr_code: response.dig(:qrcode, :value),
@@ -74,7 +79,7 @@ module Api
           rescue EvolutionGoClient::Error => e
             if recoverable_evolution_instance_error?(e)
               remote = recreate_remote_instance!(@instance, reason: "remote_missing_on_qrcode")
-              response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name)
+              response = client.get_qr_code(@instance.instance_token, instance_name: @instance.instance_name, force: true)
               ensure_evolution_webhooks!(@instance, remote: remote)
               @instance.update!(
                 qr_code: response.dig(:qrcode, :value),
@@ -130,7 +135,19 @@ module Api
           end
 
           def client
-            @client ||= EvolutionGoClient.new
+            @client ||= EvolutionGoClient.new(company: current_company)
+          end
+
+          def force_refresh?
+            ActiveModel::Type::Boolean.new.cast(params[:force])
+          end
+
+          def enqueue_status_refresh_if_needed(instance)
+            return if instance.last_remote_sync_at.present? && instance.last_remote_sync_at > 30.seconds.ago
+
+            EvolutionInstanceStatusRefreshJob.perform_later(instance.id)
+          rescue StandardError => e
+            Rails.logger.warn("[WhatsappInstances] async status refresh skipped instance_id=#{instance.id}: #{e.class}")
           end
 
           def ensure_company_instance!
