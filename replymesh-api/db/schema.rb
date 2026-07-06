@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_02_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -386,12 +386,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
   create_table "customers", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.datetime "created_at", null: false
+    t.string "customer_segment", default: "new", null: false
+    t.integer "customer_value_score", default: 0, null: false
+    t.datetime "customer_value_score_calculated_at", precision: nil
     t.text "email"
     t.datetime "first_order_at"
     t.text "full_name", null: false
-    t.string "customer_segment", default: "new", null: false
-    t.integer "customer_value_score", default: 0, null: false
-    t.datetime "customer_value_score_calculated_at"
     t.boolean "is_recurring", default: false, null: false
     t.datetime "last_marketing_sent_at"
     t.datetime "last_order_at"
@@ -1132,44 +1132,100 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.index ["stock_item_id"], name: "index_products_on_stock_item_id"
   end
 
-  create_table "sales_recovery_events", force: :cascade do |t|
-    t.integer "cart_total_cents", default: 0, null: false
-    t.jsonb "cart_snapshot", default: {}, null: false
-    t.bigint "company_id", null: false
+  create_table "replymesh_brain_knowledge", force: :cascade do |t|
+    t.datetime "calculated_at"
+    t.bigint "company_id"
+    t.decimal "conversion_rate", precision: 8, scale: 4, default: "0.0", null: false
     t.datetime "created_at", null: false
-    t.bigint "coupon_id"
-    t.bigint "customer_id"
-    t.string "customer_phone", null: false
+    t.string "dimension", null: false
+    t.string "dimension_value", null: false
+    t.integer "estimated_value_cents", default: 0, null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "metric_key", null: false
+    t.integer "sample_size", default: 0, null: false
+    t.string "scope", default: "global", null: false
+    t.string "segment"
+    t.integer "success_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["calculated_at"], name: "index_replymesh_brain_knowledge_on_calculated_at"
+    t.index ["company_id"], name: "index_replymesh_brain_knowledge_on_company_id"
+    t.index ["metric_key", "dimension"], name: "index_replymesh_brain_knowledge_on_metric_key_and_dimension"
+    t.index ["scope", "company_id", "segment", "metric_key", "dimension", "dimension_value"], name: "index_replymesh_brain_unique_knowledge", unique: true
+  end
+
+  create_table "sales_coach_insights", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.datetime "archived_at"
+    t.string "category", null: false
+    t.bigint "company_id", null: false
+    t.integer "confidence", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.integer "estimated_value_cents", default: 0, null: false
+    t.datetime "failed_at"
+    t.integer "feedback_impact_cents", default: 0, null: false
+    t.string "feedback_result"
+    t.datetime "generated_at"
+    t.datetime "ignored_at"
+    t.datetime "manual_executed_at"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "origin"
+    t.string "priority", null: false
+    t.string "public_id", null: false
+    t.text "reason"
+    t.string "stable_key", null: false
+    t.string "status", default: "new", null: false
+    t.string "suggested_action"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "viewed_at"
+    t.datetime "worked_at"
+    t.index ["company_id", "category"], name: "index_sales_coach_insights_on_company_id_and_category"
+    t.index ["company_id", "priority"], name: "index_sales_coach_insights_on_company_id_and_priority"
+    t.index ["company_id", "public_id"], name: "index_sales_coach_insights_on_company_id_and_public_id", unique: true
+    t.index ["company_id", "stable_key"], name: "index_sales_coach_insights_on_company_id_and_stable_key", unique: true
+    t.index ["company_id", "status"], name: "index_sales_coach_insights_on_company_id_and_status"
+    t.index ["generated_at"], name: "index_sales_coach_insights_on_generated_at"
+  end
+
+  create_table "sales_recovery_events", force: :cascade do |t|
+    t.integer "abandoned_minutes", default: 0, null: false
     t.string "benefit_decision", default: "none", null: false
     t.string "benefit_reason"
+    t.string "block_reason"
+    t.datetime "blocked_at"
+    t.jsonb "cart_snapshot", default: {}, null: false
+    t.integer "cart_total_cents", default: 0, null: false
+    t.bigint "company_id", null: false
+    t.integer "conversion_minutes"
+    t.bigint "coupon_id"
+    t.datetime "created_at", null: false
+    t.bigint "customer_id"
+    t.string "customer_phone", null: false
     t.string "customer_segment"
     t.integer "customer_value_score", default: 0, null: false
-    t.integer "conversion_minutes"
+    t.string "delivery_strategy", default: "template", null: false
     t.text "error_message"
     t.bigint "marketing_message_log_id"
+    t.text "message"
     t.jsonb "metadata_json", default: {}, null: false
     t.datetime "recovered_at"
     t.bigint "recovered_order_id"
     t.integer "recovered_value_cents", default: 0, null: false
-    t.datetime "responded_at"
+    t.integer "recovery_score", default: 0, null: false
     t.jsonb "reputation_snapshot", default: {}, null: false
+    t.datetime "responded_at"
     t.datetime "scheduled_at"
     t.datetime "sent_at"
     t.string "source", default: "store_ai_cart", null: false
     t.string "status", default: "queued", null: false
     t.bigint "store_ai_cart_id"
-    t.text "message"
-    t.integer "recovery_score", default: 0, null: false
-    t.string "block_reason"
-    t.datetime "blocked_at"
-    t.integer "abandoned_minutes", default: 0, null: false
-    t.string "delivery_strategy", default: "template", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id", "benefit_decision", "status"], name: "idx_sales_recovery_events_benefit"
+    t.index ["company_id", "customer_phone", "created_at"], name: "idx_sales_recovery_events_customer"
     t.index ["company_id", "customer_value_score"], name: "idx_sales_recovery_events_customer_value"
     t.index ["company_id", "recovery_score"], name: "idx_sales_recovery_events_score"
     t.index ["company_id", "status", "block_reason", "created_at"], name: "idx_sales_recovery_events_blocked"
-    t.index ["company_id", "customer_phone", "created_at"], name: "idx_sales_recovery_events_customer"
     t.index ["company_id", "status", "scheduled_at"], name: "idx_sales_recovery_events_queue"
     t.index ["company_id", "store_ai_cart_id"], name: "idx_sales_recovery_events_unique_cart", unique: true, where: "(store_ai_cart_id IS NOT NULL)"
     t.index ["company_id"], name: "index_sales_recovery_events_on_company_id"
@@ -1184,6 +1240,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.integer "allowed_weekdays", default: [], null: false, array: true
     t.boolean "auto_coupon", default: true, null: false
     t.bigint "company_id", null: false
+    t.integer "cooldown_hours", default: 24, null: false
+    t.jsonb "coupon_rules_json", default: {}, null: false
     t.integer "coupon_validity_hours", default: 48, null: false
     t.datetime "created_at", null: false
     t.integer "daily_limit", default: 20, null: false
@@ -1193,15 +1251,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
     t.boolean "free_delivery", default: false, null: false
     t.text "message_template"
     t.jsonb "metadata_json", default: {}, null: false
+    t.integer "min_cart_total_cents", default: 0, null: false
     t.integer "per_customer_daily_limit", default: 1, null: false
     t.integer "queue_spacing_minutes", default: 3, null: false
-    t.integer "cooldown_hours", default: 24, null: false
-    t.integer "recent_response_minutes", default: 30, null: false
-    t.integer "min_cart_total_cents", default: 0, null: false
     t.boolean "quiet_hours_enabled", default: true, null: false
-    t.string "quiet_window_start", default: "22:00", null: false
     t.string "quiet_window_end", default: "08:00", null: false
-    t.jsonb "coupon_rules_json", default: {}, null: false
+    t.string "quiet_window_start", default: "22:00", null: false
+    t.integer "recent_response_minutes", default: 30, null: false
     t.datetime "updated_at", null: false
     t.boolean "use_ai", default: true, null: false
     t.string "window_end", default: "21:00", null: false
@@ -1807,12 +1863,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_093000) do
   add_foreign_key "products", "categories", on_delete: :restrict
   add_foreign_key "products", "companies", on_delete: :cascade
   add_foreign_key "products", "inventory_items", column: "stock_item_id", on_delete: :nullify
-  add_foreign_key "sales_recovery_events", "companies"
-  add_foreign_key "sales_recovery_events", "coupons"
-  add_foreign_key "sales_recovery_events", "customers"
-  add_foreign_key "sales_recovery_events", "marketing_message_logs"
-  add_foreign_key "sales_recovery_events", "store_ai_carts"
-  add_foreign_key "sales_recovery_settings", "companies"
+  add_foreign_key "replymesh_brain_knowledge", "companies"
+  add_foreign_key "sales_coach_insights", "companies", name: "sales_coach_insights_company_id_fkey"
+  add_foreign_key "sales_recovery_events", "companies", name: "fk_sales_recovery_events_company"
+  add_foreign_key "sales_recovery_events", "coupons", name: "fk_sales_recovery_events_coupon"
+  add_foreign_key "sales_recovery_events", "customers", name: "fk_sales_recovery_events_customer"
+  add_foreign_key "sales_recovery_events", "marketing_message_logs", name: "fk_sales_recovery_events_message_log"
+  add_foreign_key "sales_recovery_events", "store_ai_carts", name: "fk_sales_recovery_events_cart"
+  add_foreign_key "sales_recovery_settings", "companies", name: "fk_sales_recovery_settings_company"
   add_foreign_key "store_ai_carts", "companies"
   add_foreign_key "store_ai_carts", "store_ai_conversations"
   add_foreign_key "store_ai_conversations", "companies"
