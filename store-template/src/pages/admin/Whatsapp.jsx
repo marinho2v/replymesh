@@ -40,6 +40,7 @@ const Whatsapp = () => {
 
   const instance = useMemo(() => instances[0] || null, [instances])
   const connected = instance?.status === 'connected'
+  const shouldPollStatus = whatsappMode !== 'manual' && ['connected', 'connecting'].includes(instance?.status)
 
   const load = async () => {
     setLoading(true)
@@ -60,7 +61,7 @@ const Whatsapp = () => {
 
   // Atualiza status silenciosamente via cache/job para nao sobrecarregar a Evolution.
   const pollStatus = async () => {
-    if (!instance || whatsappMode === 'manual') return
+    if (!instance || !shouldPollStatus) return
     try {
       const updated = await railsGetWhatsappInstanceStatus(instance.id)
       if (updated) {
@@ -157,11 +158,11 @@ const Whatsapp = () => {
       visibleMs: STATUS_POLL_INTERVAL,
       hiddenMs: HIDDEN_STATUS_POLL_INTERVAL,
       maxMs: 120000,
-      enabled: whatsappMode !== 'manual',
+      enabled: shouldPollStatus,
     })
     return () => pollRef.current?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instance?.id, instance?.status, whatsappMode])
+  }, [instance?.id, instance?.status, shouldPollStatus])
 
   if (!loading && whatsappMode === 'manual') {
     return (

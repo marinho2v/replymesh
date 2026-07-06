@@ -1,11 +1,13 @@
 require "json"
 require "net/http"
+require "digest"
 require "securerandom"
 require "uri"
 
 class EvolutionGoClient
   CACHE_GROUP = :evolution
   CACHE_TTL = 30.seconds
+  STATUS_CIRCUIT_TTL = 2.minutes
   DEFAULT_RETRIES = 2
 
   class Error < StandardError
@@ -33,11 +35,13 @@ class EvolutionGoClient
     { success: true, mode: "real", instances_count: instances.size, auth_header: last_auth_header_label }
   end
 
-  def list_instances
+  def list_instances(force: false)
     return [mock_response("mock-instance", "connected")] if mock?
 
-    cache_fetch(endpoint: "list_instances") do
-      normalize_instances(global_request(:get, "/instance/all"))
+    guarded_status_call(endpoint: "list_instances", extra: "global", force: force) do
+      cache_fetch(endpoint: "list_instances", force: force) do
+        normalize_instances(global_request(:get, "/instance/all"))
+      end
     end
   end
 
@@ -74,8 +78,10 @@ class EvolutionGoClient
   def status(uuid_or_name, force: false)
     return mock_response(uuid_or_name, "connected") if mock?
 
-    cache_fetch(endpoint: "status", extra: uuid_or_name, force: force) do
-      normalize_instance(global_request(:get, "/instance/info/#{escape(uuid_or_name)}"))
+    guarded_status_call(endpoint: "status", extra: uuid_or_name, force: force) do
+      cache_fetch(endpoint: "status", extra: uuid_or_name, force: force) do
+        normalize_instance(global_request(:get, "/instance/info/#{escape(uuid_or_name)}"))
+      end
     end
   end
   alias get_status status
@@ -391,6 +397,64 @@ class EvolutionGoClient
     Rails.cache.delete(ReplymeshCacheService.key(company: cache_company, group: CACHE_GROUP, endpoint: "list_instances")) if defined?(ReplymeshCacheService) && defined?(Rails.cache)
   rescue StandardError
     nil
+  end
+
+  def guarded_status_call(endpoint:, extra:, force: false)
+    circuit_key = evolution_circuit_key(endpoint: endpoint, extra: extra)
+
+    if !force && Rails.cache.exist?(circuit_key)
+      raise Error.new(
+        "Evolution temporariamente indisponivel para esta consulta. Aguarde alguns instantes antes de atualizar novamente.",
+        status: 503,
+        payload: { source: "replymesh_evolution_circuit", endpoint: endpoint }
+      )
+    end
+
+    yield
+  rescue Error => e
+    open_evolution_circuit(endpoint: endpoint, extra: extra, error: e) if evolution_unavailable_error?(e)
+    raise
+  rescue Net::OpenTimeout, Net::ReadTimeout, EOFError, Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+    open_evolution_circuit(endpoint: endpoint, extra: extra, error: e)
+    raise Error.new(
+      "Evolution demorou para responder. A consulta foi pausada temporariamente para proteger a plataforma.",
+      status: 503,
+      payload: { source: "replymesh_evolution_circuit", endpoint: endpoint }
+    )
+  end
+
+  def open_evolution_circuit(endpoint:, extra:, error:)
+    return unless defined?(Rails.cache)
+
+    Rails.cache.write(
+      evolution_circuit_key(endpoint: endpoint, extra: extra),
+      {
+        endpoint: endpoint,
+        error_class: error.class.name,
+        status: error.respond_to?(:status) ? error.status : nil,
+        opened_at: Time.current.iso8601
+      },
+      expires_in: STATUS_CIRCUIT_TTL
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[EvolutionGoClient] circuit open failed endpoint=#{endpoint}: #{e.class}")
+  end
+
+  def evolution_unavailable_error?(error)
+    status = error.respond_to?(:status) ? error.status.to_i : nil
+    return true if status.nil?
+    return true if status >= 500
+
+    message = error.message.to_s.downcase
+    message.include?("timeout") || message.include?("demorou") || message.include?("bad gateway")
+  end
+
+  def evolution_circuit_key(endpoint:, extra:)
+    "replymesh:evolution:circuit:#{cache_company_id}:#{endpoint}:#{Digest::SHA256.hexdigest(extra.to_s)}"
+  end
+
+  def cache_company_id
+    cache_company.respond_to?(:id) ? cache_company.id : cache_company
   end
 
   def cache_company

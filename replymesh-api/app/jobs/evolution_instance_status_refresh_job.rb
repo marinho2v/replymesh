@@ -5,10 +5,11 @@ class EvolutionInstanceStatusRefreshJob < ApplicationJob
     instance = WhatsappInstance.includes(company: :store_setting).find_by(id: whatsapp_instance_id)
     return unless instance
     return unless automatic_whatsapp?(instance.company)
+    return if recent_remote_error?(instance)
 
     response = EvolutionGoClient.new(company: instance.company).status(
       instance.instance_uuid.presence || instance.instance_name,
-      force: true
+      force: false
     )
     apply_remote_status!(instance, response)
   rescue EvolutionGoClient::Error => e
@@ -23,6 +24,12 @@ class EvolutionInstanceStatusRefreshJob < ApplicationJob
   def automatic_whatsapp?(company)
     setting = company.store_setting
     setting.nil? || setting.automatic_whatsapp?
+  end
+
+  def recent_remote_error?(instance)
+    instance.remote_status.to_s.in?(%w[remote_error remote_missing]) &&
+      instance.last_remote_sync_at.present? &&
+      instance.last_remote_sync_at > 2.minutes.ago
   end
 
   def apply_remote_status!(instance, response)

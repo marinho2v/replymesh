@@ -187,8 +187,8 @@ module Api
             @primary_instance ||= WhatsappInstance.primary_for_company(current_company)
           end
 
-          def remote_instance_by_name(name)
-            client.list_instances.find { |remote| remote[:instance_name].to_s == name.to_s }
+          def remote_instance_by_name(name, force: false)
+            client.list_instances(force: force).find { |remote| remote[:instance_name].to_s == name.to_s }
           end
 
           def sync_remote_for!(instance)
@@ -205,7 +205,7 @@ module Api
             now = Time.current
             token = SecureRandom.hex(32)
             response = client.create_instance(instance.instance_name, token: token)
-            remote_after_create = remote_instance_by_name(instance.instance_name) || response
+            remote_after_create = remote_instance_by_name(instance.instance_name, force: true) || response
 
             instance.instance_token = token
             instance.provider = "evolution_go"
